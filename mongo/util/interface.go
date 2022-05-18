@@ -11,7 +11,7 @@ func ToInterfaceSlice[T any](slice []T) []interface{} {
 func ToAnySlice[T any](slice []interface{}) []T {
 	res := make([]T, len(slice))
 	for i, t := range slice {
-		res[i] = t
+		res[i] = t.(T)
 	}
 	return res
 }
