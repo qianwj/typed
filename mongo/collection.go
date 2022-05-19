@@ -111,3 +111,15 @@ func (c typedCollectionImpl[D]) UpdateById(ctx context.Context, m *model.UpdateB
 	}
 	return res, nil
 }
+
+func Aggregate[D any, U any](ctx context.Context, c typedCollectionImpl[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
+	cursor, err := c.internal.Aggregate(ctx, pipeline, opts...)
+	if err != nil {
+		return nil, err
+	}
+	var data []*U
+	if err = cursor.All(ctx, &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}

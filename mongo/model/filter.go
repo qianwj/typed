@@ -1,6 +1,9 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 func NewFilter() Filter {
 	return Filter{}
@@ -32,4 +35,17 @@ func (f Filter) Nin(field string, value []interface{}) Filter {
 func (f Filter) Or(conditions bson.A) Filter {
 	f["$or"] = conditions
 	return f
+}
+
+func (f Filter) IgnoreCaseRegex(field string, pattern string) {
+	regex := primitive.Regex{
+		Pattern: pattern,
+		Options: "i",
+	}
+	f[field] = bson.M{"$regex": regex}
+}
+
+func (f Filter) Regex(field string, pattern string) {
+	regex := primitive.Regex{Pattern: pattern}
+	f[field] = bson.M{"$regex": regex}
 }
