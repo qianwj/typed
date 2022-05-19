@@ -1,4 +1,4 @@
-package collection
+package set
 
 import (
 	"github.com/qianwj/typed/collection/list"
@@ -17,7 +17,9 @@ func TestSet_NewSet(t *testing.T) {
 
 func TestSet_AddAll(t *testing.T) {
 	set := NewSet[int]()
-	coll := list.NewArrayList[int]().Add(1).Add(1)
+	coll := list.NewArrayList[int]()
+	coll.Add(1)
+	coll.Add(1)
 	set.AddAll(coll)
 	if set.Size() != 1 {
 		t.Errorf("want set size is 1, but found: %d", set.Size())

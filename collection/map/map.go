@@ -1,4 +1,4 @@
-package collection
+package _map
 
 type Map[K comparable, V any] map[K]V
 

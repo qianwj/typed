@@ -1,42 +1,33 @@
 package list
 
-type ArrayList[T any] []T
+import "github.com/qianwj/typed/collection"
+
+type ArrayList[T any] struct {
+	elements []T
+}
 
 const defaultInitialCapacity = 10
 
-func NewArrayList[T any]() ArrayList[T] {
-	return make(ArrayList[T], 0, defaultInitialCapacity)
+func NewArrayList[T any]() *ArrayList[T] {
+	return &ArrayList[T]{elements: make([]T, 0, defaultInitialCapacity)}
 }
 
-func (a ArrayList[T]) Add(e T) ArrayList[T] {
-	return append(a, e)
+func (a ArrayList[T]) Add(e T) {
+	a.elements = append(a.elements, e)
 }
 
-func (a ArrayList[T]) Contains(e T) bool {
-	//idx := a.binarySearch(e, 0, a.Size())
-	//return idx > -1
-	return false
+func (a ArrayList[T]) AddAll(c collection.Collection[T]) {
+	c.Foreach(func(e T) {
+		a.Add(e)
+	})
 }
 
 func (a ArrayList[T]) Foreach(handle func(e T)) {
-	for _, e := range a {
+	for _, e := range a.elements {
 		handle(e)
 	}
 }
 
 func (a ArrayList[T]) Size() int {
-	return len(a)
+	return len(a.elements)
 }
-
-//func (a ArrayList[T]) binarySearch(target T, left, right int) int {
-//	for left <= right {
-//		middleIndex := left + (right-left)/2
-//		if a[middleIndex] == target {
-//			return middleIndex
-//		} else if a[middleIndex] > target {
-//			right = middleIndex - 1
-//		} else {
-//			left = middleIndex + 1
-//		}
-//	}
-//}

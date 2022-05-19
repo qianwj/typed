@@ -7,3 +7,7 @@ type Object interface {
 type Any interface {
 	Object | comparable
 }
+
+type Comparable interface {
+	Compare(other Any) int
+}

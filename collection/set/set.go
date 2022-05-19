@@ -1,21 +1,25 @@
-package collection
+package set
+
+import (
+	"github.com/qianwj/typed/collection"
+	"github.com/qianwj/typed/collection/map"
+)
 
 type Set[T comparable] struct {
-	Collection[T]
-	elements Map[T, struct{}]
+	collection.Collection[T]
+	elements _map.Map[T, struct{}]
 }
 
 func NewSet[T comparable]() *Set[T] {
 	return &Set[T]{
-		elements: make(Map[T, struct{}]),
+		elements: make(_map.Map[T, struct{}]),
 	}
 }
 
-func (s *Set[T]) AddAll(c Collection[T]) *Set[T] {
+func (s *Set[T]) AddAll(c collection.Collection[T]) {
 	c.Foreach(func(e T) {
 		s.elements[e] = struct{}{}
 	})
-	return s
 }
 
 func (s *Set[T]) Add(e T) {

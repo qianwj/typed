@@ -1,6 +1,8 @@
 package collection
 
 type Collection[T any] interface {
-	Contains(e T) bool
+	Add(e T)
+	AddAll(c Collection[T])
 	Foreach(handle func(e T))
+	Size() int
 }
