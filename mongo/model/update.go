@@ -4,6 +4,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+func NewUpdateMany() *UpdateMany {
+	return &UpdateMany{}
+}
+
+func (m *UpdateMany) SetFilter(filter Filter) *UpdateMany {
+	m.Filter = filter
+	return m
+}
+
+func (m *UpdateMany) SetUpdate(update Update) *UpdateMany {
+	m.Update = update
+	return m
+}
+
 func NewFindOneAndUpdate() *FindOneAndUpdate {
 	return &FindOneAndUpdate{}
 }
