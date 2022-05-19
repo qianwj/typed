@@ -18,6 +18,18 @@ func NewAggregatePipeline() AggregatePipeline {
 	return AggregatePipeline{}
 }
 
+func (a AggregateGroup) Field(field, from string) AggregateGroup {
+	a[field] = from
+	return a
+}
+
+func (a AggregateGroup) SumFixed(field string, value int) AggregateGroup {
+	a[field] = bson.M{
+		"$sum": value,
+	}
+	return a
+}
+
 func (a AggregatePipeline) Match(filter Filter) AggregatePipeline {
 	return append(a, bson.D{
 		{Key: "$match", Value: filter},
