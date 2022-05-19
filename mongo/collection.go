@@ -11,9 +11,11 @@ import (
 )
 
 type TypedCollection[D any] interface {
+	collection() *mongo.Collection
 	FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (*D, error)
 	Find(ctx context.Context, filter model.Filter, opts ...*options.FindOptions) ([]*D, error)
 	FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]*D, error)
+	CountDocuments(ctx context.Context, filter model.Filter, opts ...*options.CountOptions) (int64, error)
 	InsertOne(ctx context.Context, doc D) (primitive.ObjectID, error)
 	InsertMany(ctx context.Context, docs []*D) ([]primitive.ObjectID, error)
 	FindOneAndUpdate(ctx context.Context, m *model.FindOneAndUpdate, opts ...*options.FindOneAndUpdateOptions) (*D, error)
@@ -28,6 +30,10 @@ type typedCollectionImpl[D any] struct {
 
 func NewTypedCollection[D any](db *mongo.Database, name string, opts ...*options.CollectionOptions) TypedCollection[D] {
 	return &typedCollectionImpl[D]{internal: db.Collection(name, opts...)}
+}
+
+func (c typedCollectionImpl[D]) collection() *mongo.Collection {
+	return c.internal
 }
 
 func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (*D, error) {
@@ -57,6 +63,10 @@ func (c typedCollectionImpl[D]) Find(ctx context.Context, filter model.Filter, o
 func (c typedCollectionImpl[D]) FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]*D, error) {
 	filter := model.NewFilter().In("_id", util.ToInterfaceSlice[primitive.ObjectID](ids))
 	return c.Find(ctx, filter, opts...)
+}
+
+func (c typedCollectionImpl[D]) CountDocuments(ctx context.Context, filter model.Filter, opts ...*options.CountOptions) (int64, error) {
+	return c.internal.CountDocuments(ctx, filter, opts...)
 }
 
 func (c typedCollectionImpl[D]) InsertOne(ctx context.Context, doc D) (primitive.ObjectID, error) {
@@ -112,11 +122,11 @@ func (c typedCollectionImpl[D]) UpdateById(ctx context.Context, m *model.UpdateB
 	return res, nil
 }
 
-func Aggregate[D any, U any](ctx context.Context, c typedCollectionImpl[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
+func Aggregate[D any, U any](ctx context.Context, c TypedCollection[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
 	if len(pipeline) == 0 {
 		return nil, errors.New("pipeline must not empty")
 	}
-	cursor, err := c.internal.Aggregate(ctx, pipeline, opts...)
+	cursor, err := c.collection().Aggregate(ctx, pipeline, opts...)
 	if err != nil {
 		return nil, err
 	}
