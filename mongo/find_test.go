@@ -3,6 +3,8 @@ package typed_mongo
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"testing"
@@ -25,7 +27,8 @@ func TestFindOne(t *testing.T) {
 		Name:  "abc",
 		Value: 1,
 	})
-	res, err := FindOne[testDoc](context.TODO(), coll, model.NewFilter().Eq("name", "abc"))
+	typedColl := NewTypedCollection[testDoc](db, "test_doc")
+	res, err := typedColl.FindOne(context.TODO(), model.NewFilter().Eq("name", "abc"))
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -41,11 +44,14 @@ func TestFind(t *testing.T) {
 	cli.Connect(context.TODO())
 	db := cli.Database("test_typed")
 	coll := db.Collection("test_doc")
-	coll.InsertOne(context.TODO(), testDoc{
-		Name:  "abc",
-		Value: 1,
+	id := primitive.NewObjectID()
+	coll.InsertOne(context.TODO(), bson.M{
+		"_id":   id,
+		"name":  "abc",
+		"value": 1,
 	})
-	res, err := Find[testDoc](context.TODO(), coll, model.NewFilter().Eq("name", "abc"))
+	typedColl := NewTypedCollection[testDoc](db, "test_doc")
+	res, err := typedColl.FindByDocIds(context.TODO(), []primitive.ObjectID{id})
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
