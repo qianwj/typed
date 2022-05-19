@@ -14,6 +14,10 @@ type (
 	}
 )
 
+func NewAggregatePipeline() AggregatePipeline {
+	return AggregatePipeline{}
+}
+
 func (a AggregatePipeline) Match(filter Filter) AggregatePipeline {
 	return append(a, bson.D{
 		{Key: "$match", Value: filter},

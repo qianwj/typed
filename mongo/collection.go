@@ -113,6 +113,9 @@ func (c typedCollectionImpl[D]) UpdateById(ctx context.Context, m *model.UpdateB
 }
 
 func Aggregate[D any, U any](ctx context.Context, c typedCollectionImpl[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
+	if len(pipeline) == 0 {
+		return nil, errors.New("pipeline must not empty")
+	}
 	cursor, err := c.internal.Aggregate(ctx, pipeline, opts...)
 	if err != nil {
 		return nil, err
