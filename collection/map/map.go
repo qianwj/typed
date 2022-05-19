@@ -2,6 +2,10 @@ package _map
 
 type Map[K comparable, V any] map[K]V
 
+func NewMap[K comparable, V any]() Map[K, V] {
+	return make(Map[K, V])
+}
+
 func (m Map[K, V]) Keys() []K {
 	res := make([]K, len(m))
 	for k := range m {
