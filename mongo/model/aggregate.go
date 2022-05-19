@@ -18,6 +18,10 @@ func NewAggregatePipeline() AggregatePipeline {
 	return AggregatePipeline{}
 }
 
+func NewAggregateGroup() AggregateGroup {
+	return AggregateGroup{}
+}
+
 func (a AggregateGroup) Field(field, from string) AggregateGroup {
 	a[field] = from
 	return a
