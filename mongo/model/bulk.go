@@ -15,7 +15,7 @@ type TypedUpdateOneModel struct {
 }
 
 func NewTypeUpdateOneModel() *TypedUpdateOneModel {
-	return &TypedUpdateOneModel{}
+	return &TypedUpdateOneModel{internal: mongo.NewUpdateOneModel()}
 }
 
 // Hint specifies the index to use for the operation. This should either be the index name as a string or the index
