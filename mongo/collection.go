@@ -21,6 +21,7 @@ type TypedCollection[D any] interface {
 	FindOneAndUpdate(ctx context.Context, m *model.FindOneAndUpdate, opts ...*options.FindOneAndUpdateOptions) (*D, error)
 	UpdateMany(ctx context.Context, m *model.UpdateMany, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 	UpdateById(ctx context.Context, m *model.UpdateById, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+	InitializeBulkWriteOp() *BulkWriteOperation
 }
 
 type typedCollectionImpl[D any] struct {
@@ -120,6 +121,10 @@ func (c typedCollectionImpl[D]) UpdateById(ctx context.Context, m *model.UpdateB
 		return nil, err
 	}
 	return res, nil
+}
+
+func (c typedCollectionImpl[D]) InitializeBulkWriteOp() *BulkWriteOperation {
+	return newBulkWriteOperation(c.internal)
 }
 
 func Aggregate[D any, U any](ctx context.Context, c TypedCollection[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
