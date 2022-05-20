@@ -10,7 +10,8 @@ func Ok[T any](result T) Result[T] {
 }
 
 func Err[T any](error error) Result[T] {
-	return Result[T]{nil, error}
+	var t T
+	return Result[T]{t, error}
 }
 
 func (r Result[T]) Succeed() bool {
