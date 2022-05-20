@@ -1,4 +1,4 @@
-package core
+package result
 
 type Result[T any, E error] struct {
 	result T
@@ -9,8 +9,8 @@ func Ok[T any](result T) Result[T, error] {
 	return Result[T, error]{result, nil}
 }
 
-func Err[E error](error E) Result[any, E] {
-	return Result[any, E]{nil, error}
+func Err[T any, E error](error E) Result[T, E] {
+	return Result[T, E]{nil, error}
 }
 
 func (r Result[T, E]) Succeed() bool {
