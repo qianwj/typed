@@ -8,6 +8,10 @@ type ArrayList[T any] struct {
 
 const defaultInitialCapacity = 10
 
+func ArrayListOf[T any](data []T) *ArrayList[T] {
+	return NewArrayList[T](data...)
+}
+
 func NewArrayList[T any](e ...T) *ArrayList[T] {
 	var elements []T
 	if len(e) == 0 {
