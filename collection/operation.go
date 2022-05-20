@@ -1,4 +1,4 @@
-package operation
+package collection
 
 func Map[T, U any](input []T, convert func(t T) U) []U {
 	res := make([]U, len(input))
