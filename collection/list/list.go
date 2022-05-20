@@ -8,8 +8,14 @@ type ArrayList[T any] struct {
 
 const defaultInitialCapacity = 10
 
-func NewArrayList[T any]() *ArrayList[T] {
-	return &ArrayList[T]{elements: make([]T, 0, defaultInitialCapacity)}
+func NewArrayList[T any](e ...T) *ArrayList[T] {
+	var elements []T
+	if len(e) == 0 {
+		elements = make([]T, 0, defaultInitialCapacity)
+	} else {
+		elements = e
+	}
+	return &ArrayList[T]{elements: elements}
 }
 
 func (a ArrayList[T]) Add(e T) {
