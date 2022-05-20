@@ -1,41 +1,41 @@
 package result
 
-type Result[T any, E error] struct {
+type Result[T any] struct {
 	result T
-	err    E
+	err    error
 }
 
-func Ok[T any](result T) Result[T, error] {
-	return Result[T, error]{result, nil}
+func Ok[T any](result T) Result[T] {
+	return Result[T]{result, nil}
 }
 
-func Err[T any, E error](error E) Result[T, E] {
-	return Result[T, E]{nil, error}
+func Err[T any](error error) Result[T] {
+	return Result[T]{nil, error}
 }
 
-func (r Result[T, E]) Succeed() bool {
+func (r Result[T]) Succeed() bool {
 	return r.err == nil
 }
 
-func (r Result[T, E]) Get() T {
+func (r Result[T]) Get() T {
 	return r.result
 }
 
-func (r Result[T, E]) GetOr(t T) T {
+func (r Result[T]) GetOr(t T) T {
 	if r.Succeed() {
 		return r.Get()
 	}
 	return t
 }
 
-func (r Result[T, E]) Unwrap() (T, E) {
+func (r Result[T]) Unwrap() (T, error) {
 	return r.result, r.err
 }
 
-func (r Result[T, E]) Failed() bool {
+func (r Result[T]) Failed() bool {
 	return r.err != nil
 }
 
-func (r Result[T, E]) Error() E {
+func (r Result[T]) Error() error {
 	return r.err
 }
