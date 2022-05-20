@@ -7,7 +7,7 @@ import (
 )
 
 func Assert[T any](expect, actual T) error {
-	if !object.Equals(expect, actual) {
+	if !object.Equals[T](expect, actual) {
 		return errors.New(fmt.Sprintf("expect: %+v, but actual: %+v", expect, actual))
 	}
 	return nil

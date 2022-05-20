@@ -42,4 +42,10 @@ func TestEquals(t *testing.T) {
 		t.Error("want equals, but not equal")
 		t.FailNow()
 	}
+	i1, i2 := 1, 1
+	eq = Equals[int](i1, i2)
+	if !eq {
+		t.Error("want equals, but not equal")
+		t.FailNow()
+	}
 }
