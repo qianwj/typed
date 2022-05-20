@@ -4,6 +4,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+func NewUpdate() Update {
+	return Update{}
+}
+
 func NewUpdateMany() *UpdateMany {
 	return &UpdateMany{}
 }
