@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/qianwj/typed/mongo/model"
+	to "github.com/qianwj/typed/mongo/options"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -12,9 +13,9 @@ import (
 
 type TypedCollection[D any] interface {
 	collection() *mongo.Collection
-	FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (*D, error)
-	Find(ctx context.Context, filter model.Filter, opts ...*options.FindOptions) ([]*D, error)
-	FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]*D, error)
+	FindOne(ctx context.Context, filter model.Filter, opts ...*to.FindOneOptions) (*D, error)
+	Find(ctx context.Context, filter model.Filter, opts ...*to.FindOptions) ([]*D, error)
+	FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*to.FindOptions) ([]*D, error)
 	CountDocuments(ctx context.Context, filter model.Filter, opts ...*options.CountOptions) (int64, error)
 	InsertOne(ctx context.Context, doc D) (primitive.ObjectID, error)
 	InsertMany(ctx context.Context, docs []*D) ([]primitive.ObjectID, error)
@@ -37,8 +38,8 @@ func (c typedCollectionImpl[D]) collection() *mongo.Collection {
 	return c.internal
 }
 
-func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (*D, error) {
-	singleResult := c.internal.FindOne(ctx, filter, opts...)
+func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter model.Filter, opts ...*to.FindOneOptions) (*D, error) {
+	singleResult := c.internal.FindOne(ctx, filter, to.MergeFindOneOptions(opts...))
 	var doc D
 	if singleResult.Err() != nil {
 		return nil, singleResult.Err()
@@ -49,8 +50,8 @@ func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter model.Filter
 	return &doc, nil
 }
 
-func (c typedCollectionImpl[D]) Find(ctx context.Context, filter model.Filter, opts ...*options.FindOptions) ([]*D, error) {
-	cursor, err := c.internal.Find(ctx, filter, opts...)
+func (c typedCollectionImpl[D]) Find(ctx context.Context, filter model.Filter, opts ...*to.FindOptions) ([]*D, error) {
+	cursor, err := c.internal.Find(ctx, filter, to.MergeFindOptions(opts...))
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +62,7 @@ func (c typedCollectionImpl[D]) Find(ctx context.Context, filter model.Filter, o
 	return data, nil
 }
 
-func (c typedCollectionImpl[D]) FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]*D, error) {
+func (c typedCollectionImpl[D]) FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*to.FindOptions) ([]*D, error) {
 	filter := model.NewFilter().In("_id", util.ToInterfaceSlice[primitive.ObjectID](ids))
 	return c.Find(ctx, filter, opts...)
 }
