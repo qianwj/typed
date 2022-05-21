@@ -21,6 +21,14 @@ func (opts SortOptions) AppendField(field string, order SortOrder) SortOptions {
 	return append(opts, bson.E{Key: field, Value: order})
 }
 
+func (opts SortOptions) Asc(field string) SortOptions {
+	return append(opts, bson.E{Key: field, Value: Asc})
+}
+
+func (opts SortOptions) Desc(field string) SortOptions {
+	return append(opts, bson.E{Key: field, Value: Desc})
+}
+
 type FindOptions struct {
 	internal *options.FindOptions
 }
