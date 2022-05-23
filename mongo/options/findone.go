@@ -98,7 +98,7 @@ func (f *FindOneOptions) SetOplogReplay(b bool) *FindOneOptions {
 }
 
 // SetProjection sets the value for the Projection field.
-func (f *FindOneOptions) SetProjection(projection interface{}) *FindOneOptions {
+func (f *FindOneOptions) SetProjection(projection Projection) *FindOneOptions {
 	f.internal.Projection = projection
 	return f
 }

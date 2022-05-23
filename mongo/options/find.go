@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	Desc SortOrder = -1
-	Asc  SortOrder = 1
+	desc SortOrder = -1
+	asc  SortOrder = 1
 )
 
 type (
@@ -23,11 +23,30 @@ func (opts SortOptions) Append(next SortOptions) SortOptions {
 }
 
 func Ascending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: Asc}}
+	return SortOptions{bson.E{Key: field, Value: asc}}
 }
 
 func Descending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: Desc}}
+	return SortOptions{bson.E{Key: field, Value: desc}}
+}
+
+func Need(field string) Projection {
+	return Projection{
+		field: 1,
+	}
+}
+
+func Ignore(field string) Projection {
+	return Projection{
+		field: -1,
+	}
+}
+
+func (p Projection) And(projection Projection) Projection {
+	for k, v := range projection {
+		p[k] = v
+	}
+	return p
 }
 
 type FindOptions struct {
