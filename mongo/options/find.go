@@ -54,7 +54,9 @@ type FindOptions struct {
 }
 
 func Find() *FindOptions {
-	return &FindOptions{}
+	return &FindOptions{
+		internal: options.Find(),
+	}
 }
 
 // SetAllowDiskUse sets the value for the AllowDiskUse field.
@@ -268,7 +270,9 @@ type FindOneAndUpdateOptions struct {
 
 // FindOneAndUpdate creates a new FindOneAndUpdateOptions instance.
 func FindOneAndUpdate() *FindOneAndUpdateOptions {
-	return &FindOneAndUpdateOptions{}
+	return &FindOneAndUpdateOptions{
+		internal: options.FindOneAndUpdate(),
+	}
 }
 
 // SetBypassDocumentValidation sets the value for the BypassDocumentValidation field.

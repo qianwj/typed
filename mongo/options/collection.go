@@ -14,7 +14,9 @@ type CollectionOptions struct {
 
 // Collection creates a new CollectionOptions instance.
 func Collection() *CollectionOptions {
-	return &CollectionOptions{}
+	return &CollectionOptions{
+		internal: options.Collection(),
+	}
 }
 
 // SetReadConcern sets the value for the ReadConcern field.

@@ -11,7 +11,9 @@ type CountOptions struct {
 
 // Count creates a new CountOptions instance.
 func Count() *CountOptions {
-	return &CountOptions{}
+	return &CountOptions{
+		internal: options.Count(),
+	}
 }
 
 // SetCollation sets the value for the Collation field.

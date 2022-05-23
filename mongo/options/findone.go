@@ -11,7 +11,9 @@ type FindOneOptions struct {
 
 // FindOne creates a new FindOneOptions instance.
 func FindOne() *FindOneOptions {
-	return &FindOneOptions{}
+	return &FindOneOptions{
+		internal: options.FindOne(),
+	}
 }
 
 // SetAllowPartialResults sets the value for the AllowPartialResults field.

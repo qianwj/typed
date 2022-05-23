@@ -8,7 +8,9 @@ type DeleteOptions struct {
 
 // Delete creates a new DeleteOptions instance.
 func Delete() *DeleteOptions {
-	return &DeleteOptions{}
+	return &DeleteOptions{
+		internal: options.Delete(),
+	}
 }
 
 // SetCollation sets the value for the Collation field.

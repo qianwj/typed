@@ -8,7 +8,9 @@ type UpdateOptions struct {
 
 // Update creates a new UpdateOptions instance.
 func Update() *UpdateOptions {
-	return &UpdateOptions{}
+	return &UpdateOptions{
+		internal: options.Update(),
+	}
 }
 
 // SetArrayFilters sets the value for the ArrayFilters field.

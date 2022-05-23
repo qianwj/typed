@@ -12,7 +12,9 @@ type AggregateOptions struct {
 
 // Aggregate creates a new AggregateOptions instance.
 func Aggregate() *AggregateOptions {
-	return &AggregateOptions{}
+	return &AggregateOptions{
+		internal: options.Aggregate(),
+	}
 }
 
 // SetAllowDiskUse sets the value for the AllowDiskUse field.
