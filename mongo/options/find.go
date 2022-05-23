@@ -241,3 +241,116 @@ func MergeFindOptions(opts ...*FindOptions) *options.FindOptions {
 	}
 	return fo
 }
+
+type FindOneAndUpdateOptions struct {
+	internal *options.FindOneAndUpdateOptions
+}
+
+// FindOneAndUpdate creates a new FindOneAndUpdateOptions instance.
+func FindOneAndUpdate() *FindOneAndUpdateOptions {
+	return &FindOneAndUpdateOptions{}
+}
+
+// SetBypassDocumentValidation sets the value for the BypassDocumentValidation field.
+func (f *FindOneAndUpdateOptions) SetBypassDocumentValidation(b bool) *FindOneAndUpdateOptions {
+	f.internal.BypassDocumentValidation = &b
+	return f
+}
+
+// SetArrayFilters sets the value for the ArrayFilters field.
+func (f *FindOneAndUpdateOptions) SetArrayFilters(filters options.ArrayFilters) *FindOneAndUpdateOptions {
+	f.internal.ArrayFilters = &filters
+	return f
+}
+
+// SetCollation sets the value for the Collation field.
+func (f *FindOneAndUpdateOptions) SetCollation(collation *options.Collation) *FindOneAndUpdateOptions {
+	f.internal.Collation = collation
+	return f
+}
+
+// SetMaxTime sets the value for the MaxTime field.
+func (f *FindOneAndUpdateOptions) SetMaxTime(d time.Duration) *FindOneAndUpdateOptions {
+	f.internal.MaxTime = &d
+	return f
+}
+
+// SetProjection sets the value for the Projection field.
+func (f *FindOneAndUpdateOptions) SetProjection(projection Projection) *FindOneAndUpdateOptions {
+	f.internal.Projection = projection
+	return f
+}
+
+// SetReturnDocument sets the value for the ReturnDocument field.
+func (f *FindOneAndUpdateOptions) SetReturnDocument(rd options.ReturnDocument) *FindOneAndUpdateOptions {
+	f.internal.ReturnDocument = &rd
+	return f
+}
+
+// SetSort sets the value for the Sort field.
+func (f *FindOneAndUpdateOptions) SetSort(sort SortOptions) *FindOneAndUpdateOptions {
+	f.internal.Sort = sort
+	return f
+}
+
+// SetUpsert sets the value for the Upsert field.
+func (f *FindOneAndUpdateOptions) SetUpsert(b bool) *FindOneAndUpdateOptions {
+	f.internal.Upsert = &b
+	return f
+}
+
+// SetHint sets the value for the Hint field.
+func (f *FindOneAndUpdateOptions) SetHint(hint interface{}) *FindOneAndUpdateOptions {
+	f.internal.Hint = hint
+	return f
+}
+
+// SetLet sets the value for the Let field.
+func (f *FindOneAndUpdateOptions) SetLet(let interface{}) *FindOneAndUpdateOptions {
+	f.internal.Let = let
+	return f
+}
+
+// MergeFindOneAndUpdateOptions combines the given FindOneAndUpdateOptions instances into a single
+// FindOneAndUpdateOptions in a last-one-wins fashion.
+func MergeFindOneAndUpdateOptions(opts ...*FindOneAndUpdateOptions) *options.FindOneAndUpdateOptions {
+	fo := options.FindOneAndUpdate()
+	for _, o := range opts {
+		opt := o.internal
+		if opt == nil {
+			continue
+		}
+		if opt.ArrayFilters != nil {
+			fo.ArrayFilters = opt.ArrayFilters
+		}
+		if opt.BypassDocumentValidation != nil {
+			fo.BypassDocumentValidation = opt.BypassDocumentValidation
+		}
+		if opt.Collation != nil {
+			fo.Collation = opt.Collation
+		}
+		if opt.MaxTime != nil {
+			fo.MaxTime = opt.MaxTime
+		}
+		if opt.Projection != nil {
+			fo.Projection = opt.Projection
+		}
+		if opt.ReturnDocument != nil {
+			fo.ReturnDocument = opt.ReturnDocument
+		}
+		if opt.Sort != nil {
+			fo.Sort = opt.Sort
+		}
+		if opt.Upsert != nil {
+			fo.Upsert = opt.Upsert
+		}
+		if opt.Hint != nil {
+			fo.Hint = opt.Hint
+		}
+		if opt.Let != nil {
+			fo.Let = opt.Let
+		}
+	}
+
+	return fo
+}

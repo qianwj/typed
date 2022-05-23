@@ -3,8 +3,8 @@ package typed_mongo
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
+	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type BulkWriteOperation struct {
@@ -23,5 +23,5 @@ func (b *BulkWriteOperation) UpdateOne(update *model.TypedUpdateOneModel) *BulkW
 }
 
 func (b *BulkWriteOperation) Execute(ctx context.Context) (*mongo.BulkWriteResult, error) {
-	return b.coll.BulkWrite(ctx, b.models, b.opts...)
+	return b.coll.BulkWrite(ctx, b.models, options.MergeBulkWriteOptions(b.opts...))
 }

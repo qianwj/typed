@@ -6,18 +6,18 @@ import (
 )
 
 type (
-	Filter           bson.M
-	Update           bson.M
-	FindOneAndUpdate struct {
+	Filter     bson.M
+	Update     bson.M
+	UpdateSome struct {
 		Filter Filter
 		Update Update
 	}
-	UpdateMany struct {
-		Filter Filter
-		Update Update
-	}
-	UpdateById struct {
+	FindOneAndUpdate UpdateSome
+	UpdateOne        UpdateSome
+	UpdateMany       UpdateSome
+	UpdateById       struct {
 		Id     primitive.ObjectID
 		Update Update
 	}
+	FieldType int32
 )
