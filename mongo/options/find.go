@@ -14,19 +14,20 @@ const (
 type (
 	SortOrder   int
 	SortOptions bson.D
+	SortOption  bson.E
 	Projection  bson.M
 )
 
-func (opts SortOptions) AppendField(field string, order SortOrder) SortOptions {
-	return append(opts, bson.E{Key: field, Value: order})
+func (opts SortOptions) Append(next SortOptions) SortOptions {
+	return append(opts, next...)
 }
 
-func (opts SortOptions) Asc(field string) SortOptions {
-	return append(opts, bson.E{Key: field, Value: Asc})
+func Ascending(field string) SortOptions {
+	return SortOptions{bson.E{Key: field, Value: Asc}}
 }
 
-func (opts SortOptions) Desc(field string) SortOptions {
-	return append(opts, bson.E{Key: field, Value: Desc})
+func Descending(field string) SortOptions {
+	return SortOptions{bson.E{Key: field, Value: Desc}}
 }
 
 type FindOptions struct {
