@@ -5,6 +5,10 @@ type Result[T any] struct {
 	err    error
 }
 
+func Wrap[T any](result T, err error) Result[T] {
+	return Result[T]{result, err}
+}
+
 func Ok[T any](result T) Result[T] {
 	return Result[T]{result, nil}
 }
