@@ -1,6 +1,8 @@
 package options
 
 import (
+	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -16,6 +18,10 @@ type (
 	SortOptions bson.D
 	SortOption  bson.E
 	Projection  bson.M
+	Page        struct {
+		pageNo   int64
+		pageSize int64
+	}
 )
 
 func (opts SortOptions) Append(next SortOptions) SortOptions {
@@ -47,6 +53,24 @@ func (p Projection) And(projection Projection) Projection {
 		p[k] = v
 	}
 	return p
+}
+
+func NewPage(pageNo, pageSize int64) *Page {
+	return &Page{
+		pageNo:   pageNo,
+		pageSize: pageSize,
+	}
+}
+
+func (p *Page) toOptions() (*options.FindOptions, error) {
+	if p.pageNo < 1 {
+		return nil, errors.New(fmt.Sprintf("invalid pageNo: %d", p.pageNo))
+	}
+	if p.pageSize < 1 {
+		return nil, errors.New(fmt.Sprintf("invalid pageSize: %d", p.pageSize))
+	}
+	start := (p.pageNo - 1) * p.pageSize
+	return options.Find().SetSkip(start).SetLimit(p.pageSize), nil
 }
 
 type FindOptions struct {
@@ -173,6 +197,16 @@ func (f *FindOptions) SetShowRecordID(b bool) *FindOptions {
 func (f *FindOptions) SetSkip(i int64) *FindOptions {
 	f.internal.Skip = &i
 	return f
+}
+
+func (f *FindOptions) SetPage(page *Page) (*FindOptions, error) {
+	opts, err := page.toOptions()
+	if err != nil {
+		return nil, err
+	}
+	f.internal.Skip = opts.Skip
+	f.internal.Limit = opts.Limit
+	return f, nil
 }
 
 // SetSnapshot sets the value for the Snapshot field.
