@@ -1,4 +1,4 @@
-package option
+package core
 
 type Optional[T any] interface {
 	EmptyFunc(emptyFunc func(T) bool) Optional[T]
