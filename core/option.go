@@ -39,10 +39,8 @@ func (o *Option[T]) IfPresentThen(process func(T) T) *Option[T] {
 	return o
 }
 
-type stringOption Option[string]
-
-func String(data string) *stringOption {
-	return &stringOption{data: data, emptyFunc: func(s string) bool {
+func String(data string) *Option[string] {
+	return &Option[string]{data: data, emptyFunc: func(s string) bool {
 		return s == ""
 	}}
 }
