@@ -1,5 +1,7 @@
 package core
 
+import "errors"
+
 type Optional[T any] interface {
 	EmptyFunc(emptyFunc func(T) bool) Optional[T]
 	IsPresent() bool
@@ -22,7 +24,17 @@ func (o *Option[T]) EmptyFunc(emptyFunc func(T) bool) *Option[T] {
 	return o
 }
 
+func (o *Option[T]) IsPresent() bool {
+	if o.emptyFunc == nil {
+		panic(errors.New("Option.emptyFunc is nil"))
+	}
+	return !o.emptyFunc(o.data)
+}
+
 func (o *Option[T]) IfPresentThen(process func(T) T) *Option[T] {
+	if !o.IsPresent() {
+		return o
+	}
 	o.data = process(o.data)
 	return o
 }
