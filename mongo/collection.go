@@ -138,7 +138,7 @@ func (c typedCollectionImpl[D]) DeleteOne(ctx context.Context, filter model.Filt
 }
 
 func (c typedCollectionImpl[D]) DeleteMany(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
-	return c.internal.DeleteOne(ctx, filter, options.MergeDeleteOptions(opts...))
+	return c.internal.DeleteMany(ctx, filter, options.MergeDeleteOptions(opts...))
 }
 
 func (c typedCollectionImpl[D]) InitializeBulkWriteOp(opts ...*options.BulkWriteOptions) *BulkWriteOperation {
