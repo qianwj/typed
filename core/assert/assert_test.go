@@ -1,6 +1,9 @@
 package assert
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestAssert(t *testing.T) {
 	i1, i2 := 1, 1
@@ -8,4 +11,9 @@ func TestAssert(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
+}
+
+func TestEqual(t *testing.T) {
+	Equal[error](t, errors.New("test"), errors.New("test"))
+	Equal[error](t, errors.New("test"), nil)
 }
