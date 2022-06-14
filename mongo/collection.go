@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/options"
-	"github.com/qianwj/typed/mongo/util"
+	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -65,7 +65,7 @@ func (c typedCollectionImpl[D]) Find(ctx context.Context, filter model.Filter, o
 }
 
 func (c typedCollectionImpl[D]) FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]*D, error) {
-	filter := model.NewFilter().In("_id", util.ToInterfaceSlice[primitive.ObjectID](ids))
+	filter := model.NewFilter().In("_id", lo.ToAnySlice[primitive.ObjectID](ids))
 	return c.Find(ctx, filter, opts...)
 }
 
@@ -82,11 +82,12 @@ func (c typedCollectionImpl[D]) InsertOne(ctx context.Context, doc D) (primitive
 }
 
 func (c typedCollectionImpl[D]) InsertMany(ctx context.Context, docs []*D) ([]primitive.ObjectID, error) {
-	res, err := c.internal.InsertMany(ctx, util.ToInterfaceSlice[*D](docs))
+	res, err := c.internal.InsertMany(ctx, lo.ToAnySlice[*D](docs))
 	if err != nil {
 		return nil, err
 	}
-	return util.ToAnySlice[primitive.ObjectID](res.InsertedIDs), nil
+	data, _ := lo.FromAnySlice[primitive.ObjectID](res.InsertedIDs)
+	return data, nil
 }
 
 func (c typedCollectionImpl[D]) FindOneAndUpdate(ctx context.Context, m *model.FindOneAndUpdate, opts ...*options.FindOneAndUpdateOptions) (*D, error) {
