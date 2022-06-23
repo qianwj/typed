@@ -3,6 +3,7 @@ package list
 import "github.com/qianwj/typed/collection"
 
 type ArrayList[T any] struct {
+	collection.Collection[T]
 	elements []T
 }
 
@@ -69,4 +70,8 @@ func (a *ArrayList[T]) Clear() {
 
 func (a *ArrayList[T]) Size() int {
 	return len(a.elements)
+}
+
+func (a *ArrayList[T]) IsEmpty() bool {
+	return a.Size() == 0
 }
