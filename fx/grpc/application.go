@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/Masterminds/log-go"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -41,7 +42,10 @@ func (app *Application) WithLogger(constructor any) tfx.Application {
 
 func (app *Application) Run() {
 	app.state.Inc()
-	container := fx.New(fx.Module("service", app.services...), fx.Supply(app), fx.Invoke(runGrpcServer))
+	if len(app.services) == 0 {
+		panic(errors.New("no grpc service! please use `RegisterService()` register service"))
+	}
+	container := fx.New(fx.Options(app.services...), fx.Supply(app), fx.Invoke(runGrpcServer))
 	go func() {
 		signal := <-container.Done()
 		log.Debugf("receive signal(%s), app shutdown", signal.String())
