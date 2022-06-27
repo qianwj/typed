@@ -2,7 +2,7 @@ module fx-grpc
 
 go 1.18
 
-require github.com/qianwj/typed/fx v0.0.1
+require github.com/qianwj/typed/fx v0.0.2
 
 require (
 	github.com/Masterminds/log-go v1.0.0 // indirect

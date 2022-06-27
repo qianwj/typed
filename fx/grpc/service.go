@@ -11,15 +11,17 @@ type Service interface {
 }
 
 func (app *Application) RegisterService(constructors ...any) {
+	ctx := app.ctx
 	for _, constructor := range constructors {
-		opt := fx.Provide(fx.Annotated{Target: constructor, Group: "svc"})
-		app.services = append(app.services, opt)
+		opt := fx.Provide(fx.Annotate(constructor, fx.ResultTags(`group:"grpc_service"`)))
+		ctx.services = append(ctx.services, opt)
 	}
+	app.ctx = ctx
 }
 
 type serviceModule struct {
 	fx.In
-	Services []Service
+	Services []Service `group:"grpc_service"`
 }
 
 func (s *serviceModule) register(srv *grpc.Server) {

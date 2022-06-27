@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"context"
 	"fmt"
 	"go.uber.org/fx"
 	"testing"
@@ -94,4 +95,53 @@ func TestMap(t *testing.T) {
 	a := make([]int, 0, 10)
 	a = append(a, 1, 1)
 	t.Log(a[1])
+}
+
+type Data interface {
+	GetOne() string
+}
+
+type MongoData struct{}
+
+func NewMongoData() Data {
+	return &MongoData{}
+}
+
+func (d *MongoData) GetOne() string {
+	return "mongo"
+}
+
+type ESData struct{}
+
+func (d *ESData) GetOne() string {
+	return "es"
+}
+
+type MyRepo struct {
+	fx.In
+	D []Data `group:"data"`
+}
+
+func checkRepoData(r MyRepo, bean *MyBean) {
+	for _, data := range r.D {
+		fmt.Println(data.GetOne())
+	}
+	fmt.Println(bean.D.GetOne())
+}
+
+type MyBean struct {
+	D *MongoData
+}
+
+func newMyBean(d Data) *MyBean {
+	return &MyBean{D: d.(*MongoData)}
+}
+
+func TestMultiInject(t *testing.T) {
+	app := fx.New(fx.Invoke(checkRepoData), fx.Provide(
+		fx.Annotate(NewMongoData, fx.ResultTags(`group:"data"`)),
+	), fx.Provide(newMyBean))
+	if err := app.Start(context.Background()); err != nil {
+		t.Error(err)
+	}
 }
