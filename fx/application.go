@@ -12,8 +12,8 @@ type Application interface {
 	Run()
 }
 
-func NewApp(options ...options.Options) Application {
-	return &defaultApp{opts: options}
+func NewApp() Application {
+	return &defaultApp{}
 }
 
 type defaultApp struct {
