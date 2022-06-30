@@ -1,35 +1,27 @@
 package fx
 
 import (
-	"github.com/qianwj/typed/fx/options"
+	"github.com/qianwj/typed/collection"
+	"go.uber.org/fx"
 )
 
-type Application interface {
-	RegisterService(constructors ...any)
-	RegisterRepository(constructor any, tags ...string)
-	WithData(data DataAccess, name ...string) Application
-	WithLogger(constructor any) Application
-	Run()
+type Application struct {
+	components []fx.Option
 }
 
-func NewApp() Application {
-	return &defaultApp{}
+func NewApp(components ...Component) *Application {
+	opts := collection.Map[Component, fx.Option](components, func(c Component) fx.Option {
+		return c.Provide()
+	})
+	return &Application{components: opts}
 }
 
-type defaultApp struct {
-	opts []options.Options
-}
-
-func (app *defaultApp) Run() {}
-
-func (app *defaultApp) RegisterRepository(constructor any, tags ...string) {}
-
-func (app *defaultApp) WithData(data DataAccess, name ...string) Application {
+func (app *Application) Provide(components ...fx.Option) *Application {
+	app.components = append(app.components, components...)
 	return app
 }
 
-func (app *defaultApp) WithLogger(constructor any) Application {
-	return app
+func (app *Application) Run() {
+	container := fx.New(app.components...)
+	container.Run()
 }
-
-func (app *defaultApp) RegisterService(constructors ...any) {}

@@ -1,19 +1,24 @@
 package grpc
 
 import (
+	"fmt"
 	"github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/validator"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/qianwj/typed/fx/options"
 	"google.golang.org/grpc"
 )
 
-const (
-	maxConcurrentStreamsKey = "maxConcurrentStreams"
-	validateKey             = "validate"
-	recoveryKey             = "recovery"
-)
+type Config struct {
+	Port                 int
+	EnableHealthCheck    bool
+	EnableValidate       bool
+	EnableRecovery       bool
+	MaxConcurrentStreams uint32
+	Metrics              *struct {
+		Port int
+	}
+}
 
 type grpcOptions struct {
 	addr                 string
@@ -27,50 +32,55 @@ type grpcOptions struct {
 	tracing bool
 }
 
-func (o *grpcOptions) GetValue(key string) (any, bool) {
-	switch key {
-	case maxConcurrentStreamsKey:
-		return o.maxConcurrentStreams, o.maxConcurrentStreams > 0
-	case validateKey:
-		return o.validate, o.validate
-	case recoveryKey:
-		return o.recovery, o.recovery
+type Option func(o *grpcOptions)
+
+func Address(addr string) Option {
+	return func(o *grpcOptions) {
+		o.addr = addr
 	}
-	return o, false
 }
 
-func MaxConcurrentStreams(maxConcurrentStreams uint32) *grpcOptions {
-	return &grpcOptions{maxConcurrentStreams: maxConcurrentStreams}
+func MaxConcurrentStreams(maxConcurrentStreams uint32) Option {
+	return func(o *grpcOptions) {
+		o.maxConcurrentStreams = maxConcurrentStreams
+	}
 }
 
-func EnableValidate() *grpcOptions {
-	return &grpcOptions{validate: true}
+func EnableValidate() Option {
+	return func(o *grpcOptions) {
+		o.validate = true
+	}
 }
 
-func mergeOptions(opts ...options.Options) *grpcOptions {
-	result := new(grpcOptions)
-	for _, opt := range opts {
-		addr, ok := opt.GetValue(options.AddressKey)
-		if ok {
-			result.addr = addr.(string)
-			continue
-		}
-		maxConcurrentStreams, ok := opt.GetValue(maxConcurrentStreamsKey)
-		if ok {
-			result.maxConcurrentStreams = maxConcurrentStreams.(uint32)
-		}
-		if _, ok = opt.GetValue(validateKey); ok {
-			result.validate = true
-		}
-		if _, ok = opt.GetValue(recoveryKey); ok {
-			result.recovery = true
-		}
-		metricsPort, _ := opt.GetValue(options.MetricsPortKey)
-		if ok {
-			result.metrics = &struct{ port int }{port: metricsPort.(int)}
+func EnableHealthCheck() Option {
+	return func(o *grpcOptions) {
+		o.healthCheck = true
+	}
+}
+
+func EnableRecovery() Option {
+	return func(o *grpcOptions) {
+		o.recovery = true
+	}
+}
+
+func Metrics(port int) Option {
+	return func(o *grpcOptions) {
+		o.metrics = &struct{ port int }{port: port}
+	}
+}
+
+func FromConfig(c *Config) Option {
+	return func(o *grpcOptions) {
+		o.addr = fmt.Sprintf(":%d", c.Port)
+		o.healthCheck = c.EnableHealthCheck
+		o.validate = c.EnableValidate
+		o.recovery = c.EnableRecovery
+		o.maxConcurrentStreams = c.MaxConcurrentStreams
+		if c.Metrics != nil {
+			o.metrics = &struct{ port int }{port: c.Port}
 		}
 	}
-	return result
 }
 
 func grpcServerOptions(opts *grpcOptions) []grpc.ServerOption {

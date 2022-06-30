@@ -10,7 +10,7 @@ type Service interface {
 	Register(srv *grpc.Server)
 }
 
-func (app *Application) RegisterService(constructors ...any) {
+func (app *Server) RegisterService(constructors ...any) {
 	ctx := app.ctx
 	for _, constructor := range constructors {
 		opt := fx.Provide(fx.Annotate(constructor, fx.ResultTags(`group:"grpc_service"`)))

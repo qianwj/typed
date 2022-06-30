@@ -2,15 +2,14 @@ package grpc
 
 import (
 	"fmt"
-	"github.com/qianwj/typed/fx/options"
 	"google.golang.org/grpc"
 	"testing"
 )
 
 func TestApplication_RegisterService(t *testing.T) {
-	app := NewApp(options.Address(":8081"))
+	app := NewServer(Address(":8081"))
 	app.RegisterService(newTestService)
-	app.Run()
+	app.Provide()
 }
 
 type testService struct{}
