@@ -3,18 +3,19 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/Masterminds/log-go"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	tfx "github.com/qianwj/typed/fx"
-	"github.com/qianwj/typed/fx/util"
 	"go.uber.org/atomic"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
+	"os"
 )
 
 type Server struct {
@@ -42,7 +43,7 @@ func NewServer(options ...Option) tfx.Server {
 	return &Server{opts: opts, ctx: &applicationContext{}}
 }
 
-func (app *Server) Provide(name ...string) fx.Option {
+func (app *Server) Provide() fx.Option {
 	return fx.Options(app.ctx.provide(), fx.Supply(app), fx.Invoke(runGrpcServer))
 }
 
@@ -53,7 +54,8 @@ func (app *Server) onStart(ctx context.Context) error {
 	}
 	go func(ctx context.Context) {
 		if err := app.srv.Serve(lis); err != nil {
-			util.Panic(err)
+			log.Error("starting grpc server error:", err)
+			os.Exit(-1)
 		}
 	}(ctx)
 	return nil

@@ -3,6 +3,7 @@ package mongo
 import (
 	"context"
 	"fmt"
+	"github.com/Masterminds/log-go"
 	"github.com/pkg/errors"
 	tfx "github.com/qianwj/typed/fx"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,6 +12,7 @@ import (
 )
 
 type mongoClient struct {
+	name     string
 	internal *mongo.Client
 }
 
@@ -34,22 +36,32 @@ func Apply(uri string) (tfx.DataAccess, error) {
 	}, nil
 }
 
-func (m *mongoClient) Provide(name ...string) fx.Option {
-	if len(name) == 0 {
-		return fx.Provide(fx.Annotate(func() *mongo.Client {
-			return m.internal
-		}, fx.ResultTags(`name:"mongo"`)))
-	} else {
-		return fx.Provide(fx.Annotate(func() *mongo.Client {
-			return m.internal
-		}, fx.ResultTags(fmt.Sprintf(`name:"%s_mongo"`, name[0]))))
+func (m *mongoClient) Name(name string) tfx.DataAccess {
+	m.name = name
+	return m
+}
+
+func (m *mongoClient) Provide() fx.Option {
+	data := fx.Provide(fx.Annotate(func() tfx.DataAccess {
+		return m
+	}, fx.ResultTags(`group:"data_sources"`)))
+	tag := `name:"mongo"`
+	if len(m.name) > 0 {
+		tag = fmt.Sprintf(`name:"%s_mongo"`, m.name)
 	}
+	return fx.Options(data, fx.Provide(fx.Annotate(m.client, fx.ResultTags(tag))))
+}
+
+func (m *mongoClient) client() *mongo.Client {
+	return m.internal
 }
 
 func (m *mongoClient) Connect(ctx context.Context) error {
+	log.Info("connecting to mongo...")
 	return m.internal.Connect(ctx)
 }
 
 func (m *mongoClient) Close(ctx context.Context) error {
+	log.Info("disconnecting mongo...")
 	return m.internal.Disconnect(ctx)
 }

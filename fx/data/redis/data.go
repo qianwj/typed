@@ -9,12 +9,13 @@ import (
 )
 
 type redisClient struct {
+	name     string
 	internal *client.Client
 }
 
 func NewData(opt *client.Options) (tfx.DataAccess, error) {
 	c := client.NewClient(opt)
-	return &redisClient{c}, nil
+	return &redisClient{internal: c}, nil
 }
 
 func Apply(uri string) (tfx.DataAccess, error) {
@@ -27,16 +28,24 @@ func Apply(uri string) (tfx.DataAccess, error) {
 	}, nil
 }
 
-func (r *redisClient) Provide(name ...string) fx.Option {
-	if len(name) == 0 {
-		return fx.Provide(fx.Annotate(func() *client.Client {
-			return r.internal
-		}, fx.ResultTags(`name:"redis"`)))
-	} else {
-		return fx.Provide(fx.Annotate(func() *client.Client {
-			return r.internal
-		}, fx.ResultTags(fmt.Sprintf(`name:"%s_redis"`, name[0]))))
+func (r *redisClient) Name(name string) tfx.DataAccess {
+	r.name = name
+	return r
+}
+
+func (r *redisClient) Provide() fx.Option {
+	data := fx.Provide(fx.Annotate(func() tfx.DataAccess {
+		return r
+	}), fx.ResultTags(`group:"data_sources"`))
+	tag := `name:"redis"`
+	if len(r.name) > 0 {
+		tag = fmt.Sprintf(`name:"%s_redis"`, r.name)
 	}
+	return fx.Options(data, fx.Provide(fx.Annotate(r.client, fx.ResultTags(tag))))
+}
+
+func (r *redisClient) client() *client.Client {
+	return r.internal
 }
 
 func (r *redisClient) Connect(ctx context.Context) error {
