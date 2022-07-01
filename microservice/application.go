@@ -17,5 +17,5 @@ func Bootstrap(options ...Option) {
 	if err != nil {
 		log.Fatal("reading configuration error", err)
 	}
-
+	conf.Load("data")
 }

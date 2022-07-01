@@ -22,6 +22,11 @@ type DataAccess interface {
 	Close(ctx context.Context) error
 }
 
+type DataSources struct {
+	fx.In
+	Items []DataAccess `group:"data_sources"`
+}
+
 type components struct {
 	items []Component
 }
