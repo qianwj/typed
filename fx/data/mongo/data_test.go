@@ -15,7 +15,7 @@ func TestApply(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	var data2 tfx.DataAccess
+	var data2 tfx.DataSource
 	data2, err = Apply("mongodb://localhost:27017")
 	if err != nil {
 		t.Error(err)
@@ -36,12 +36,12 @@ func TestApply(t *testing.T) {
 }
 
 type testRepo struct {
-	dataSources []tfx.DataAccess `group:"data_sources"`
+	dataSources []tfx.DataSource `group:"data_sources"`
 	data        *mongo.Client    `name:"mongo"`
 	test        *mongo.Client    `name:"test_mongo"`
 }
 
-func newRepo(dataSources []tfx.DataAccess, c *mongo.Client, test *mongo.Client) *testRepo {
+func newRepo(dataSources []tfx.DataSource, c *mongo.Client, test *mongo.Client) *testRepo {
 	return &testRepo{dataSources: dataSources, data: c, test: test}
 }
 

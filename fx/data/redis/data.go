@@ -13,12 +13,12 @@ type redisClient struct {
 	internal *client.Client
 }
 
-func NewData(opt *client.Options) (tfx.DataAccess, error) {
+func NewData(opt *client.Options) (tfx.DataSource, error) {
 	c := client.NewClient(opt)
 	return &redisClient{internal: c}, nil
 }
 
-func Apply(uri string) (tfx.DataAccess, error) {
+func Apply(uri string) (tfx.DataSource, error) {
 	opt, err := client.ParseURL(uri)
 	if err != nil {
 		return nil, err
@@ -28,13 +28,13 @@ func Apply(uri string) (tfx.DataAccess, error) {
 	}, nil
 }
 
-func (r *redisClient) Name(name string) tfx.DataAccess {
+func (r *redisClient) Name(name string) tfx.DataSource {
 	r.name = name
 	return r
 }
 
 func (r *redisClient) Provide() fx.Option {
-	data := fx.Provide(fx.Annotate(func() tfx.DataAccess {
+	data := fx.Provide(fx.Annotate(func() tfx.DataSource {
 		return r
 	}), fx.ResultTags(`group:"data_sources"`))
 	tag := `name:"redis"`

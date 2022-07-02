@@ -15,16 +15,16 @@ type Server interface {
 	RegisterService(constructors ...any)
 }
 
-type DataAccess interface {
+type DataSource interface {
 	Component
-	Name(name string) DataAccess
+	Name(name string) DataSource
 	Connect(ctx context.Context) error
 	Close(ctx context.Context) error
 }
 
 type DataSources struct {
 	fx.In
-	Items []DataAccess `group:"data_sources"`
+	Items []DataSource `group:"data_sources"`
 }
 
 type components struct {
@@ -40,4 +40,21 @@ func (c *components) Provide() fx.Option {
 		return c.Provide()
 	})
 	return fx.Options(opts...)
+}
+
+func (d *DataSources) Connect(ctx context.Context) error {
+	for _, dataSource := range d.Items {
+		if err := dataSource.Connect(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *DataSources) Close(ctx context.Context) error {
+	var err error
+	for _, dataSource := range d.Items {
+		err = dataSource.Close(ctx)
+	}
+	return err
 }

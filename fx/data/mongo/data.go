@@ -16,7 +16,7 @@ type mongoClient struct {
 	internal *mongo.Client
 }
 
-func NewData(opts ...*options.ClientOptions) (tfx.DataAccess, error) {
+func NewData(opts ...*options.ClientOptions) (tfx.DataSource, error) {
 	client, err := mongo.NewClient(opts...)
 	if err != nil {
 		return nil, err
@@ -26,7 +26,7 @@ func NewData(opts ...*options.ClientOptions) (tfx.DataAccess, error) {
 	}, nil
 }
 
-func Apply(uri string) (tfx.DataAccess, error) {
+func Apply(uri string) (tfx.DataSource, error) {
 	client, err := mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("uri: %s", uri))
@@ -36,13 +36,13 @@ func Apply(uri string) (tfx.DataAccess, error) {
 	}, nil
 }
 
-func (m *mongoClient) Name(name string) tfx.DataAccess {
+func (m *mongoClient) Name(name string) tfx.DataSource {
 	m.name = name
 	return m
 }
 
 func (m *mongoClient) Provide() fx.Option {
-	data := fx.Provide(fx.Annotate(func() tfx.DataAccess {
+	data := fx.Provide(fx.Annotate(func() tfx.DataSource {
 		return m
 	}, fx.ResultTags(`group:"data_sources"`)))
 	tag := `name:"mongo"`

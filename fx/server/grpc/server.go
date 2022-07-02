@@ -25,8 +25,9 @@ type Server struct {
 }
 
 type applicationContext struct {
-	services []fx.Option
-	state    *atomic.Int32
+	services    []fx.Option
+	dataSources *tfx.DataSources
+	state       *atomic.Int32
 }
 
 func (ctx *applicationContext) provide() fx.Option {
@@ -48,6 +49,10 @@ func (app *Server) Provide() fx.Option {
 }
 
 func (app *Server) onStart(ctx context.Context) error {
+	err := app.ctx.dataSources.Connect(ctx)
+	if err != nil {
+		return err
+	}
 	lis, err := net.Listen("tcp", app.opts.addr)
 	if err != nil {
 		return err
@@ -63,13 +68,15 @@ func (app *Server) onStart(ctx context.Context) error {
 
 func (app *Server) onStop(ctx context.Context) error {
 	app.srv.GracefulStop()
-	return nil
+	err := app.ctx.dataSources.Close(ctx)
+	return err
 }
 
-func runGrpcServer(app *Server, serviceModule serviceModule, lifecycle fx.Lifecycle) *grpc.Server {
+func runGrpcServer(app *Server, dataSources tfx.DataSources, serviceModule serviceModule, lifecycle fx.Lifecycle) *grpc.Server {
 	srv := grpc.NewServer(grpcServerOptions(app.opts)...)
 	serviceModule.register(srv)
 	app.srv = srv
+	app.ctx.dataSources = &dataSources
 	if app.opts.metrics != nil {
 		exportMetrics(app.opts.metrics.port, srv)
 	}
