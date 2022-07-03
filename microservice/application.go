@@ -28,20 +28,14 @@ func Bootstrap(options ...Option) {
 					log.Fatal("reading mongo conf error:", err)
 				}
 				for name, config := range mongoConf {
-					if name == "default" {
-						component, err := mongo.Apply(config.Uri)
-						if err != nil {
-							log.Fatal("init mongo error:", err)
-						}
-						components = append(components, component)
-					} else {
-						component, err := mongo.Apply(config.Uri)
-						if err != nil {
-							log.Fatal("init mongo error:", err)
-						}
-						component.Name(name)
-						components = append(components, component)
+					component, err := mongo.Apply(config.Uri)
+					if err != nil {
+						log.Fatal("init mongo error:", err)
 					}
+					if name != "default" {
+						component.Name(name)
+					}
+					components = append(components, component)
 				}
 			}
 		}
