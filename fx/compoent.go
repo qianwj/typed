@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/collection"
 	"go.uber.org/fx"
+	"sync"
 )
 
 type Component interface {
@@ -29,7 +30,8 @@ type DataSource interface {
 
 type DataSources struct {
 	fx.In
-	Items []DataSource `group:"data_sources"`
+	locker *sync.Mutex
+	Items  []DataSource `group:"data_sources"`
 }
 
 type components struct {
@@ -48,18 +50,23 @@ func (c *components) Provide() fx.Option {
 }
 
 func (d *DataSources) Connect(ctx context.Context) error {
+	d.locker.Lock()
 	for _, dataSource := range d.Items {
 		if err := dataSource.Connect(ctx); err != nil {
+			d.locker.Unlock()
 			return err
 		}
 	}
+	d.locker.Unlock()
 	return nil
 }
 
 func (d *DataSources) Close(ctx context.Context) error {
+	d.locker.Lock()
 	var err error
 	for _, dataSource := range d.Items {
 		err = dataSource.Close(ctx)
 	}
+	d.locker.Unlock()
 	return err
 }
