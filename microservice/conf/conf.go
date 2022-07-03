@@ -18,10 +18,10 @@ func Load(envPrefix string) error {
 	return err
 }
 
-func Unmarshal[T any](prefix string) (*T, error) {
-	t := new(T)
+func Unmarshal[T any](prefix string) (T, error) {
+	var t T
 	if err := loader.Unmarshal(prefix, t); err != nil {
-		return nil, err
+		return t, err
 	}
 	return t, nil
 }

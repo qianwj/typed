@@ -1,5 +1,9 @@
 package microservice
 
+import (
+	"github.com/qianwj/typed/collection/set"
+)
+
 type serverType int
 type loggerType int
 
@@ -16,7 +20,7 @@ type appConf struct {
 	serverType  serverType
 	loggerType  loggerType
 	enableData  bool
-	dataType    string
+	dataTypes   *set.Set[string]
 	enableCache bool
 	cacheType   string
 }
@@ -27,7 +31,7 @@ func defaultConf() *appConf {
 	return &appConf{
 		serverType:  serverGrpc,
 		enableData:  false,
-		dataType:    "",
+		dataTypes:   set.NewSet[string](),
 		enableCache: false,
 		cacheType:   "",
 	}
@@ -54,13 +58,13 @@ func Zap() Option {
 func Mongo() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataType = dataMongo
+		c.dataTypes.Add(dataMongo)
 	}
 }
 
 func Redis() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataType = dataRedis
+		c.dataTypes.Add(dataRedis)
 	}
 }

@@ -1,12 +1,13 @@
 package microservice
 
 import (
-	"go.uber.org/fx"
+	tfx "github.com/qianwj/typed/fx"
+	"github.com/qianwj/typed/fx/data/mongo"
 	"log"
 	"microservice/conf"
 )
 
-var beans = []fx.Option{}
+var components = []tfx.Component{}
 
 func Bootstrap(options ...Option) {
 	appConf := defaultConf()
@@ -15,7 +16,27 @@ func Bootstrap(options ...Option) {
 	}
 	err := conf.Load("")
 	if err != nil {
-		log.Fatal("reading configuration error", err)
+		log.Fatal("reading conf error", err)
 	}
-	conf.Load("data")
+	if appConf.enableData {
+		dataTypes := appConf.dataTypes
+		for _, dataType := range dataTypes.Slice() {
+			switch dataType {
+			case dataMongo:
+				mongoConf, err := conf.Unmarshal[map[string]mongo.Conf]("data.mongo")
+				if err != nil {
+					log.Fatal("reading mongo conf error:", err)
+				}
+				for name, config := range mongoConf {
+					if name == "default" {
+						component, err := mongo.Apply(config.Uri)
+						if err != nil {
+							log.Fatal("init mongo error:", err)
+						}
+						components = append(components, component)
+					}
+				}
+			}
+		}
+	}
 }
