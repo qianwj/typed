@@ -34,6 +34,13 @@ func Bootstrap(options ...Option) {
 							log.Fatal("init mongo error:", err)
 						}
 						components = append(components, component)
+					} else {
+						component, err := mongo.Apply(config.Uri)
+						if err != nil {
+							log.Fatal("init mongo error:", err)
+						}
+						component.Name(name)
+						components = append(components, component)
 					}
 				}
 			}
