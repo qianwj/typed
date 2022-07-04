@@ -13,7 +13,7 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/qianwj/typed/collection v0.0.7 // indirect
 	github.com/qianwj/typed/core v0.0.6 // indirect
-	github.com/qianwj/typed/fx v0.0.3 // indirect
+	github.com/qianwj/typed/fx v0.0.4-0.20220704032824-6baf23a9e3a2 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/dig v1.14.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect

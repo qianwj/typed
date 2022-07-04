@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	client "github.com/go-redis/redis"
+	"github.com/pkg/errors"
 	tfx "github.com/qianwj/typed/fx"
 	"go.uber.org/fx"
 )
@@ -11,6 +12,7 @@ import (
 type redisClient struct {
 	name     string
 	internal *client.Client
+	uri      string
 }
 
 func NewData(opt *client.Options) (tfx.DataSource, error) {
@@ -25,6 +27,7 @@ func Apply(uri string) (tfx.DataSource, error) {
 	}
 	return &redisClient{
 		internal: client.NewClient(opt),
+		uri:      uri,
 	}, nil
 }
 
@@ -51,7 +54,10 @@ func (r *redisClient) client() *client.Client {
 func (r *redisClient) Connect(ctx context.Context) error {
 	r.internal.WithContext(ctx)
 	res := r.internal.Ping()
-	return res.Err()
+	if res.Err() != nil {
+		return errors.Wrapf(res.Err(), "redis: connecting [%s] error", r.uri)
+	}
+	return nil
 }
 
 func (r *redisClient) Close(ctx context.Context) error {

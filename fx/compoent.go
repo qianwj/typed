@@ -11,11 +11,6 @@ type Component interface {
 	Provide() fx.Option
 }
 
-type OrderedComponent interface {
-	Component
-	Order() int
-}
-
 type Server interface {
 	Component
 	RegisterService(constructors ...any)

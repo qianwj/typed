@@ -2,7 +2,6 @@ package microservice
 
 import (
 	tfx "github.com/qianwj/typed/fx"
-	"github.com/qianwj/typed/fx/data/mongo"
 	"log"
 	"microservice/conf"
 )
@@ -19,25 +18,6 @@ func Bootstrap(options ...Option) {
 		log.Fatal("reading conf error", err)
 	}
 	if appConf.enableData {
-		dataTypes := appConf.dataTypes
-		for _, dataType := range dataTypes.Slice() {
-			switch dataType {
-			case dataMongo:
-				mongoConf, err := conf.Unmarshal[map[string]mongo.Conf]("data.mongo")
-				if err != nil {
-					log.Fatal("reading mongo conf error:", err)
-				}
-				for name, config := range mongoConf {
-					component, err := mongo.Apply(config.Uri)
-					if err != nil {
-						log.Fatal("init mongo error:", err)
-					}
-					if name != "default" {
-						component.Name(name)
-					}
-					components = append(components, component)
-				}
-			}
-		}
+
 	}
 }
