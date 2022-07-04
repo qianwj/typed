@@ -3,20 +3,19 @@ package microservice
 import (
 	"github.com/qianwj/typed/collection/set"
 	"github.com/qianwj/typed/fx/data"
+	"microservice/logger"
 )
 
 type serverType int
-type loggerType int
 
 const (
 	serverGrpc serverType = iota + 1
 	serverHttp
-	loggerZap = iota
 )
 
 type appConf struct {
 	serverType  serverType
-	loggerType  loggerType
+	loggerType  logger.Type
 	enableData  bool
 	dataTypes   *set.Set[string]
 	enableCache bool
@@ -49,7 +48,7 @@ func Http() Option {
 
 func Zap() Option {
 	return func(c *appConf) {
-		c.loggerType = loggerZap
+		c.loggerType = logger.Zap
 	}
 }
 

@@ -25,3 +25,7 @@ func Unmarshal[T any](prefix string) (*T, error) {
 	}
 	return t, nil
 }
+
+func GetString(key string) string {
+	return loader.String(key)
+}
