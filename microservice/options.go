@@ -2,6 +2,7 @@ package microservice
 
 import (
 	"github.com/qianwj/typed/collection/set"
+	"github.com/qianwj/typed/fx/data"
 )
 
 type serverType int
@@ -10,10 +11,7 @@ type loggerType int
 const (
 	serverGrpc serverType = iota + 1
 	serverHttp
-	loggerZap  = iota
-	dataMongo  = "mongo"
-	dataRedis  = "redis"
-	cacheRedis = "redis"
+	loggerZap = iota
 )
 
 type appConf struct {
@@ -58,13 +56,13 @@ func Zap() Option {
 func Mongo() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataTypes.Add(dataMongo)
+		c.dataTypes.Add(data.TypeMongo)
 	}
 }
 
 func Redis() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataTypes.Add(dataRedis)
+		c.dataTypes.Add(data.TypeRedis)
 	}
 }
