@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/knadh/koanf v1.4.2
 	github.com/qianwj/typed/collection v0.0.7
-	github.com/qianwj/typed/fx v0.0.4
+	github.com/qianwj/typed/fx v0.0.5-0.20220704061746-76e6dc56dbf7
 )
 
 require (
