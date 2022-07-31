@@ -1,4 +1,4 @@
-package typed_mongo
+package mongo
 
 import (
 	"context"
@@ -15,6 +15,10 @@ type testDoc struct {
 	Value int
 }
 
+func (t *testDoc) CollectionName() string {
+	return "test_doc"
+}
+
 func TestFindOne(t *testing.T) {
 	cli, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
@@ -27,7 +31,7 @@ func TestFindOne(t *testing.T) {
 		Name:  "abc",
 		Value: 1,
 	})
-	typedColl := NewTypedCollection[testDoc](db, "test_doc")
+	typedColl := NewTypedCollection[*testDoc](db, "test_doc")
 	res, err := typedColl.FindOne(context.TODO(), model.NewFilter().Eq("name", "abc"))
 	if err != nil {
 		t.Error(err)
@@ -50,7 +54,7 @@ func TestFind(t *testing.T) {
 		"name":  "abc",
 		"value": 1,
 	})
-	typedColl := NewTypedCollection[testDoc](db, "test_doc")
+	typedColl := NewTypedCollection[*testDoc](db, "test_doc")
 	res, err := typedColl.FindByDocIds(context.TODO(), []primitive.ObjectID{id})
 	if err != nil {
 		t.Error(err)

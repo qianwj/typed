@@ -1,4 +1,4 @@
-package typed_mongo
+package mongo
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/qianwj/typed/mongo/options"
 )
 
-func Aggregate[D any, U any](ctx context.Context, c TypedCollection[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
+func Aggregate[D model.Document, U any](ctx context.Context, c TypedCollection[D], pipeline model.AggregatePipeline, opts ...*options.AggregateOptions) ([]*U, error) {
 	if len(pipeline) == 0 {
 		return nil, errors.New("pipeline must not empty")
 	}

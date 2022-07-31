@@ -1,4 +1,4 @@
-package typed_mongo
+package mongo
 
 import (
 	"context"

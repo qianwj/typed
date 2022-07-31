@@ -21,3 +21,7 @@ type (
 	}
 	FieldType int32
 )
+
+type Document interface {
+	CollectionName() string
+}
