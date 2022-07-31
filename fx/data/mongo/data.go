@@ -3,7 +3,6 @@ package mongo
 import (
 	"context"
 	"fmt"
-	"github.com/Masterminds/log-go"
 	"github.com/pkg/errors"
 	tfx "github.com/qianwj/typed/fx"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,6 +13,7 @@ import (
 type mongoClient struct {
 	name     string
 	internal *mongo.Client
+	uri      string
 }
 
 func NewData(opts ...*options.ClientOptions) (tfx.DataSource, error) {
@@ -33,6 +33,7 @@ func Apply(uri string) (tfx.DataSource, error) {
 	}
 	return &mongoClient{
 		internal: client,
+		uri:      uri,
 	}, nil
 }
 
@@ -57,11 +58,13 @@ func (m *mongoClient) client() *mongo.Client {
 }
 
 func (m *mongoClient) Connect(ctx context.Context) error {
-	log.Info("connecting to mongo...")
-	return m.internal.Connect(ctx)
+	err := m.internal.Connect(ctx)
+	if err != nil {
+		return errors.Wrapf(err, "mongo: connecting [%s] error", m.uri)
+	}
+	return nil
 }
 
 func (m *mongoClient) Close(ctx context.Context) error {
-	log.Info("disconnecting mongo...")
 	return m.internal.Disconnect(ctx)
 }

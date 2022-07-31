@@ -2,23 +2,20 @@ package microservice
 
 import (
 	"github.com/qianwj/typed/collection/set"
+	"github.com/qianwj/typed/fx/data"
+	"microservice/logger"
 )
 
 type serverType int
-type loggerType int
 
 const (
 	serverGrpc serverType = iota + 1
 	serverHttp
-	loggerZap  = iota
-	dataMongo  = "mongo"
-	dataRedis  = "redis"
-	cacheRedis = "redis"
 )
 
 type appConf struct {
 	serverType  serverType
-	loggerType  loggerType
+	loggerType  logger.Type
 	enableData  bool
 	dataTypes   *set.Set[string]
 	enableCache bool
@@ -51,20 +48,20 @@ func Http() Option {
 
 func Zap() Option {
 	return func(c *appConf) {
-		c.loggerType = loggerZap
+		c.loggerType = logger.Zap
 	}
 }
 
 func Mongo() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataTypes.Add(dataMongo)
+		c.dataTypes.Add(data.TypeMongo)
 	}
 }
 
 func Redis() Option {
 	return func(c *appConf) {
 		c.enableData = true
-		c.dataTypes.Add(dataRedis)
+		c.dataTypes.Add(data.TypeRedis)
 	}
 }

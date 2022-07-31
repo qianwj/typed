@@ -1,15 +1,22 @@
 package microservice
 
 import (
+	"context"
 	tfx "github.com/qianwj/typed/fx"
-	"github.com/qianwj/typed/fx/data/mongo"
+	"github.com/qianwj/typed/fx/data"
+	"github.com/qianwj/typed/fx/server"
+	"go.uber.org/fx"
 	"log"
 	"microservice/conf"
 )
 
-var components = []tfx.Component{}
+var (
+	app        *tfx.Application
+	components = make([]tfx.Component, 0)
+)
 
-func Bootstrap(options ...Option) {
+func Bootstrap(options ...Option) *tfx.Application {
+	ctx := context.TODO()
 	appConf := defaultConf()
 	for _, option := range options {
 		option(appConf)
@@ -19,25 +26,25 @@ func Bootstrap(options ...Option) {
 		log.Fatal("reading conf error", err)
 	}
 	if appConf.enableData {
-		dataTypes := appConf.dataTypes
-		for _, dataType := range dataTypes.Slice() {
-			switch dataType {
-			case dataMongo:
-				mongoConf, err := conf.Unmarshal[map[string]mongo.Conf]("data.mongo")
-				if err != nil {
-					log.Fatal("reading mongo conf error:", err)
-				}
-				for name, config := range mongoConf {
-					component, err := mongo.Apply(config.Uri)
-					if err != nil {
-						log.Fatal("init mongo error:", err)
-					}
-					if name != "default" {
-						component.Name(name)
-					}
-					components = append(components, component)
-				}
-			}
+		dataSources, err := data.Bootstrap(ctx, *appConf.dataTypes)
+		if err != nil {
+			log.Fatal("init datasource error", err)
 		}
+		components = append(components, dataSources...)
 	}
+	servers, err := server.Bootstrap(ctx)
+	if err != nil {
+		log.Fatal("init server error", err)
+	}
+	components = append(components, servers...)
+	app = tfx.NewApp(components...)
+	return app
+}
+
+func Provide(components ...fx.Option) {
+	app.Provide(components...)
+}
+
+func Run() {
+	app.Run()
 }

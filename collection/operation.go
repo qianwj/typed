@@ -21,3 +21,17 @@ func MapResult[T, U any](input []T, convert func(t T) (U, error)) result.Result[
 	}
 	return result.Ok[[]U](res)
 }
+
+func Repeat(times int64, execute func(id int64) error) error {
+	id := int64(0)
+	for {
+		if err := execute(id); err != nil {
+			return err
+		}
+		id++
+		if id > times-1 {
+			break
+		}
+	}
+	return nil
+}
