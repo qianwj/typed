@@ -1,8 +1,6 @@
 package options
 
 import (
-	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -13,12 +11,31 @@ const (
 	asc  SortOrder = 1
 )
 
+const (
+	// NonTailable specifies that a cursor should close after retrieving the last data.
+	NonTailable CursorType = iota
+	// Tailable specifies that a cursor should not close when the last data is retrieved and can be resumed later.
+	Tailable
+	// TailableAwait specifies that a cursor should not close when the last data is retrieved and
+	// that it should block for a certain amount of time for new data before returning no data.
+	TailableAwait
+)
+
+const (
+	// Before specifies that findAndUpdate should return the document as it was before the update.
+	Before ReturnDocument = iota
+	// After specifies that findAndUpdate should return the document as it is after the update.
+	After
+)
+
 type (
-	SortOrder   int
-	SortOptions bson.D
-	SortOption  bson.E
-	Projection  bson.M
-	Page        struct {
+	CursorType     options.CursorType
+	ReturnDocument options.ReturnDocument
+	SortOrder      int
+	SortOptions    bson.D
+	SortOption     bson.E
+	Projection     bson.M
+	Page           struct {
 		pageNo   int64
 		pageSize int64
 	}
@@ -62,15 +79,9 @@ func NewPage(pageNo, pageSize int64) *Page {
 	}
 }
 
-func (p *Page) toOptions() (*options.FindOptions, error) {
-	if p.pageNo < 1 {
-		return nil, errors.New(fmt.Sprintf("invalid pageNo: %d", p.pageNo))
-	}
-	if p.pageSize < 1 {
-		return nil, errors.New(fmt.Sprintf("invalid pageSize: %d", p.pageSize))
-	}
+func (p *Page) toOptions() *options.FindOptions {
 	start := (p.pageNo - 1) * p.pageSize
-	return options.Find().SetSkip(start).SetLimit(p.pageSize), nil
+	return options.Find().SetSkip(start).SetLimit(p.pageSize)
 }
 
 type FindOptions struct {
@@ -114,14 +125,14 @@ func (f *FindOptions) SetComment(comment string) *FindOptions {
 }
 
 // SetCursorType sets the value for the CursorType field.
-func (f *FindOptions) SetCursorType(ct options.CursorType) *FindOptions {
-	f.internal.CursorType = &ct
+func (f *FindOptions) SetCursorType(ct CursorType) *FindOptions {
+	f.internal.CursorType = (*options.CursorType)(&ct)
 	return f
 }
 
 // SetHint sets the value for the Hint field.
-func (f *FindOptions) SetHint(hint interface{}) *FindOptions {
-	f.internal.Hint = hint
+func (f *FindOptions) SetHint(index string) *FindOptions {
+	f.internal.Hint = index
 	return f
 }
 
@@ -199,14 +210,11 @@ func (f *FindOptions) SetSkip(i int64) *FindOptions {
 	return f
 }
 
-func (f *FindOptions) SetPage(page *Page) (*FindOptions, error) {
-	opts, err := page.toOptions()
-	if err != nil {
-		return nil, err
-	}
+func (f *FindOptions) SetPage(page *Page) *FindOptions {
+	opts := page.toOptions()
 	f.internal.Skip = opts.Skip
 	f.internal.Limit = opts.Limit
-	return f, nil
+	return f
 }
 
 // SetSnapshot sets the value for the Snapshot field.
@@ -340,8 +348,8 @@ func (f *FindOneAndUpdateOptions) SetProjection(projection Projection) *FindOneA
 }
 
 // SetReturnDocument sets the value for the ReturnDocument field.
-func (f *FindOneAndUpdateOptions) SetReturnDocument(rd options.ReturnDocument) *FindOneAndUpdateOptions {
-	f.internal.ReturnDocument = &rd
+func (f *FindOneAndUpdateOptions) SetReturnDocument(rd ReturnDocument) *FindOneAndUpdateOptions {
+	f.internal.ReturnDocument = (*options.ReturnDocument)(&rd)
 	return f
 }
 
@@ -358,8 +366,8 @@ func (f *FindOneAndUpdateOptions) SetUpsert(b bool) *FindOneAndUpdateOptions {
 }
 
 // SetHint sets the value for the Hint field.
-func (f *FindOneAndUpdateOptions) SetHint(hint interface{}) *FindOneAndUpdateOptions {
-	f.internal.Hint = hint
+func (f *FindOneAndUpdateOptions) SetHint(index string) *FindOneAndUpdateOptions {
+	f.internal.Hint = index
 	return f
 }
 
