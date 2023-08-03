@@ -62,13 +62,28 @@ func (f *Filter) And(others ...*Filter) *Filter {
 	return f
 }
 
-func (f *Filter) Not(sub *Filter) *Filter {
-	f.put(operator.Not, bson.D(sub.entries))
+func (f *Filter) Not(key string, sub *Filter) *Filter {
+	f.put(key, bson.M{operator.Not: bson.D(sub.entries)})
+	return f
+}
+
+func (f *Filter) Nor(others ...*Filter) *Filter {
+	f.putAsArray(operator.Nor, others...)
 	return f
 }
 
 func (f *Filter) Or(others ...*Filter) *Filter {
 	f.putAsArray(operator.Or, others...)
+	return f
+}
+
+func (f *Filter) Expr(expression any) *Filter {
+	f.put(operator.Expr, expression)
+	return f
+}
+
+func (f *Filter) Mod(key string, divisor, remainder float64) *Filter {
+	f.put(key, bson.M{operator.Mod: []float64{divisor, remainder}})
 	return f
 }
 
@@ -79,6 +94,11 @@ func (f *Filter) Like(key string, matcher *regex.Matcher) *Filter {
 
 func (f *Filter) Where(key, expression string) *Filter {
 	f.put(key, bson.M{operator.Where: expression})
+	return f
+}
+
+func (f *Filter) All(key string, items []any) *Filter {
+	f.put(key, bson.M{operator.All: items})
 	return f
 }
 

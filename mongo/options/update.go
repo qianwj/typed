@@ -1,6 +1,10 @@
 package options
 
-import "go.mongodb.org/mongo-driver/mongo/options"
+import (
+	"github.com/qianwj/typed/mongo/model/filter"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
+	"go.mongodb.org/mongo-driver/mongo/options"
+)
 
 type UpdateOptions struct {
 	internal *options.UpdateOptions
@@ -78,4 +82,14 @@ func MergeUpdateOptions(opts ...*UpdateOptions) *options.UpdateOptions {
 	}
 
 	return uOpts
+}
+
+type ArrayFilters struct {
+	Items    []*filter.Filter
+	Registry *bsoncodec.Registry
+}
+
+func (af *ArrayFilters) Raw() options.ArrayFilters {
+	// complete this function
+	return options.ArrayFilters{}
 }
