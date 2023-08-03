@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/qianwj/typed/mongo/model"
+	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/options"
 	"github.com/samber/lo"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -12,7 +13,7 @@ import (
 
 type TypedCollection[D model.Document] interface {
 	collection() *mongo.Collection
-	FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (D, error)
+	FindOne(ctx context.Context, filter *filter.Filter, opts ...*options.FindOneOptions) (D, error)
 	Find(ctx context.Context, filter model.Filter, opts ...*options.FindOptions) ([]D, error)
 	FindByDocIds(ctx context.Context, ids []primitive.ObjectID, opts ...*options.FindOptions) ([]D, error)
 	CountDocuments(ctx context.Context, filter model.Filter, opts ...*options.CountOptions) (int64, error)
@@ -40,8 +41,8 @@ func (c typedCollectionImpl[D]) collection() *mongo.Collection {
 	return c.internal
 }
 
-func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter model.Filter, opts ...*options.FindOneOptions) (D, error) {
-	singleResult := c.internal.FindOne(ctx, filter, options.MergeFindOneOptions(opts...))
+func (c typedCollectionImpl[D]) FindOne(ctx context.Context, filter *filter.Filter, opts ...*options.FindOneOptions) (D, error) {
+	singleResult := c.internal.FindOne(ctx, filter.Marshal(), options.MergeFindOneOptions(opts...))
 	var doc D
 	if singleResult.Err() != nil {
 		return doc, singleResult.Err()
