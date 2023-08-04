@@ -7,7 +7,15 @@ type DocumentId interface {
 }
 
 type Number interface {
-	~int | ~int32 | ~int64 | ~float32 | ~float64
+	Int | Float
+}
+
+type Int interface {
+	~int | ~int32 | ~int64
+}
+
+type Float interface {
+	~float32 | ~float64
 }
 
 type Document[T DocumentId] interface {

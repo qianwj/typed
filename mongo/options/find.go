@@ -31,6 +31,7 @@ const (
 type (
 	CursorType     options.CursorType
 	ReturnDocument options.ReturnDocument
+	Collation      options.Collation
 	SortOrder      int
 	SortOptions    bson.D
 	SortOption     bson.E
@@ -113,8 +114,8 @@ func (f *FindOptions) SetBatchSize(i int32) *FindOptions {
 }
 
 // SetCollation sets the value for the Collation field.
-func (f *FindOptions) SetCollation(collation *options.Collation) *FindOptions {
-	f.internal.Collation = collation
+func (f *FindOptions) SetCollation(collation *Collation) *FindOptions {
+	f.internal.Collation = (*options.Collation)(collation)
 	return f
 }
 
@@ -137,7 +138,7 @@ func (f *FindOptions) SetHint(index string) *FindOptions {
 }
 
 // SetLet sets the value for the Let field.
-func (f *FindOptions) SetLet(let interface{}) *FindOptions {
+func (f *FindOptions) SetLet(let bson.M) *FindOptions {
 	f.internal.Let = let
 	return f
 }
@@ -149,7 +150,7 @@ func (f *FindOptions) SetLimit(i int64) *FindOptions {
 }
 
 // SetMax sets the value for the Max field.
-func (f *FindOptions) SetMax(max interface{}) *FindOptions {
+func (f *FindOptions) SetMax(max int) *FindOptions {
 	f.internal.Max = max
 	return f
 }
@@ -167,7 +168,7 @@ func (f *FindOptions) SetMaxTime(d time.Duration) *FindOptions {
 }
 
 // SetMin sets the value for the Min field.
-func (f *FindOptions) SetMin(min interface{}) *FindOptions {
+func (f *FindOptions) SetMin(min int) *FindOptions {
 	f.internal.Min = min
 	return f
 }
@@ -231,79 +232,8 @@ func (f *FindOptions) SetSort(sort SortOptions) *FindOptions {
 	return f
 }
 
-// MergeFindOptions combines the given FindOptions instances into a single FindOptions in a last-one-wins fashion.
-func MergeFindOptions(opts ...*FindOptions) *options.FindOptions {
-	fo := options.Find()
-	for _, o := range opts {
-		opt := o.internal
-		if opt == nil {
-			continue
-		}
-		if opt.AllowDiskUse != nil {
-			fo.AllowDiskUse = opt.AllowDiskUse
-		}
-		if opt.AllowPartialResults != nil {
-			fo.AllowPartialResults = opt.AllowPartialResults
-		}
-		if opt.BatchSize != nil {
-			fo.BatchSize = opt.BatchSize
-		}
-		if opt.Collation != nil {
-			fo.Collation = opt.Collation
-		}
-		if opt.Comment != nil {
-			fo.Comment = opt.Comment
-		}
-		if opt.CursorType != nil {
-			fo.CursorType = opt.CursorType
-		}
-		if opt.Hint != nil {
-			fo.Hint = opt.Hint
-		}
-		if opt.Let != nil {
-			fo.Let = opt.Let
-		}
-		if opt.Limit != nil {
-			fo.Limit = opt.Limit
-		}
-		if opt.Max != nil {
-			fo.Max = opt.Max
-		}
-		if opt.MaxAwaitTime != nil {
-			fo.MaxAwaitTime = opt.MaxAwaitTime
-		}
-		if opt.MaxTime != nil {
-			fo.MaxTime = opt.MaxTime
-		}
-		if opt.Min != nil {
-			fo.Min = opt.Min
-		}
-		if opt.NoCursorTimeout != nil {
-			fo.NoCursorTimeout = opt.NoCursorTimeout
-		}
-		if opt.OplogReplay != nil {
-			fo.OplogReplay = opt.OplogReplay
-		}
-		if opt.Projection != nil {
-			fo.Projection = opt.Projection
-		}
-		if opt.ReturnKey != nil {
-			fo.ReturnKey = opt.ReturnKey
-		}
-		if opt.ShowRecordID != nil {
-			fo.ShowRecordID = opt.ShowRecordID
-		}
-		if opt.Skip != nil {
-			fo.Skip = opt.Skip
-		}
-		if opt.Snapshot != nil {
-			fo.Snapshot = opt.Snapshot
-		}
-		if opt.Sort != nil {
-			fo.Sort = opt.Sort
-		}
-	}
-	return fo
+func (f *FindOptions) Raw() *options.FindOptions {
+	return f.internal
 }
 
 type FindOneAndUpdateOptions struct {
