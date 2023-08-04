@@ -163,3 +163,19 @@ func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 	}
 	return data, nil
 }
+
+func (f *FindExecutor[D, I]) ExecuteTo(ctx context.Context, data []any) error {
+	var (
+		err    error
+		cursor *raw.Cursor
+	)
+	if f.primary {
+		cursor, err = f.coll.primary.Find(ctx, f.filter, f.opts)
+	} else {
+		cursor, err = f.coll.secondary.Find(ctx, f.filter, f.opts)
+	}
+	if err != nil {
+		return err
+	}
+	return cursor.All(ctx, &data)
+}

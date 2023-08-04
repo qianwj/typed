@@ -126,3 +126,16 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 	}
 	return data, nil
 }
+
+func (f *FindOneExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
+	var res *raw.SingleResult
+	if f.primary {
+		res = f.coll.primary.FindOne(ctx, f.filter, f.opts)
+	} else {
+		res = f.coll.secondary.FindOne(ctx, f.filter, f.opts)
+	}
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return res.Decode(&data)
+}
