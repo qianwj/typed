@@ -5,6 +5,7 @@ import (
 	"github.com/qianwj/typed/mongo"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/update"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -12,7 +13,6 @@ import (
 type Collection[D model.Document[I], I model.DocumentId] struct {
 	primary   *raw.Collection
 	secondary *raw.Collection
-	//FindOneAndUpdate(ctx context.Context, m *model.FindOneAndUpdate, opts ...*options.FindOneAndUpdateOptions) (D, error)
 	//DeleteOne(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 	//DeleteMany(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 	//InitializeBulkWriteOp(opts ...*options.BulkWriteOptions) *BulkWriteOperation
@@ -77,62 +77,40 @@ func (c *Collection[D, I]) CountDocuments(filter *filter.Filter) *CountExecutor[
 	}
 }
 
-//
-//func (c typedCollectionImpl[D]) InsertOne(ctx context.Context, doc D) (primitive.ObjectID, error) {
-//	res, err := c.internal.InsertOne(ctx, doc)
-//	if err != nil {
-//		return primitive.NilObjectID, err
-//	}
-//	return res.InsertedID.(primitive.ObjectID), nil
-//}
-//
-//func (c typedCollectionImpl[D]) InsertMany(ctx context.Context, docs []D) ([]primitive.ObjectID, error) {
-//	res, err := c.internal.InsertMany(ctx, lo.ToAnySlice[D](docs))
-//	if err != nil {
-//		return nil, err
-//	}
-//	data, _ := lo.FromAnySlice[primitive.ObjectID](res.InsertedIDs)
-//	return data, nil
-//}
-//
-//func (c typedCollectionImpl[D]) FindOneAndUpdate(ctx context.Context, m *model.FindOneAndUpdate, opts ...*options.FindOneAndUpdateOptions) (D, error) {
-//	var t D
-//	if len(m.Update) == 0 {
-//		return t, errors.New("update is empty")
-//	}
-//	singleResult := c.internal.FindOneAndUpdate(ctx, m.Filter, m.Update, options.MergeFindOneAndUpdateOptions(opts...))
-//	if singleResult.Err() != nil {
-//		return t, singleResult.Err()
-//	}
-//	if err := singleResult.Decode(t); err != nil {
-//		return t, err
-//	}
-//	return t, nil
-//}
-//
+func (c *Collection[D, I]) FindOneAndUpdate(filter *filter.Filter, update *update.Update) *FindOneAndUpdateExecutor[D, I] {
+	return &FindOneAndUpdateExecutor[D, I]{
+		coll:   c,
+		filter: filter,
+		update: update,
+		opts:   options.FindOneAndUpdate(),
+	}
+}
 
-func (c *Collection[D, I]) UpdateOne(filter *filter.Filter) *UpdateExecutor[D, I] {
+func (c *Collection[D, I]) UpdateOne(filter *filter.Filter, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   c,
 		filter: filter,
+		update: update,
 		opts:   options.Update(),
 	}
 }
 
-func (c *Collection[D, I]) UpdateMany(filter *filter.Filter) *UpdateExecutor[D, I] {
+func (c *Collection[D, I]) UpdateMany(filter *filter.Filter, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   c,
 		filter: filter,
+		update: update,
 		multi:  true,
 		opts:   options.Update(),
 	}
 }
 
-func (c *Collection[D, I]) UpdateById(id I) *UpdateExecutor[D, I] {
+func (c *Collection[D, I]) UpdateById(id I, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
-		coll:  c,
-		docId: &id,
-		opts:  options.Update(),
+		coll:   c,
+		docId:  &id,
+		update: update,
+		opts:   options.Update(),
 	}
 }
 

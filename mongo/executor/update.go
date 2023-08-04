@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,6 +14,7 @@ import (
 type UpdateExecutor[D model.Document[I], I model.DocumentId] struct {
 	coll   *Collection[D, I]
 	filter *filter.Filter
+	update *update.Update
 	multi  bool
 	docId  *I
 	opts   *rawopts.UpdateOptions
@@ -55,10 +57,10 @@ func (u *UpdateExecutor[D, I]) Let(l bson.M) *UpdateExecutor[D, I] {
 
 func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*mongo.UpdateResult, error) {
 	if u.docId != nil {
-		return u.coll.primary.UpdateByID(ctx, u.docId, u.opts)
+		return u.coll.primary.UpdateByID(ctx, u.docId, u.update, u.opts)
 	}
 	if u.multi {
-		return u.coll.primary.UpdateMany(ctx, u.filter, u.opts)
+		return u.coll.primary.UpdateMany(ctx, u.filter, u.update, u.opts)
 	}
-	return u.coll.primary.UpdateOne(ctx, u.filter, u.opts)
+	return u.coll.primary.UpdateOne(ctx, u.filter, u.update, u.opts)
 }
