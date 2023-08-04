@@ -1,4 +1,4 @@
-package modify
+package update
 
 import (
 	"github.com/qianwj/typed/mongo/model/filter"
@@ -8,13 +8,11 @@ import (
 
 type TypedWriteModel interface {
 	WriteModel() mongo.WriteModel
-	Error() error
 }
 
 type TypedUpdateOneModel struct {
 	TypedWriteModel
 	internal *mongo.UpdateOneModel
-	err      error
 }
 
 // NewUpdateOne creates a new UpdateOneModel.
@@ -43,8 +41,8 @@ func (uom *TypedUpdateOneModel) Filter(filter *filter.Filter) *TypedUpdateOneMod
 
 // Update specifies the modifications to be made to the selected document. The value must be a document containing
 // update operators (https://docs.mongodb.com/manual/reference/operator/update/). It cannot be nil or empty.
-func (uom *TypedUpdateOneModel) Update(update Update) *TypedUpdateOneModel {
-	uom.internal.Update, uom.err = update.Marshal()
+func (uom *TypedUpdateOneModel) Update(update *Update) *TypedUpdateOneModel {
+	uom.internal.Update = update.Marshal()
 	return uom
 }
 
@@ -74,14 +72,9 @@ func (uom *TypedUpdateOneModel) WriteModel() mongo.WriteModel {
 	return uom.internal
 }
 
-func (uom *TypedUpdateOneModel) Error() error {
-	return uom.err
-}
-
 type TypedUpdateManyModel struct {
 	TypedWriteModel
 	internal *mongo.UpdateManyModel
-	err      error
 }
 
 // NewUpdateMany creates a new UpdateManyModel.
@@ -110,7 +103,7 @@ func (umm *TypedUpdateManyModel) SetFilter(filter *filter.Filter) *TypedUpdateMa
 // SetUpdate specifies the modifications to be made to the selected documents. The value must be a document containing
 // update operators (https://www.mongodb.com/docs/manual/reference/operator/update/). It cannot be nil or empty.
 func (umm *TypedUpdateManyModel) SetUpdate(update Update) *TypedUpdateManyModel {
-	umm.internal.Update, umm.err = update.Marshal()
+	umm.internal.Update = update.Marshal()
 	return umm
 }
 
@@ -138,8 +131,4 @@ func (umm *TypedUpdateManyModel) SetUpsert(upsert bool) *TypedUpdateManyModel {
 
 func (umm *TypedUpdateManyModel) WriteModel() mongo.WriteModel {
 	return umm.internal
-}
-
-func (umm *TypedUpdateManyModel) Error() error {
-	return umm.err
 }

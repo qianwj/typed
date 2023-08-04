@@ -5,6 +5,7 @@ package operator
 const (
 	// Fields
 	CurrentDate = "$currentDate"
+	Timestamp   = "$timestamp"
 	Inc         = "$inc"
 	Min         = "$min"
 	Max         = "$max"

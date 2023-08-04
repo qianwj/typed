@@ -7,6 +7,7 @@ import (
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
+	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
@@ -14,7 +15,7 @@ type FindExecutor[D model.Document[I], I model.DocumentId] struct {
 	coll    *Collection[D, I]
 	filter  *filter.Filter
 	primary bool
-	opts    *options.FindOptions
+	opts    *rawopts.FindOptions
 }
 
 func (f *FindExecutor[D, I]) Primary() *FindExecutor[D, I] {
@@ -42,7 +43,7 @@ func (f *FindExecutor[D, I]) BatchSize(i int32) *FindExecutor[D, I] {
 
 // Collation sets the value for the Collation field.
 func (f *FindExecutor[D, I]) Collation(collation *options.Collation) *FindExecutor[D, I] {
-	f.opts.SetCollation(collation)
+	f.opts.SetCollation((*rawopts.Collation)(collation))
 	return f
 }
 
@@ -54,7 +55,7 @@ func (f *FindExecutor[D, I]) Comment(comment string) *FindExecutor[D, I] {
 
 // CursorType sets the value for the CursorType field.
 func (f *FindExecutor[D, I]) CursorType(ct options.CursorType) *FindExecutor[D, I] {
-	f.opts.SetCursorType(ct)
+	f.opts.SetCursorType(rawopts.CursorType(ct))
 	return f
 }
 
@@ -105,7 +106,7 @@ func (f *FindExecutor[D, I]) Min(min int) *FindExecutor[D, I] {
 }
 
 // NoCursorTimeout sets the value for the NoCursorTimeout field.
-func (f *FindExecutor[D, I]) SetNoCursorTimeout() *FindExecutor[D, I] {
+func (f *FindExecutor[D, I]) NoCursorTimeout() *FindExecutor[D, I] {
 	f.opts.SetNoCursorTimeout(true)
 	return f
 }
@@ -145,14 +146,14 @@ func (f *FindExecutor[D, I]) Snapshot() *FindExecutor[D, I] {
 
 func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 	var (
-		cursor *raw.Cursor
-		err    error
 		data   []D
+		err    error
+		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.coll.primary.Find(ctx, f.filter, f.opts.Raw())
+		cursor, err = f.coll.primary.Find(ctx, f.filter, f.opts)
 	} else {
-		cursor, err = f.coll.secondary.Find(ctx, f.filter, f.opts.Raw())
+		cursor, err = f.coll.secondary.Find(ctx, f.filter, f.opts)
 	}
 	if err != nil {
 		return nil, err

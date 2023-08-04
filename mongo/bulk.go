@@ -2,7 +2,7 @@ package mongo
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/model/modify"
+	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -17,7 +17,7 @@ func newBulkWriteOperation(coll *mongo.Collection, opts ...*options.BulkWriteOpt
 	return &BulkWriteOperation{coll: coll, opts: opts}
 }
 
-func (b *BulkWriteOperation) UpdateOne(update *modify.TypedUpdateOneModel) *BulkWriteOperation {
+func (b *BulkWriteOperation) UpdateOne(update *update.TypedUpdateOneModel) *BulkWriteOperation {
 	b.models = append(b.models, update.WriteModel())
 	return b
 }
