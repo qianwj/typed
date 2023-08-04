@@ -1,23 +1,23 @@
 package model
 
-import (
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
+import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type (
-	Filter     bson.M
-	Update     bson.M
-	UpdateSome struct {
-		Filter Filter
-		Update Update
-	}
-	FindOneAndUpdate UpdateSome
-	UpdateOne        UpdateSome
-	UpdateMany       UpdateSome
-	UpdateById       struct {
-		Id     primitive.ObjectID
-		Update Update
-	}
-	FieldType int32
-)
+type DocumentId interface {
+	~string | Number | primitive.ObjectID
+}
+
+type Number interface {
+	Int | Float
+}
+
+type Int interface {
+	~int | ~int32 | ~int64
+}
+
+type Float interface {
+	~float32 | ~float64
+}
+
+type Document[T DocumentId] interface {
+	GetId() T
+}
