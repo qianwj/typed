@@ -52,9 +52,10 @@ func (b *BulkWriteExecutor[D, I]) UpdateMany(update *update.TypedUpdateManyModel
 	return b
 }
 
-func (b *BulkWriteExecutor[D, I]) Execute(ctx context.Context) (*mongo.BulkWriteResult, error) {
+func (b *BulkWriteExecutor[D, I]) Execute(ctx context.Context) (*model.BulkWriteResult[I], error) {
 	if len(b.models) == 0 {
-		return &mongo.BulkWriteResult{}, nil
+		return &model.BulkWriteResult[I]{}, nil
 	}
-	return b.coll.primary.BulkWrite(ctx, b.models)
+	res, err := b.coll.primary.BulkWrite(ctx, b.models)
+	return model.FromBulkWriteResult[I](res), err
 }

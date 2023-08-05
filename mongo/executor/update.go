@@ -55,12 +55,17 @@ func (u *UpdateExecutor[D, I]) Let(l bson.M) *UpdateExecutor[D, I] {
 	return u
 }
 
-func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*mongo.UpdateResult, error) {
+func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult[I], error) {
+	var (
+		err error
+		res *mongo.UpdateResult
+	)
 	if u.docId != nil {
-		return u.coll.primary.UpdateByID(ctx, u.docId, u.update, u.opts)
+		res, err = u.coll.primary.UpdateByID(ctx, u.docId, u.update.Marshal(), u.opts)
+	} else if u.multi {
+		res, err = u.coll.primary.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+	} else {
+		res, err = u.coll.primary.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
 	}
-	if u.multi {
-		return u.coll.primary.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
-	}
-	return u.coll.primary.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+	return model.FromUpdateResult[I](res), err
 }
