@@ -1,10 +1,41 @@
 package filter
 
 import (
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/operator"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+func Eq(key string, val any) *Filter {
+	return New().Eq(key, val)
+}
+
+func Gt(key string, val any) *Filter {
+	return New().Gt(key, val)
+}
+
+func Gte(key string, val any) *Filter {
+	return New().Gte(key, val)
+}
+
+func In(key string, items []any) *Filter {
+	return New().In(key, items)
+}
+
+func Lt(key string, val any) *Filter {
+	return New().Lt(key, val)
+}
+
+func Lte(key string, val any) *Filter {
+	return New().Lte(key, val)
+}
+
+func Nin(key string, items []any) *Filter {
+	return New().Nin(key, items)
+}
+
+func Ne(key string, val any) *Filter {
+	return New().Ne(key, val)
+}
 
 func (f *Filter) Eq(key string, val any) *Filter {
 	f.put(key, val)
@@ -43,35 +74,5 @@ func (f *Filter) Nin(key string, items []any) *Filter {
 
 func (f *Filter) Ne(key string, val any) *Filter {
 	f.put(key, bson.M{operator.Ne: val})
-	return f
-}
-
-func (f *Filter) Exists(key string, val bool) *Filter {
-	f.put(key, bson.M{operator.Exists: val})
-	return f
-}
-
-func (f *Filter) Type(key string, val *model.DataType) *Filter {
-	f.put(key, bson.M{operator.Type: val.Order()})
-	return f
-}
-
-func (f *Filter) And(others ...*Filter) *Filter {
-	f.putAsArray(operator.And, others...)
-	return f
-}
-
-func (f *Filter) Not(key string, sub *Filter) *Filter {
-	f.put(key, bson.M{operator.Not: bson.D(sub.entries)})
-	return f
-}
-
-func (f *Filter) Nor(others ...*Filter) *Filter {
-	f.putAsArray(operator.Nor, others...)
-	return f
-}
-
-func (f *Filter) Or(others ...*Filter) *Filter {
-	f.putAsArray(operator.Or, others...)
 	return f
 }

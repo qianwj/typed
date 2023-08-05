@@ -22,12 +22,16 @@ const (
 	Type   = "$type"
 
 	// Evaluation
-	Expr       = "$expr"
-	JsonSchema = "$jsonSchema"
-	Mod        = "$mod"
-	Regex      = "$regex"
-	Text       = "$text"
-	Where      = "$where"
+	Expr               = "$expr"
+	JsonSchema         = "$jsonSchema"
+	Mod                = "$mod"
+	Regex              = "$regex"
+	Text               = "$text"
+	Where              = "$where"
+	Search             = "$search"
+	Language           = "$language"
+	CaseSensitive      = "$caseSensitive"
+	DiacriticSensitive = "$diacriticSensitive"
 
 	// Geo spatial
 	GeoIntersects = "$geoIntersects"
