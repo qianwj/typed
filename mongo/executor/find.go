@@ -151,9 +151,9 @@ func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.coll.primary.Find(ctx, f.filter, f.opts)
+		cursor, err = f.coll.primary.Find(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		cursor, err = f.coll.secondary.Find(ctx, f.filter, f.opts)
+		cursor, err = f.coll.secondary.Find(ctx, f.filter.Marshal(), f.opts)
 	}
 	if err != nil {
 		return nil, err

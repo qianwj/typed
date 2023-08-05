@@ -1,7 +1,6 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
@@ -31,40 +30,48 @@ func Dec(field string, delta int) *Update {
 	return New().Dec(field, delta)
 }
 
-func MinNumber[N model.Number](field string, cur N) *Update {
-	switch cur.(type) {
-	case int32:
-		return New().MinInt32(field, int32(cur))
-	case int:
-		return New().MinInt(field, int(cur))
-	case int64:
-		return New().MinInt64(field, int64(cur))
-	case float32:
-		return New().MinFloat32(field, float32(cur))
-	case float64:
-		return New().MinFloat64(field, float64(cur))
-	}
-	return New()
+func MinInt32(field string, cur int32) *Update {
+	return New().MinInt32(field, cur)
+}
+
+func MinInt(field string, cur int) *Update {
+	return New().MinInt(field, cur)
+}
+
+func MinInt64(field string, cur int64) *Update {
+	return New().MinInt64(field, cur)
+}
+
+func MinFloat32(field string, cur float32) *Update {
+	return New().MinFloat32(field, cur)
+}
+
+func MinFloat64(field string, cur float64) *Update {
+	return New().MinFloat64(field, cur)
 }
 
 func MinTime(field string, time time.Time) *Update {
 	return New().MinTime(field, time)
 }
 
-func MaxNumber[N model.Number](field string, cur N) *Update {
-	switch cur.(type) {
-	case int32:
-		return New().MaxInt32(field, int32(cur))
-	case int:
-		return New().MaxInt(field, int(cur))
-	case int64:
-		return New().MaxInt64(field, int64(cur))
-	case float32:
-		return New().MaxFloat32(field, float32(cur))
-	case float64:
-		return New().MaxFloat64(field, float64(cur))
-	}
-	return New()
+func MaxInt32(field string, cur int32) *Update {
+	return New().MaxInt32(field, cur)
+}
+
+func MaxInt(field string, cur int) *Update {
+	return New().MaxInt(field, cur)
+}
+
+func MaxInt64(field string, cur int64) *Update {
+	return New().MaxInt64(field, cur)
+}
+
+func MaxFloat32(field string, cur float32) *Update {
+	return New().MaxFloat32(field, cur)
+}
+
+func MaxFloat64(field string, cur float64) *Update {
+	return New().MaxFloat64(field, cur)
 }
 
 func MaxTime(field string, time time.Time) *Update {

@@ -94,12 +94,12 @@ func (f *FindOneAndUpdateExecutor[D, I]) Let(l bson.M) *FindOneAndUpdateExecutor
 
 func (f *FindOneAndUpdateExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 	res := f.coll.primary.FindOneAndUpdate(ctx, f.filter.Marshal(), f.update.Marshal(), f.opts)
-	if res.Err() != nil {
-		return nil, res.Err()
-	}
 	var data D
+	if res.Err() != nil {
+		return data, res.Err()
+	}
 	if err := res.Decode(&data); err != nil {
-		return nil, err
+		return data, err
 	}
 	return data, nil
 }
