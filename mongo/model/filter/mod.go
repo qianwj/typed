@@ -2,7 +2,6 @@ package filter
 
 import (
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/regex"
 )
 
 func Eq(key string, val any) *Filter {
@@ -59,32 +58,4 @@ func Nor(others ...*Filter) *Filter {
 
 func Or(others ...*Filter) *Filter {
 	return New().Or(others...)
-}
-
-func Expr(expression any) *Filter {
-	return New().Expr(expression)
-}
-
-func Mod(key string, divisor, remainder float64) *Filter {
-	return New().Mod(key, divisor, remainder)
-}
-
-func Like(key string, matcher *regex.Matcher) *Filter {
-	return New().Like(key, matcher)
-}
-
-func Where(key, expression string) *Filter {
-	return New().Where(key, expression)
-}
-
-func All(key string, items []any) *Filter {
-	return New().All(key, items)
-}
-
-func Size(key string, size int64) *Filter {
-	return New().Size(key, size)
-}
-
-func ElemMatch(sub *Filter) *Filter {
-	return New().ElemMatch(sub)
 }

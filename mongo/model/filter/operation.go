@@ -3,7 +3,6 @@ package filter
 import (
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/operator"
-	"github.com/qianwj/typed/mongo/model/regex"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -74,40 +73,5 @@ func (f *Filter) Nor(others ...*Filter) *Filter {
 
 func (f *Filter) Or(others ...*Filter) *Filter {
 	f.putAsArray(operator.Or, others...)
-	return f
-}
-
-func (f *Filter) Expr(expression any) *Filter {
-	f.put(operator.Expr, expression)
-	return f
-}
-
-func (f *Filter) Mod(key string, divisor, remainder float64) *Filter {
-	f.put(key, bson.M{operator.Mod: []float64{divisor, remainder}})
-	return f
-}
-
-func (f *Filter) Like(key string, matcher *regex.Matcher) *Filter {
-	f.put(key, bson.M{operator.Regex: matcher.Compile()})
-	return f
-}
-
-func (f *Filter) Where(key, expression string) *Filter {
-	f.put(key, bson.M{operator.Where: expression})
-	return f
-}
-
-func (f *Filter) All(key string, items []any) *Filter {
-	f.put(key, bson.M{operator.All: items})
-	return f
-}
-
-func (f *Filter) Size(key string, size int64) *Filter {
-	f.put(key, bson.M{operator.Size: size})
-	return f
-}
-
-func (f *Filter) ElemMatch(sub *Filter) *Filter {
-	f.put(operator.ElemMatch, bson.D(sub.entries))
 	return f
 }

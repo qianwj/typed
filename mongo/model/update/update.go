@@ -20,6 +20,7 @@ type Update struct {
 	pop         bson.M
 	pull        bson.M
 	pullAll     bson.M
+	bit         bson.M
 }
 
 func New() *Update {
@@ -38,6 +39,7 @@ func New() *Update {
 		pop:         bson.M{},
 		pull:        bson.M{},
 		pullAll:     bson.M{},
+		bit:         bson.M{},
 	}
 }
 
@@ -85,6 +87,9 @@ func (u *Update) Marshal() bson.M {
 	}
 	if len(u.pullAll) > 0 {
 		res[operator.PullAll] = u.pullAll
+	}
+	if len(u.bit) > 0 {
+		res[operator.Bit] = u.bit
 	}
 	return res
 }
