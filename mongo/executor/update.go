@@ -60,7 +60,7 @@ func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*mongo.UpdateResult
 		return u.coll.primary.UpdateByID(ctx, u.docId, u.update, u.opts)
 	}
 	if u.multi {
-		return u.coll.primary.UpdateMany(ctx, u.filter, u.update, u.opts)
+		return u.coll.primary.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
 	}
-	return u.coll.primary.UpdateOne(ctx, u.filter, u.update, u.opts)
+	return u.coll.primary.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
 }

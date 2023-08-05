@@ -102,5 +102,5 @@ func (a *AggregateExecutor) ExecuteTo(ctx context.Context, result interface{}) e
 	if err != nil {
 		return err
 	}
-	return cursor.All(ctx, result)
+	return cursor.All(ctx, &result)
 }

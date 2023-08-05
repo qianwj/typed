@@ -12,9 +12,6 @@ import (
 type Collection[D model.Document[I], I model.DocumentId] struct {
 	primary   *raw.Collection
 	secondary *raw.Collection
-	//DeleteOne(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
-	//DeleteMany(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
-	//InitializeBulkWriteOp(opts ...*options.BulkWriteOptions) *BulkWriteOperation
 }
 
 func FromDatabase[D model.Document[I], I model.DocumentId](db *Database, name string, opts ...*options.CollectionOptions) *Collection[D, I] {
@@ -113,17 +110,29 @@ func (c *Collection[D, I]) UpdateById(id I, update *update.Update) *UpdateExecut
 	}
 }
 
-//func (c typedCollectionImpl[D]) DeleteOne(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
-//	return c.internal.DeleteOne(ctx, filter, options.MergeDeleteOptions(opts...))
-//}
-//
-//func (c typedCollectionImpl[D]) DeleteMany(ctx context.Context, filter model.Filter, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
-//	return c.internal.DeleteMany(ctx, filter, options.MergeDeleteOptions(opts...))
-//}
-//
-//func (c typedCollectionImpl[D]) InitializeBulkWriteOp(opts ...*options.BulkWriteOptions) *BulkWriteOperation {
-//	return newBulkWriteOperation(c.internal, opts...)
-//}
+func (c *Collection[D, I]) DeleteOne(filter *filter.Filter) *DeleteExecutor[D, I] {
+	return &DeleteExecutor[D, I]{
+		coll:   c,
+		filter: filter,
+		opts:   options.Delete(),
+	}
+}
+
+func (c *Collection[D, I]) DeleteMany(filter *filter.Filter) *DeleteExecutor[D, I] {
+	return &DeleteExecutor[D, I]{
+		coll:   c,
+		filter: filter,
+		multi:  true,
+		opts:   options.Delete(),
+	}
+}
+
+func (c *Collection[D, I]) BulkWrite() *BulkWriteExecutor[D, I] {
+	return &BulkWriteExecutor[D, I]{
+		coll: c,
+		opts: options.BulkWrite(),
+	}
+}
 
 func toAny[T any](arr []T) []any {
 	res := make([]any, len(arr))
