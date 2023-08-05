@@ -1,6 +1,7 @@
 package options
 
 import (
+	"github.com/qianwj/typed/mongo/model/operator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -8,6 +9,7 @@ import (
 const (
 	desc SortOrder = -1
 	asc  SortOrder = 1
+	meta SortOrder = 9999
 )
 
 const (
@@ -43,6 +45,12 @@ func Ascending(field string) SortOptions {
 
 func Descending(field string) SortOptions {
 	return SortOptions{bson.E{Key: field, Value: desc}}
+}
+
+func Meta(field string) SortOptions {
+	return SortOptions{
+		{Key: field, Value: bson.M{operator.Meta: "textScore"}},
+	}
 }
 
 func Need(field string) Projection {

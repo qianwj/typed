@@ -2,6 +2,7 @@ package executor
 
 import (
 	"github.com/qianwj/typed/mongo/model"
+	"github.com/qianwj/typed/mongo/model/aggregate/pipe"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/model/update"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -126,5 +127,13 @@ func (c *Collection[D, I]) BulkWrite() *BulkWriteExecutor[D, I] {
 	return &BulkWriteExecutor[D, I]{
 		coll: c,
 		opts: options.BulkWrite(),
+	}
+}
+
+func (c *Collection[D, I]) Aggregate(pipe *pipe.Pipeline) *AggregateExecutor[D, I] {
+	return &AggregateExecutor[D, I]{
+		coll: c,
+		pipe: pipe,
+		opts: options.Aggregate(),
 	}
 }

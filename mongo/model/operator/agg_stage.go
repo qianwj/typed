@@ -22,6 +22,7 @@ const (
 	BucketAuto     = "$bucketAuto"
 	CollStats      = "$collStats"
 	Count          = "$count"
+	Documents      = "$documents"
 	Facet          = "$facet"
 	GeoNear        = "$geoNear"
 	GraphLookup    = "$graphLookup"

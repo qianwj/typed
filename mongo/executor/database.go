@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"github.com/qianwj/typed/mongo/model/aggregate"
+	"github.com/qianwj/typed/mongo/model/aggregate/pipe"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -35,8 +35,8 @@ func (d *Database) Secondary(coll string, opts ...*options.CollectionOptions) *r
 	return d.secondary.Collection(coll, opts...)
 }
 
-func (d *Database) Aggregate(pipe *aggregate.Pipeline) *AggregateExecutor {
-	return &AggregateExecutor{
+func (d *Database) Aggregate(pipe *pipe.Pipeline) *DatabaseAggregateExecutor {
+	return &DatabaseAggregateExecutor{
 		db:   d,
 		pipe: pipe,
 		opts: options.Aggregate(),
