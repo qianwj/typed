@@ -1,17 +1,9 @@
-/*
- Copyright 2023 The typed Authors.
- Licensed under the Apache License, Version 2.0 (the "License");
- you may not use this file except in compliance with the License.
- You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
- Unless required by applicable law or agreed to in writing, software
- distributed under the License is distributed on an "AS IS" BASIS,
- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- See the License for the specific language governing permissions and
- limitations under the License.
-*/
-
 package filter
+
+import (
+	"github.com/qianwj/typed/mongo/model"
+	"github.com/qianwj/typed/mongo/model/regex"
+)
 
 func Eq(key string, val any) *Filter {
 	return New().Eq(key, val)
@@ -43,4 +35,56 @@ func Nin(key string, items []any) *Filter {
 
 func Ne(key string, val any) *Filter {
 	return New().Ne(key, val)
+}
+
+func Exists(key string, val bool) *Filter {
+	return New().Exists(key, val)
+}
+
+func Type(key string, val *model.DataType) *Filter {
+	return New().Type(key, val)
+}
+
+func And(others ...*Filter) *Filter {
+	return New().And(others...)
+}
+
+func Not(key string, sub *Filter) *Filter {
+	return New().Not(key, sub)
+}
+
+func Nor(others ...*Filter) *Filter {
+	return New().Nor(others...)
+}
+
+func Or(others ...*Filter) *Filter {
+	return New().Or(others...)
+}
+
+func Expr(expression any) *Filter {
+	return New().Expr(expression)
+}
+
+func Mod(key string, divisor, remainder float64) *Filter {
+	return New().Mod(key, divisor, remainder)
+}
+
+func Like(key string, matcher *regex.Matcher) *Filter {
+	return New().Like(key, matcher)
+}
+
+func Where(key, expression string) *Filter {
+	return New().Where(key, expression)
+}
+
+func All(key string, items []any) *Filter {
+	return New().All(key, items)
+}
+
+func Size(key string, size int64) *Filter {
+	return New().Size(key, size)
+}
+
+func ElemMatch(sub *Filter) *Filter {
+	return New().ElemMatch(sub)
 }
