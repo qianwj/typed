@@ -2,9 +2,9 @@ package mongo
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/executor"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/x/mongo/driver/connstring"
 )
 
@@ -31,17 +31,6 @@ func newClient(ctx context.Context, uri string, opts ...*options.ClientOptions) 
 	}, nil
 }
 
-func (c *Client) DefaultDatabase(opts ...*options.DatabaseOptions) *Database {
-	db := Database{
-		primary: c.internal.Database(c.defaultDatabaseName),
-	}
-	if c.clusterMode {
-		db.secondary = c.internal.Database(
-			c.defaultDatabaseName,
-			append(opts, options.Database().SetReadPreference(readpref.Secondary()))...,
-		)
-	} else {
-		db.secondary = db.primary
-	}
-	return &db
+func (c *Client) DefaultDatabase(opts ...*options.DatabaseOptions) *executor.Database {
+	return executor.NewDatabase(c.internal, c.defaultDatabaseName, c.clusterMode, opts...)
 }

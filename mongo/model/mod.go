@@ -21,3 +21,8 @@ type Float interface {
 type Document[T DocumentId] interface {
 	GetId() T
 }
+
+type Pair[V any] struct {
+	Key   string
+	Value V
+}

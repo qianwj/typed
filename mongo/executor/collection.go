@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/model/update"
@@ -18,7 +17,7 @@ type Collection[D model.Document[I], I model.DocumentId] struct {
 	//InitializeBulkWriteOp(opts ...*options.BulkWriteOptions) *BulkWriteOperation
 }
 
-func FromDatabase[D model.Document[I], I model.DocumentId](db *mongo.Database, name string, opts ...*options.CollectionOptions) *Collection[D, I] {
+func FromDatabase[D model.Document[I], I model.DocumentId](db *Database, name string, opts ...*options.CollectionOptions) *Collection[D, I] {
 	return &Collection[D, I]{
 		primary:   db.Primary(name, opts...),
 		secondary: db.Secondary(name, opts...),
