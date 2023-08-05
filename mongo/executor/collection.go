@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/model/update"
@@ -21,24 +20,20 @@ func FromDatabase[D model.Document[I], I model.DocumentId](db *Database, name st
 	}
 }
 
-func (c *Collection[D, I]) InsertOne(ctx context.Context, doc *D) (I, error) {
-	res, err := c.primary.InsertOne(ctx, doc)
-	var id I
-	if err != nil {
-		return id, err
+func (c *Collection[D, I]) InsertOne(doc D) *InsertOneExecutor[D, I] {
+	return &InsertOneExecutor[D, I]{
+		coll: c,
+		data: doc,
+		opts: options.InsertOne(),
 	}
-	return res.InsertedID.(I), nil
 }
 
-func (c *Collection[D, I]) InsertMany(ctx context.Context, docs []*D) ([]I, error) {
-	res, err := c.primary.InsertMany(ctx, toAny(docs))
-	if err != nil {
-		return nil, err
+func (c *Collection[D, I]) InsertMany(docs ...D) *InsertManyExecutor[D, I] {
+	return &InsertManyExecutor[D, I]{
+		coll: c,
+		data: toAny(docs),
+		opts: options.InsertMany(),
 	}
-
-	return mapTo(res.InsertedIDs, func(i any) I {
-		return i.(I)
-	}), nil
 }
 
 func (c *Collection[D, I]) FindOne(filter *filter.Filter) *FindOneExecutor[D, I] {
@@ -132,20 +127,4 @@ func (c *Collection[D, I]) BulkWrite() *BulkWriteExecutor[D, I] {
 		coll: c,
 		opts: options.BulkWrite(),
 	}
-}
-
-func toAny[T any](arr []T) []any {
-	res := make([]any, len(arr))
-	for i, t := range arr {
-		res[i] = t
-	}
-	return res
-}
-
-func mapTo[T, U any](arr []T, convert func(t T) U) []U {
-	res := make([]U, len(arr))
-	for i, t := range arr {
-		res[i] = convert(t)
-	}
-	return res
 }
