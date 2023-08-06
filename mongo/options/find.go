@@ -7,9 +7,8 @@ import (
 )
 
 const (
-	desc SortOrder = -1
-	asc  SortOrder = 1
-	meta SortOrder = 9999
+	Desc SortOrder = -1
+	Asc  SortOrder = 1
 )
 
 const (
@@ -40,11 +39,11 @@ func (opts SortOptions) Append(next SortOptions) SortOptions {
 }
 
 func Ascending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: asc}}
+	return SortOptions{bson.E{Key: field, Value: Asc}}
 }
 
 func Descending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: desc}}
+	return SortOptions{bson.E{Key: field, Value: Desc}}
 }
 
 func Meta(field string) SortOptions {

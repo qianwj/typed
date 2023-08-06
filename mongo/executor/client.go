@@ -30,3 +30,10 @@ func (c *Client) DefaultDatabase() *builder.DatabaseBuilder {
 func (c *Client) Database(name string) *builder.DatabaseBuilder {
 	return builder.NewDatabase(c.internal, name)
 }
+
+func (c *Client) Transaction() *TxSessionBuilder {
+	return &TxSessionBuilder{
+		cli:  c,
+		opts: options.Session(),
+	}
+}

@@ -242,12 +242,12 @@ func (b *ClientBuilder) Registry(registry *bsoncodec.Registry) *ClientBuilder {
 	return b
 }
 
-// Replica specifies the replica set name for the cluster. If specified, the cluster will be treated as a replica
+// ReplicaSet specifies the replica set name for the cluster. If specified, the cluster will be treated as a replica
 // set and the driver will automatically discover all servers in the set, starting with the nodes specified through
 // ApplyURI or Hosts. All nodes in the replica set must have the same replica set name, or they will not be
 // considered as part of the set by the Client. This can also be set through the "replica" URI option (e.g.
 // "replica=replset"). The default is empty.
-func (b *ClientBuilder) Replica(s string) *ClientBuilder {
+func (b *ClientBuilder) ReplicaSet(s string) *ClientBuilder {
 	b.opts.SetReplicaSet(s)
 	return b
 }

@@ -137,3 +137,7 @@ func (c *Collection[D, I]) Aggregate(pipe *pipe.Pipeline) *AggregateExecutor[D, 
 		opts: options.Aggregate(),
 	}
 }
+
+func (c *Collection[D, I]) Indexes() *IndexViewer {
+	return &IndexViewer{view: c.primary.Indexes()}
+}
