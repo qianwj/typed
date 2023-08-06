@@ -5,5 +5,6 @@ import (
 )
 
 var (
-	ErrNoDocuments = rawmongo.ErrNoDocuments
+	ErrNoDocuments        = rawmongo.ErrNoDocuments
+	ErrClientDisconnected = rawmongo.ErrClientDisconnected
 )
