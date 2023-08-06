@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -39,4 +40,13 @@ func (m BsonMap[I]) GetId() I {
 type Pair[V any] struct {
 	Key   string
 	Value V
+}
+
+type Addr struct {
+	Host string
+	Port int
+}
+
+func (a *Addr) String() string {
+	return fmt.Sprintf("%s:%d", a.Host, a.Port)
 }
