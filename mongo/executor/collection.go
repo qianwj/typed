@@ -14,10 +14,10 @@ type Collection[D model.Document[I], I model.DocumentId] struct {
 	secondary *raw.Collection
 }
 
-func FromDatabase[D model.Document[I], I model.DocumentId](db *Database, name string, opts ...*options.CollectionOptions) *Collection[D, I] {
+func NewCollection[D model.Document[I], I model.DocumentId](primary, secondary *raw.Collection) *Collection[D, I] {
 	return &Collection[D, I]{
-		primary:   db.Primary(name, opts...),
-		secondary: db.Secondary(name, opts...),
+		primary:   primary,
+		secondary: secondary,
 	}
 }
 
