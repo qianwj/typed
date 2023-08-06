@@ -153,7 +153,7 @@ func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 	if f.primary {
 		cursor, err = f.coll.primary.Find(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		cursor, err = f.coll.secondary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.coll.defaultReadpref.Find(ctx, f.filter.Marshal(), f.opts)
 	}
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (f *FindExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 	if f.primary {
 		cursor, err = f.coll.primary.Find(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		cursor, err = f.coll.secondary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.coll.defaultReadpref.Find(ctx, f.filter.Marshal(), f.opts)
 	}
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
@@ -9,12 +10,26 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"strings"
 )
 
 type CollectionBuilder[D model.Document[I], I model.DocumentId] struct {
 	db   *mongo.Database
 	name string
 	opts *options.CollectionOptions
+}
+
+func FromNamespace[D model.Document[I], I model.DocumentId](cli *executor.Client, ns string) (*CollectionBuilder[D, I], error) {
+	pair := strings.Split(ns, ".")
+	if len(pair) != 2 {
+		return nil, fmt.Errorf("invalid ns: %s", ns)
+	}
+	db := cli.Database(pair[0]).build().Raw()
+	return NewCollection[D, I](db, pair[1]), nil
+}
+
+func FromDatabase[D model.Document[I], I model.DocumentId](db *executor.Database, name string) *CollectionBuilder[D, I] {
+	return NewCollection[D, I](db.Raw(), name)
 }
 
 func NewCollection[D model.Document[I], I model.DocumentId](db *mongo.Database, name string) *CollectionBuilder[D, I] {

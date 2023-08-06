@@ -98,7 +98,7 @@ func (a *DatabaseAggregateExecutor) ExecuteTo(ctx context.Context, result interf
 	if a.primary {
 		cursor, err = a.db.primary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
 	} else {
-		cursor, err = a.db.secondary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.db.defaultReadpref.Aggregate(ctx, a.pipe.Marshal(), a.opts)
 	}
 	if err != nil {
 		return err

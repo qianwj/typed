@@ -10,14 +10,14 @@ import (
 )
 
 type Collection[D model.Document[I], I model.DocumentId] struct {
-	primary   *raw.Collection
-	secondary *raw.Collection
+	primary         *raw.Collection
+	defaultReadpref *raw.Collection
 }
 
-func NewCollection[D model.Document[I], I model.DocumentId](primary, secondary *raw.Collection) *Collection[D, I] {
+func NewCollection[D model.Document[I], I model.DocumentId](primary, defaultReadpref *raw.Collection) *Collection[D, I] {
 	return &Collection[D, I]{
-		primary:   primary,
-		secondary: secondary,
+		primary:         primary,
+		defaultReadpref: defaultReadpref,
 	}
 }
 

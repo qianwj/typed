@@ -65,6 +65,6 @@ func (c *CountExecutor[D, I]) Execute(ctx context.Context) (int64, error) {
 	if c.primary {
 		return c.coll.primary.CountDocuments(ctx, c.filter, c.opts)
 	} else {
-		return c.coll.secondary.CountDocuments(ctx, c.filter, c.opts)
+		return c.coll.defaultReadpref.CountDocuments(ctx, c.filter, c.opts)
 	}
 }

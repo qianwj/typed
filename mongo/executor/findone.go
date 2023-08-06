@@ -116,7 +116,7 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 	if f.primary {
 		res = f.coll.primary.FindOne(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		res = f.coll.secondary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.coll.defaultReadpref.FindOne(ctx, f.filter.Marshal(), f.opts)
 	}
 	if res.Err() != nil {
 		return data, res.Err()
@@ -132,7 +132,7 @@ func (f *FindOneExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 	if f.primary {
 		res = f.coll.primary.FindOne(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		res = f.coll.secondary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.coll.defaultReadpref.FindOne(ctx, f.filter.Marshal(), f.opts)
 	}
 	if res.Err() != nil {
 		return res.Err()
