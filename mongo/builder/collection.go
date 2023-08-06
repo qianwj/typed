@@ -65,7 +65,7 @@ func (b *CollectionBuilder[D, I]) Registry(r *bsoncodec.Registry) *CollectionBui
 }
 
 func (b *CollectionBuilder[D, I]) build() *executor.Collection[D, I] {
-	primary := b.db.Collection(b.name, b.opts, options.Collection().SetReadPreference(readpref.Primary()))
+	primary := b.db.Collection(b.name, options.Collection().SetReadPreference(readpref.Primary()), b.opts)
 	defaultNode := b.db.Collection(b.name, b.opts)
 	return executor.NewCollection[D, I](primary, defaultNode)
 }

@@ -55,7 +55,7 @@ func (b *DatabaseBuilder) BSONOptions(opts *options.BSONOptions) *DatabaseBuilde
 }
 
 func (b *DatabaseBuilder) build() *executor.Database {
-	primary := b.cli.Database(b.name, b.opts, options.Database().SetReadPreference(readpref.Primary()))
+	primary := b.cli.Database(b.name, options.Database().SetReadPreference(readpref.Primary()), b.opts)
 	defaultReadpref := b.cli.Database(b.name, b.opts)
 	return executor.NewDatabase(primary, defaultReadpref)
 }
