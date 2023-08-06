@@ -26,6 +26,10 @@ type Document[T DocumentId] interface {
 	GetId() T
 }
 
+type Bson interface {
+	bson.M | bson.D | bson.A | bson.E
+}
+
 type BsonMap[I DocumentId] bson.M
 
 func (m BsonMap[I]) GetId() I {
