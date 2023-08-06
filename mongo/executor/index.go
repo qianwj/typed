@@ -42,6 +42,13 @@ func (i *IndexViewer) DropAll() *IndexDropBuilder {
 	}
 }
 
+func (i *IndexViewer) List() *IndexListBuilder {
+	return &IndexListBuilder{
+		view: i.view,
+		opts: options.ListIndexes(),
+	}
+}
+
 type IndexCreateBuilder struct {
 	idx  []*model.Index
 	view mongo.IndexView
@@ -116,4 +123,41 @@ func (d *IndexDropBuilder) Execute(ctx context.Context) (bson.Raw, error) {
 		return d.view.DropOne(ctx, d.name, d.opts)
 	}
 	return d.view.DropAll(ctx, d.opts)
+}
+
+type IndexListBuilder struct {
+	view mongo.IndexView
+	opts *options.ListIndexesOptions
+}
+
+// BatchSize sets the value for the BatchSize field.
+func (l *IndexListBuilder) BatchSize(i int32) *IndexListBuilder {
+	l.opts.SetBatchSize(i)
+	return l
+}
+
+// SetMaxTime sets the value for the MaxTime field.
+//
+// NOTE(benjirewis): MaxTime will be deprecated in a future release. The more general Timeout
+// option may be used in its place to control the amount of time that a single operation can
+// run before returning an error. MaxTime is ignored if Timeout is set on the client.
+func (l *IndexListBuilder) SetMaxTime(d time.Duration) *IndexListBuilder {
+	l.opts.SetMaxTime(d)
+	return l
+}
+
+func (l *IndexListBuilder) Execute(ctx context.Context) ([]*mongo.IndexModel, error) {
+	cursor, err := l.view.List(ctx, l.opts)
+	if err != nil {
+		return nil, err
+	}
+	var data []*mongo.IndexModel
+	if err := cursor.All(ctx, &data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (l *IndexListBuilder) ExecuteSpecifications(ctx context.Context) ([]*mongo.IndexSpecification, error) {
+	return l.view.ListSpecifications(ctx, l.opts)
 }
