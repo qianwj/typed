@@ -45,6 +45,15 @@ func (c *Collection[D, I]) FindOne(filter *filter.Filter) *FindOneExecutor[D, I]
 	}
 }
 
+func (c *Collection[D, I]) FindOneById(id I, primary bool) *FindOneExecutor[D, I] {
+	return &FindOneExecutor[D, I]{
+		coll:    c,
+		filter:  filter.Eq("_id", id),
+		primary: primary,
+		opts:    options.FindOne(),
+	}
+}
+
 func (c *Collection[D, I]) Find(filter *filter.Filter) *FindExecutor[D, I] {
 	return &FindExecutor[D, I]{
 		coll:   c,
@@ -53,7 +62,7 @@ func (c *Collection[D, I]) Find(filter *filter.Filter) *FindExecutor[D, I] {
 	}
 }
 
-func (c *Collection[D, I]) FindByDocIds(ids []I) *FindExecutor[D, I] {
+func (c *Collection[D, I]) FindByIds(ids []I) *FindExecutor[D, I] {
 	return &FindExecutor[D, I]{
 		coll:   c,
 		filter: filter.In("_id", toAny(ids)),

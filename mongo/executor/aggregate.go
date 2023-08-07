@@ -193,7 +193,7 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 	if a.primary {
 		cursor, err = a.coll.primary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
 	} else {
-		cursor, err = a.coll.secondary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.coll.defaultReadpref.Aggregate(ctx, a.pipe.Marshal(), a.opts)
 	}
 	if err != nil {
 		return err

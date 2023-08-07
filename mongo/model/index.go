@@ -19,6 +19,21 @@ func NewIndex(keys ...Pair[options.SortOrder]) *Index {
 	}
 }
 
+func From(model *mongo.IndexModel) *Index {
+	keys, idx := model.Keys, Index{keys: make([]Pair[options.SortOrder], 0)}
+	switch keys.(type) {
+	case bson.D:
+		for _, e := range keys.(bson.D) {
+			idx.keys = append(idx.keys, Pair[options.SortOrder]{
+				Key:   e.Key,
+				Value: e.Value.(options.SortOrder),
+			})
+		}
+	}
+	idx.opts = model.Options
+	return &idx
+}
+
 // Background sets value for the Background field.
 //
 // Deprecated: This option has been deprecated in MongoDB version 4.2.
