@@ -15,7 +15,7 @@ type Accumulate struct {
 	lang           text.Langeuage // <string>
 }
 
-func New(init, accumulate, merge string, accumulateArgs bson.A, lang text.Langeuage) *Accumulate {
+func NewAccumulate(init, accumulate, merge string, accumulateArgs bson.A, lang text.Langeuage) *Accumulate {
 	return &Accumulate{
 		init:           init,
 		accumulate:     accumulate,

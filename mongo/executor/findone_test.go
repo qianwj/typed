@@ -10,47 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
-	rawopts "go.mongodb.org/mongo-driver/mongo/options"
-	"os"
 	"testing"
 	"time"
 )
-
-const (
-	testDBName   = "test_db"
-	testCollName = "test_coll"
-)
-
-var (
-	testCli  *mongo.Client
-	testColl *mongo.Collection
-)
-
-type TestDoc struct {
-	model.Document[primitive.ObjectID] `bson:"-"`
-	Id                                 primitive.ObjectID `bson:"_id"`
-	Name                               string             `bson:"name"`
-	Age                                int                `bson:"age"`
-	CreateTime                         time.Time          `bson:"createTime"`
-}
-
-func (t *TestDoc) GetId() primitive.ObjectID {
-	return t.Id
-}
-
-func init() {
-	uri := os.Getenv("CI_MONGO_URI")
-	var err error
-	testCli, err = mongo.Connect(context.TODO(), rawopts.Client().ApplyURI(uri))
-	if err != nil {
-		panic(err)
-	}
-	err = testCli.Database(testDBName).Collection(testCollName).Drop(context.TODO())
-	if err != nil {
-		panic(err)
-	}
-	testColl = testCli.Database(testDBName).Collection(testCollName)
-}
 
 func TestCollection_FindOne(t *testing.T) {
 	createTime := time.UnixMilli(time.Now().UTC().UnixMilli()).UTC()
@@ -66,8 +28,8 @@ func TestCollection_FindOne(t *testing.T) {
 		return
 	}
 	coll := Collection[*TestDoc, primitive.ObjectID]{
-		primary:   testColl,
-		secondary: testColl,
+		primary:         testColl,
+		defaultReadpref: testColl,
 	}
 	tests := []struct {
 		Expect   *TestDoc
@@ -103,8 +65,8 @@ func TestCollection_FindOne(t *testing.T) {
 		}
 		mt.AddMockResponses(mtest.CreateCommandErrorResponse(mockError))
 		coll := Collection[model.BsonMap[string], string]{
-			primary:   mt.Coll,
-			secondary: mt.Coll,
+			primary:         mt.Coll,
+			defaultReadpref: mt.Coll,
 		}
 		_, err := coll.FindOne(filter.Eq("a", "b")).Execute(context.TODO())
 		if !assert.Equal(mt, mockError.Message, err.Error()) {

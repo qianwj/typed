@@ -2,7 +2,7 @@ package pipe
 
 import (
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/aggregate/lookup"
+	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/model/operator"
 	"github.com/qianwj/typed/mongo/options"
@@ -19,7 +19,7 @@ func (p *Pipeline) Documents(docs []any) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) GraphLookup(join *lookup.GraphLookup) *Pipeline {
+func (p *Pipeline) GraphLookup(join *aggregate.GraphLookup) *Pipeline {
 	p.put(operator.Lookup, join.Marshal())
 	return p
 }
@@ -38,7 +38,7 @@ func (p *Pipeline) Limit(value int64) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Lookup(join *lookup.Lookup) *Pipeline {
+func (p *Pipeline) Lookup(join *aggregate.Lookup) *Pipeline {
 	p.put(operator.Lookup, join.Marshal())
 	return p
 }
