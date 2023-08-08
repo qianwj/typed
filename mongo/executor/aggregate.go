@@ -118,3 +118,108 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 	}
 	return cursor.All(ctx, &result)
 }
+
+type DatabaseAggregateExecutor struct {
+	readprefPrimary *raw.Database
+	readprefDefault *raw.Database
+	pipe            aggregate.Pipeline
+	primary         bool
+	opts            *rawopts.AggregateOptions
+}
+
+func NewDatabaseAggregateExecutor(readprefPrimary, readprefDefault *raw.Database, pipe aggregate.Pipeline) *DatabaseAggregateExecutor {
+	return &DatabaseAggregateExecutor{
+		readprefPrimary: readprefPrimary,
+		readprefDefault: readprefDefault,
+		pipe:            pipe,
+		opts:            rawopts.Aggregate(),
+	}
+}
+
+func (a *DatabaseAggregateExecutor) Primary() *DatabaseAggregateExecutor {
+	a.primary = true
+	return a
+}
+
+// AllowDiskUse sets the value for the AllowDiskUse field.
+func (a *DatabaseAggregateExecutor) AllowDiskUse() *DatabaseAggregateExecutor {
+	a.opts.SetAllowDiskUse(true)
+	return a
+}
+
+// BatchSize sets the value for the BatchSize field.
+func (a *DatabaseAggregateExecutor) BatchSize(i int32) *DatabaseAggregateExecutor {
+	a.opts.SetBatchSize(i)
+	return a
+}
+
+// BypassDocumentValidation sets the value for the BypassDocumentValidation field.
+func (a *DatabaseAggregateExecutor) BypassDocumentValidation() *DatabaseAggregateExecutor {
+	a.opts.SetBypassDocumentValidation(true)
+	return a
+}
+
+// Collation sets the value for the Collation field.
+func (a *DatabaseAggregateExecutor) Collation(c *options.Collation) *DatabaseAggregateExecutor {
+	a.opts.SetCollation((*rawopts.Collation)(c))
+	return a
+}
+
+// MaxTime sets the value for the MaxTime field.
+//
+// NOTE(benjirewis): MaxTime will be deprecated in a future release. The more general Timeout
+// option may be used in its place to control the amount of time that a single operation can
+// run before returning an error. MaxTime is ignored if Timeout is set on the client.
+func (a *DatabaseAggregateExecutor) MaxTime(d time.Duration) *DatabaseAggregateExecutor {
+	a.opts.SetMaxTime(d)
+	return a
+}
+
+// MaxAwaitTime sets the value for the MaxAwaitTime field.
+func (a *DatabaseAggregateExecutor) MaxAwaitTime(d time.Duration) *DatabaseAggregateExecutor {
+	a.opts.SetMaxAwaitTime(d)
+	return a
+}
+
+// Comment sets the value for the Comment field.
+func (a *DatabaseAggregateExecutor) Comment(s string) *DatabaseAggregateExecutor {
+	a.opts.SetComment(s)
+	return a
+}
+
+// Hint sets the value for the Hint field.
+func (a *DatabaseAggregateExecutor) Hint(index string) *DatabaseAggregateExecutor {
+	a.opts.SetHint(index)
+	return a
+}
+
+// Let sets the value for the Let field.
+func (a *DatabaseAggregateExecutor) Let(let bson.M) *DatabaseAggregateExecutor {
+	a.opts.SetLet(let)
+	return a
+}
+
+// Custom sets the value for the Custom field. Key-value pairs of the BSON map should correlate
+// with desired option names and values. Values must be Marshalable. Custom options may conflict
+// with non-custom options, and custom options bypass client-side validation. Prefer using non-custom
+// options where possible.
+func (a *DatabaseAggregateExecutor) Custom(c bson.M) *DatabaseAggregateExecutor {
+	a.opts.SetCustom(c)
+	return a
+}
+
+func (a *DatabaseAggregateExecutor) ExecuteTo(ctx context.Context, result interface{}) error {
+	var (
+		err    error
+		cursor *raw.Cursor
+	)
+	if a.primary {
+		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+	} else {
+		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+	}
+	if err != nil {
+		return err
+	}
+	return cursor.All(ctx, &result)
+}
