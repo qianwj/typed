@@ -1,9 +1,8 @@
-package collection
+package executor
 
 import (
 	"context"
 	"fmt"
-	"github.com/qianwj/typed/mongo/builder"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/options"
@@ -29,17 +28,16 @@ func TestCollection_FindOne(t *testing.T) {
 		t.FailNow()
 		return
 	}
-	coll := NewCollection[*TestDoc, primitive.ObjectID](testColl, testColl)
 	tests := []struct {
 		Expect   *TestDoc
 		Err      error
-		Executor *builder.FindOneExecutor[*TestDoc, primitive.ObjectID]
+		Executor *FindOneExecutor[*TestDoc, primitive.ObjectID]
 	}{
-		{Expect: docs[0], Executor: coll.FindOne(filter.Eq("name", "Amy"))},
-		{Err: mongo.ErrNoDocuments, Executor: coll.FindOne(filter.Gt("createTime", createTime.Add(time.Hour)))},
-		{Expect: docs[3], Executor: coll.FindOne(filter.Gte("createTime", createTime.Add(time.Hour)))},
-		{Expect: docs[0], Executor: coll.FindOne(filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age"))},
-		{Expect: docs[3], Executor: coll.FindOne(filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age")).Skip(1)},
+		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Eq("name", "Amy"))},
+		{Err: mongo.ErrNoDocuments, Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gt("createTime", createTime.Add(time.Hour)))},
+		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gte("createTime", createTime.Add(time.Hour)))},
+		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age"))},
+		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age")).Skip(1)},
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
@@ -63,8 +61,7 @@ func TestCollection_FindOne(t *testing.T) {
 			Message: mongo.ErrNoDocuments.Error(),
 		}
 		mt.AddMockResponses(mtest.CreateCommandErrorResponse(mockError))
-		coll := NewCollection[model.BsonMap[string], string](mt.Coll, mt.Coll)
-		_, err := coll.FindOne(filter.Eq("a", "b")).Execute(context.TODO())
+		_, err := NewFindOneExecutor[model.BsonMap[string], string](mt.Coll, mt.Coll, filter.Eq("a", "b")).Execute(context.TODO())
 		if !assert.Equal(mt, mockError.Message, err.Error()) {
 			mt.FailNow()
 		}
