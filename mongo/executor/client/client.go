@@ -2,10 +2,11 @@ package client
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/builder/client"
 	"github.com/qianwj/typed/mongo/builder/database"
+	"github.com/qianwj/typed/mongo/builder/transaction"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type Client struct {
@@ -32,6 +33,10 @@ func (c *Client) Database(name string) *database.DatabaseBuilder {
 	return database.NewDatabase(c.internal, name)
 }
 
-func (c *Client) Transaction() *client.TxSessionBuilder {
-	return client.NewTxSessionBuilder(c.internal)
+func (c *Client) Transaction() *transaction.TxSessionBuilder {
+	return transaction.NewTxSessionBuilder(c.internal)
+}
+
+func (c *Client) Ping(ctx context.Context, rp *readpref.ReadPref) error {
+	return c.internal.Ping(ctx, rp)
 }

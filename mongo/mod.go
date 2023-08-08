@@ -1,15 +1,15 @@
 package mongo
 
 import (
-	"github.com/qianwj/typed/mongo/builder/client"
+	"github.com/qianwj/typed/mongo/builder"
 	"github.com/qianwj/typed/mongo/model"
 )
 
-func FromUri(uri string) *client.ClientBuilder {
-	return client.NewClient().ApplyUri(uri)
+func FromUri(uri string) *builder.ClientBuilder {
+	return builder.NewClient().ApplyUri(uri)
 }
 
-func FromAddr(host string, port int) *client.ClientBuilder {
+func FromAddr(host string, port int) *builder.ClientBuilder {
 	addr := &model.Addr{
 		Host: host,
 		Port: port,
@@ -17,10 +17,10 @@ func FromAddr(host string, port int) *client.ClientBuilder {
 	return FromAddrs(addr)
 }
 
-func FromAddrs(addrs ...*model.Addr) *client.ClientBuilder {
+func FromAddrs(addrs ...*model.Addr) *builder.ClientBuilder {
 	hosts := make([]string, len(addrs))
 	for i, addr := range addrs {
 		hosts[i] = addr.String()
 	}
-	return client.NewClient().Hosts(hosts)
+	return builder.NewClient().Hosts(hosts)
 }

@@ -1,4 +1,4 @@
-package client
+package builder
 
 import (
 	"context"
@@ -436,7 +436,7 @@ func (b *ClientBuilder) SRVServiceName(srvName string) *ClientBuilder {
 	return b
 }
 
-func (b *ClientBuilder) build(ctx context.Context) (*client.Client, error) {
+func (b *ClientBuilder) Build(ctx context.Context) (*client.Client, error) {
 	uri, err := connstring.ParseAndValidate(b.opts.GetURI())
 	if err != nil {
 		return nil, err
