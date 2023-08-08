@@ -1,7 +1,7 @@
-package builder
+package database
 
 import (
-	"github.com/qianwj/typed/mongo/executor"
+	"github.com/qianwj/typed/mongo/executor/database"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -54,8 +54,8 @@ func (b *DatabaseBuilder) BSONOptions(opts *options.BSONOptions) *DatabaseBuilde
 	return b
 }
 
-func (b *DatabaseBuilder) build() *executor.Database {
+func (b *DatabaseBuilder) Build() *database.Database {
 	primary := b.cli.Database(b.name, options.Database().SetReadPreference(readpref.Primary()), b.opts)
 	defaultReadpref := b.cli.Database(b.name, b.opts)
-	return executor.NewDatabase(primary, defaultReadpref)
+	return database.NewDatabase(primary, defaultReadpref)
 }

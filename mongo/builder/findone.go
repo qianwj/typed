@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -11,10 +11,20 @@ import (
 )
 
 type FindOneExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll    *Collection[D, I]
-	filter  *filter.Filter
-	primary bool
-	opts    *rawopts.FindOneOptions
+	readprefPrimary *raw.Collection
+	readprefDefault *raw.Collection
+	filter          *filter.Filter
+	primary         bool
+	opts            *rawopts.FindOneOptions
+}
+
+func NewFindOneExecutor[D model.Document[I], I model.DocumentId](readprefPrimary, readprefDefault *raw.Collection, filter *filter.Filter) *FindOneExecutor[D, I] {
+	return &FindOneExecutor[D, I]{
+		readprefPrimary: readprefPrimary,
+		readprefDefault: readprefDefault,
+		filter:          filter,
+		opts:            rawopts.FindOne(),
+	}
 }
 
 func (f *FindOneExecutor[D, I]) Primary() *FindOneExecutor[D, I] {
@@ -114,9 +124,9 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 		res  *raw.SingleResult
 	)
 	if f.primary {
-		res = f.coll.primary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefPrimary.FindOne(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		res = f.coll.defaultReadpref.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefDefault.FindOne(ctx, f.filter.Marshal(), f.opts)
 	}
 	if res.Err() != nil {
 		return data, res.Err()
@@ -130,9 +140,9 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 func (f *FindOneExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 	var res *raw.SingleResult
 	if f.primary {
-		res = f.coll.primary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefPrimary.FindOne(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		res = f.coll.defaultReadpref.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefDefault.FindOne(ctx, f.filter.Marshal(), f.opts)
 	}
 	if res.Err() != nil {
 		return res.Err()

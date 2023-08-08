@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -12,10 +12,23 @@ import (
 )
 
 type FindExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll    *Collection[D, I]
-	filter  *filter.Filter
-	primary bool
-	opts    *rawopts.FindOptions
+	readprefPrimary *raw.Collection
+	readprefDefault *raw.Collection
+	filter          *filter.Filter
+	primary         bool
+	opts            *rawopts.FindOptions
+}
+
+func NewFindExecutor[D model.Document[I], I model.DocumentId](
+	readprefPrimary, readprefDefault *raw.Collection,
+	filter *filter.Filter,
+) *FindExecutor[D, I] {
+	return &FindExecutor[D, I]{
+		readprefPrimary: readprefPrimary,
+		readprefDefault: readprefDefault,
+		filter:          filter,
+		opts:            rawopts.Find(),
+	}
 }
 
 func (f *FindExecutor[D, I]) Primary() *FindExecutor[D, I] {
@@ -151,9 +164,9 @@ func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.coll.primary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		cursor, err = f.coll.defaultReadpref.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
 	}
 	if err != nil {
 		return nil, err
@@ -170,9 +183,9 @@ func (f *FindExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.coll.primary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
 	} else {
-		cursor, err = f.coll.defaultReadpref.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
 	}
 	if err != nil {
 		return err

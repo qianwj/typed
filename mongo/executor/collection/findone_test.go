@@ -1,11 +1,13 @@
-package executor
+package collection
 
 import (
 	"context"
 	"fmt"
+	"github.com/qianwj/typed/mongo/builder"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/mongo/util"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,19 +24,16 @@ func TestCollection_FindOne(t *testing.T) {
 		{Id: primitive.NewObjectID(), Name: "Mike", Age: 21, CreateTime: createTime.Add(10 * time.Minute)},
 		{Id: primitive.NewObjectID(), Name: "LiLei", Age: 30, CreateTime: createTime.Add(time.Hour)},
 	}
-	_, err := testColl.InsertMany(context.TODO(), toAny(docs))
+	_, err := testColl.InsertMany(context.TODO(), util.ToAny(docs))
 	if err != nil {
 		t.FailNow()
 		return
 	}
-	coll := Collection[*TestDoc, primitive.ObjectID]{
-		primary:         testColl,
-		defaultReadpref: testColl,
-	}
+	coll := NewCollection[*TestDoc, primitive.ObjectID](testColl, testColl)
 	tests := []struct {
 		Expect   *TestDoc
 		Err      error
-		Executor *FindOneExecutor[*TestDoc, primitive.ObjectID]
+		Executor *builder.FindOneExecutor[*TestDoc, primitive.ObjectID]
 	}{
 		{Expect: docs[0], Executor: coll.FindOne(filter.Eq("name", "Amy"))},
 		{Err: mongo.ErrNoDocuments, Executor: coll.FindOne(filter.Gt("createTime", createTime.Add(time.Hour)))},
@@ -64,10 +63,7 @@ func TestCollection_FindOne(t *testing.T) {
 			Message: mongo.ErrNoDocuments.Error(),
 		}
 		mt.AddMockResponses(mtest.CreateCommandErrorResponse(mockError))
-		coll := Collection[model.BsonMap[string], string]{
-			primary:         mt.Coll,
-			defaultReadpref: mt.Coll,
-		}
+		coll := NewCollection[model.BsonMap[string], string](mt.Coll, mt.Coll)
 		_, err := coll.FindOne(filter.Eq("a", "b")).Execute(context.TODO())
 		if !assert.Equal(mt, mockError.Message, err.Error()) {
 			mt.FailNow()

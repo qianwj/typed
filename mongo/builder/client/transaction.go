@@ -1,4 +1,4 @@
-package executor
+package client
 
 import (
 	"context"
@@ -11,9 +11,16 @@ import (
 )
 
 type TxSessionBuilder struct {
-	cli  *Client
+	cli  *mongo.Client
 	opts *options.SessionOptions
 	bind func(txc *TxSession) error
+}
+
+func NewTxSessionBuilder(cli *mongo.Client) *TxSessionBuilder {
+	return &TxSessionBuilder{
+		cli:  cli,
+		opts: options.Session(),
+	}
 }
 
 // CausalConsistency sets the value for the CausalConsistency field.
@@ -63,7 +70,7 @@ func (tx *TxSessionBuilder) Bind(fn func(txc *TxSession) error) *TxSessionBuilde
 }
 
 func (tx *TxSessionBuilder) Execute(ctx context.Context) error {
-	session, err := tx.cli.internal.StartSession(tx.opts)
+	session, err := tx.cli.StartSession(tx.opts)
 	if err != nil {
 		return err
 	}

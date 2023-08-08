@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model/operator"
+	operator2 "github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
 	"time"
 )
@@ -16,7 +16,7 @@ func (u *Update) CurrentDate(fields ...string) *Update {
 func (u *Update) CurrentTimestamp(fields ...string) *Update {
 	for _, field := range fields {
 		u.currentDate[field] = bson.M{
-			operator.Type: operator.Timestamp,
+			operator2.Type: operator2.Timestamp,
 		}
 	}
 	return u

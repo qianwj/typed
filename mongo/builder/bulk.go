@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -10,9 +10,16 @@ import (
 )
 
 type BulkWriteExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll   *Collection[D, I]
+	coll   *mongo.Collection
 	models []mongo.WriteModel
 	opts   *rawopts.BulkWriteOptions
+}
+
+func NewBulkWriteExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection) *BulkWriteExecutor[D, I] {
+	return &BulkWriteExecutor[D, I]{
+		coll: primary,
+		opts: rawopts.BulkWrite(),
+	}
 }
 
 // Comment sets the value for the Comment field.
@@ -56,6 +63,6 @@ func (b *BulkWriteExecutor[D, I]) Execute(ctx context.Context) (*model.BulkWrite
 	if len(b.models) == 0 {
 		return &model.BulkWriteResult[I]{}, nil
 	}
-	res, err := b.coll.primary.BulkWrite(ctx, b.models)
+	res, err := b.coll.BulkWrite(ctx, b.models)
 	return model.FromBulkWriteResult[I](res), err
 }

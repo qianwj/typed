@@ -1,15 +1,25 @@
-package executor
+package builder
 
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
+	"github.com/qianwj/typed/mongo/util"
+	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type InsertOneExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll *Collection[D, I]
+	coll *mongo.Collection
 	data D
 	opts *rawopts.InsertOneOptions
+}
+
+func NewInsertOneExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, doc D) *InsertOneExecutor[D, I] {
+	return &InsertOneExecutor[D, I]{
+		coll: primary,
+		data: doc,
+		opts: rawopts.InsertOne(),
+	}
 }
 
 // BypassDocumentValidation sets the value for the BypassDocumentValidation field.
@@ -25,7 +35,7 @@ func (i *InsertOneExecutor[D, I]) Comment(comment string) *InsertOneExecutor[D, 
 }
 
 func (i *InsertOneExecutor[D, I]) Execute(ctx context.Context) (I, error) {
-	res, err := i.coll.primary.InsertOne(ctx, i.data, i.opts)
+	res, err := i.coll.InsertOne(ctx, i.data, i.opts)
 	var id I
 	if err != nil {
 		return id, err
@@ -34,9 +44,17 @@ func (i *InsertOneExecutor[D, I]) Execute(ctx context.Context) (I, error) {
 }
 
 type InsertManyExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll *Collection[D, I]
+	coll *mongo.Collection
 	data []any
 	opts *rawopts.InsertManyOptions
+}
+
+func NewInsertManyExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, docs ...D) *InsertManyExecutor[D, I] {
+	return &InsertManyExecutor[D, I]{
+		coll: primary,
+		data: util.ToAny(docs),
+		opts: rawopts.InsertMany(),
+	}
 }
 
 // BypassDocumentValidation sets the value for the BypassDocumentValidation field.
@@ -58,7 +76,7 @@ func (i *InsertManyExecutor[D, I]) SetOrdered() *InsertManyExecutor[D, I] {
 }
 
 func (i *InsertManyExecutor[D, I]) Add(docs ...D) *InsertManyExecutor[D, I] {
-	i.data = append(i.data, toAny(docs))
+	i.data = append(i.data, util.ToAny(docs))
 	return i
 }
 
@@ -66,8 +84,8 @@ func (i *InsertManyExecutor[D, I]) Execute(ctx context.Context) ([]I, error) {
 	if len(i.data) == 0 {
 		return make([]I, 0), nil
 	}
-	res, err := i.coll.primary.InsertMany(ctx, i.data, i.opts)
-	return mapTo(res.InsertedIDs, func(i any) I {
+	res, err := i.coll.InsertMany(ctx, i.data, i.opts)
+	return util.Map(res.InsertedIDs, func(i any) I {
 		return i.(I)
 	}), err
 }

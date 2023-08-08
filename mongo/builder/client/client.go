@@ -1,9 +1,9 @@
-package builder
+package client
 
 import (
 	"context"
 	"crypto/tls"
-	"github.com/qianwj/typed/mongo/executor"
+	"github.com/qianwj/typed/mongo/executor/client"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -436,11 +436,11 @@ func (b *ClientBuilder) SRVServiceName(srvName string) *ClientBuilder {
 	return b
 }
 
-func (b *ClientBuilder) build(ctx context.Context) (*executor.Client, error) {
+func (b *ClientBuilder) build(ctx context.Context) (*client.Client, error) {
 	uri, err := connstring.ParseAndValidate(b.opts.GetURI())
 	if err != nil {
 		return nil, err
 	}
 	b.defaultDatabaseName = uri.Database
-	return executor.NewClient(ctx, b.defaultDatabaseName, b.opts)
+	return client.NewClient(ctx, b.defaultDatabaseName, b.opts)
 }

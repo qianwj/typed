@@ -1,8 +1,9 @@
-package executor
+package client
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/builder"
+	"github.com/qianwj/typed/mongo/builder/client"
+	"github.com/qianwj/typed/mongo/builder/database"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -23,17 +24,14 @@ func NewClient(ctx context.Context, defaultDB string, opts *options.ClientOption
 	}, nil
 }
 
-func (c *Client) DefaultDatabase() *builder.DatabaseBuilder {
-	return builder.NewDatabase(c.internal, c.defaultDatabaseName)
+func (c *Client) DefaultDatabase() *database.DatabaseBuilder {
+	return database.NewDatabase(c.internal, c.defaultDatabaseName)
 }
 
-func (c *Client) Database(name string) *builder.DatabaseBuilder {
-	return builder.NewDatabase(c.internal, name)
+func (c *Client) Database(name string) *database.DatabaseBuilder {
+	return database.NewDatabase(c.internal, name)
 }
 
-func (c *Client) Transaction() *TxSessionBuilder {
-	return &TxSessionBuilder{
-		cli:  c,
-		opts: options.Session(),
-	}
+func (c *Client) Transaction() *client.TxSessionBuilder {
+	return client.NewTxSessionBuilder(c.internal)
 }

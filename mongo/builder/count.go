@@ -1,19 +1,33 @@
-package executor
+package builder
 
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
 	"github.com/qianwj/typed/mongo/options"
+	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
 type CountExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll    *Collection[D, I]
-	filter  *filter.Filter
-	primary bool
-	opts    *rawopts.CountOptions
+	readprefPrimary *raw.Collection
+	readprefDefault *raw.Collection
+	filter          *filter.Filter
+	primary         bool
+	opts            *rawopts.CountOptions
+}
+
+func NewCountExecutor[D model.Document[I], I model.DocumentId](
+	readprefPrimary, readprefDefault *raw.Collection,
+	filter *filter.Filter,
+) *CountExecutor[D, I] {
+	return &CountExecutor[D, I]{
+		readprefPrimary: readprefPrimary,
+		readprefDefault: readprefDefault,
+		filter:          filter,
+		opts:            rawopts.Count(),
+	}
 }
 
 func (c *CountExecutor[D, I]) Primary() *CountExecutor[D, I] {
@@ -63,8 +77,8 @@ func (c *CountExecutor[D, I]) Skip(i int64) *CountExecutor[D, I] {
 
 func (c *CountExecutor[D, I]) Execute(ctx context.Context) (int64, error) {
 	if c.primary {
-		return c.coll.primary.CountDocuments(ctx, c.filter, c.opts)
+		return c.readprefPrimary.CountDocuments(ctx, c.filter, c.opts)
 	} else {
-		return c.coll.defaultReadpref.CountDocuments(ctx, c.filter, c.opts)
+		return c.readprefDefault.CountDocuments(ctx, c.filter, c.opts)
 	}
 }

@@ -3,7 +3,7 @@ package filter
 import (
 	"github.com/qianwj/typed/mongo/model/filter/regex"
 	"github.com/qianwj/typed/mongo/model/filter/text"
-	"github.com/qianwj/typed/mongo/model/operator"
+	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
 )
 

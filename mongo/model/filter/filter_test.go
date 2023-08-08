@@ -1,7 +1,7 @@
 package filter
 
 import (
-	"github.com/qianwj/typed/mongo/model/operator"
+	"github.com/qianwj/typed/mongo/operator"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

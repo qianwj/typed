@@ -2,7 +2,7 @@ package update
 
 import (
 	"github.com/qianwj/typed/mongo/model/filter"
-	"github.com/qianwj/typed/mongo/model/operator"
+	operator2 "github.com/qianwj/typed/mongo/operator"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -13,7 +13,7 @@ func (u *Update) AddToSet(field string, value any) *Update {
 }
 
 func (u *Update) AddEachToSet(field string, value []any) *Update {
-	u.addToSet[field] = bson.M{operator.Each: value}
+	u.addToSet[field] = bson.M{operator2.Each: value}
 	return u
 }
 
@@ -23,30 +23,30 @@ func (u *Update) Push(field string, value any) *Update {
 }
 
 func (u *Update) PushEach(field string, value []any) *Update {
-	u.push[field] = bson.M{operator.Each: value}
+	u.push[field] = bson.M{operator2.Each: value}
 	return u
 }
 
 func (u *Update) InsertAll(field string, value []any, index int) *Update {
 	u.push[field] = bson.M{
-		operator.Each:     value,
-		operator.Position: index,
+		operator2.Each:     value,
+		operator2.Position: index,
 	}
 	return u
 }
 
 func (u *Update) PushLimited(field string, value []string, limit int) *Update {
 	u.push[field] = bson.M{
-		operator.Each:  value,
-		operator.Slice: limit,
+		operator2.Each:  value,
+		operator2.Slice: limit,
 	}
 	return u
 }
 
 func (u *Update) PushSorted(field string, value []string, sort options.SortOptions) *Update {
 	u.push[field] = bson.M{
-		operator.Each: value,
-		operator.Sort: sort,
+		operator2.Each: value,
+		operator2.Sort: sort,
 	}
 	return u
 }

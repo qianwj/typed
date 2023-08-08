@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -12,12 +12,40 @@ import (
 )
 
 type UpdateExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll   *Collection[D, I]
+	coll   *mongo.Collection
 	filter *filter.Filter
 	update *update.Update
 	multi  bool
 	docId  *I
 	opts   *rawopts.UpdateOptions
+}
+
+func NewUpdateOneExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filter.Filter, update *update.Update) *UpdateExecutor[D, I] {
+	return &UpdateExecutor[D, I]{
+		coll:   primary,
+		filter: filter,
+		update: update,
+		opts:   rawopts.Update(),
+	}
+}
+
+func NewUpdateManyExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filter.Filter, update *update.Update) *UpdateExecutor[D, I] {
+	return &UpdateExecutor[D, I]{
+		coll:   primary,
+		filter: filter,
+		update: update,
+		multi:  true,
+		opts:   rawopts.Update(),
+	}
+}
+
+func NewUpdateByIdExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, id I, update *update.Update) *UpdateExecutor[D, I] {
+	return &UpdateExecutor[D, I]{
+		coll:   primary,
+		docId:  &id,
+		update: update,
+		opts:   rawopts.Update(),
+	}
 }
 
 func (u *UpdateExecutor[D, I]) ArrayFilters(af options.ArrayFilters) *UpdateExecutor[D, I] {
@@ -61,11 +89,11 @@ func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult
 		res *mongo.UpdateResult
 	)
 	if u.docId != nil {
-		res, err = u.coll.primary.UpdateByID(ctx, u.docId, u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateByID(ctx, u.docId, u.update.Marshal(), u.opts)
 	} else if u.multi {
-		res, err = u.coll.primary.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
 	} else {
-		res, err = u.coll.primary.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
 	}
 	return model.FromUpdateResult[I](res), err
 }

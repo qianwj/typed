@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -11,10 +11,27 @@ import (
 )
 
 type DeleteExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll   *Collection[D, I]
+	coll   *mongo.Collection
 	filter *filter.Filter
 	multi  bool
 	opts   *rawopts.DeleteOptions
+}
+
+func NewDeleteOneExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filter.Filter) *DeleteExecutor[D, I] {
+	return &DeleteExecutor[D, I]{
+		coll:   primary,
+		filter: filter,
+		opts:   rawopts.Delete(),
+	}
+}
+
+func NewDeleteManyExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filter.Filter) *DeleteExecutor[D, I] {
+	return &DeleteExecutor[D, I]{
+		coll:   primary,
+		filter: filter,
+		multi:  true,
+		opts:   rawopts.Delete(),
+	}
 }
 
 // Collation sets the value for the Collation field.
@@ -47,9 +64,9 @@ func (d *DeleteExecutor[D, I]) Execute(ctx context.Context) (int64, error) {
 		res *mongo.DeleteResult
 	)
 	if d.multi {
-		res, err = d.coll.primary.DeleteMany(ctx, d.filter.Marshal(), d.opts)
+		res, err = d.coll.DeleteMany(ctx, d.filter.Marshal(), d.opts)
 	} else {
-		res, err = d.coll.primary.DeleteOne(ctx, d.filter.Marshal(), d.opts)
+		res, err = d.coll.DeleteOne(ctx, d.filter.Marshal(), d.opts)
 	}
 	if err != nil {
 		return -1, err

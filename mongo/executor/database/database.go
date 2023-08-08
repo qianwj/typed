@@ -1,9 +1,9 @@
-package executor
+package database
 
 import (
-	"github.com/qianwj/typed/mongo/model/aggregate/pipe"
+	"github.com/qianwj/typed/mongo/builder/database"
+	"github.com/qianwj/typed/mongo/model/aggregate"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Database struct {
@@ -22,10 +22,6 @@ func (d *Database) Raw() *mongo.Database {
 	return d.defaultReadpref
 }
 
-func (d *Database) Aggregate(pipe *pipe.Pipeline) *DatabaseAggregateExecutor {
-	return &DatabaseAggregateExecutor{
-		db:   d,
-		pipe: pipe,
-		opts: options.Aggregate(),
-	}
+func (d *Database) Aggregate(pipe aggregate.Pipeline) *database.AggregateExecutor {
+	return database.NewAggregateExecutor(d.primary, d.defaultReadpref, pipe)
 }

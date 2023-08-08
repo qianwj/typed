@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -16,6 +16,10 @@ var (
 
 type IndexViewer struct {
 	view mongo.IndexView
+}
+
+func FromIndexView(view mongo.IndexView) *IndexViewer {
+	return &IndexViewer{view: view}
 }
 
 func (i *IndexViewer) Create(idx ...*model.Index) *IndexCreateBuilder {

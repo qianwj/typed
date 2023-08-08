@@ -1,4 +1,4 @@
-package executor
+package builder
 
 import (
 	"context"
@@ -7,15 +7,29 @@ import (
 	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
 type FindOneAndUpdateExecutor[D model.Document[I], I model.DocumentId] struct {
-	coll   *Collection[D, I]
+	coll   *mongo.Collection
 	filter *filter.Filter
 	update *update.Update
 	opts   *rawopts.FindOneAndUpdateOptions
+}
+
+func NewFindOneAndUpdateExecutor[D model.Document[I], I model.DocumentId](
+	primary *mongo.Collection,
+	filter *filter.Filter,
+	update *update.Update,
+) *FindOneAndUpdateExecutor[D, I] {
+	return &FindOneAndUpdateExecutor[D, I]{
+		coll:   primary,
+		filter: filter,
+		update: update,
+		opts:   rawopts.FindOneAndUpdate(),
+	}
 }
 
 // BypassDocumentValidation sets the value for the BypassDocumentValidation field.
@@ -93,7 +107,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) Let(l bson.M) *FindOneAndUpdateExecutor
 }
 
 func (f *FindOneAndUpdateExecutor[D, I]) Execute(ctx context.Context) (D, error) {
-	res := f.coll.primary.FindOneAndUpdate(ctx, f.filter.Marshal(), f.update.Marshal(), f.opts)
+	res := f.coll.FindOneAndUpdate(ctx, f.filter.Marshal(), f.update.Marshal(), f.opts)
 	var data D
 	if res.Err() != nil {
 		return data, res.Err()
