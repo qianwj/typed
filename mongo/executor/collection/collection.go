@@ -82,6 +82,10 @@ func (c *Collection[D, I]) Aggregate(pipe aggregate.Pipeline) *executor.Aggregat
 	return executor.NewAggregateExecutor[D, I](c.primary, c.defaultReadpref, pipe)
 }
 
+func (c *Collection[D, I]) Distinct(field string) *executor.DistinctExecutor {
+	return executor.NewDistinctExecutor(c.primary, c.defaultReadpref, field)
+}
+
 func (c *Collection[D, I]) Indexes() *IndexViewer {
 	return FromIndexView(c.primary.Indexes())
 }

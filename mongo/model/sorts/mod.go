@@ -3,6 +3,7 @@ package sorts
 import (
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type SortOrder int
@@ -47,9 +48,19 @@ func (s *SortOptions) Meta(field string) *SortOptions {
 	return s
 }
 
-func (s *SortOptions) Marshal() bson.D {
+func (s *SortOptions) Tag() {}
+
+func (s *SortOptions) Marshal() primitive.D {
 	if s == nil {
 		return bson.D{}
 	}
 	return s.fields
+}
+
+func (s *SortOptions) ToMap() primitive.M {
+	res := bson.M{}
+	for _, field := range s.fields {
+		res[field.Key] = field.Value
+	}
+	return res
 }
