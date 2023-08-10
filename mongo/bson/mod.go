@@ -23,6 +23,7 @@ type Document interface {
 type Array interface {
 	Bson
 	Marshal() primitive.A
+	Size() int
 }
 
 type E bson.E
@@ -67,8 +68,12 @@ func (m M) ToMap() bson.M {
 
 type A bson.A
 
-func (a A) tag() {}
+func (a A) Tag() {}
 
 func (a A) Marshal() bson.A {
 	return (bson.A)(a)
+}
+
+func (a A) Size() int {
+	return len(a)
 }
