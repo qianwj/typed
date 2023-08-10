@@ -1,7 +1,6 @@
 package options
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -18,31 +17,11 @@ const (
 type (
 	CursorType options.CursorType
 	Collation  options.Collation
-	Projection bson.M
 	Page       struct {
 		pageNo   int64
 		pageSize int64
 	}
 )
-
-func Need(field string) Projection {
-	return Projection{
-		field: 1,
-	}
-}
-
-func Ignore(field string) Projection {
-	return Projection{
-		field: -1,
-	}
-}
-
-func (p Projection) And(projection Projection) Projection {
-	for k, v := range projection {
-		p[k] = v
-	}
-	return p
-}
 
 func NewPage(pageNo, pageSize int64) *Page {
 	return &Page{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
@@ -68,8 +69,8 @@ func (f *FindOneAndUpdateExecutor[D, I]) MaxTime(d time.Duration) *FindOneAndUpd
 }
 
 // Projection sets the value for the Projection field.
-func (f *FindOneAndUpdateExecutor[D, I]) Projection(projection options.Projection) *FindOneAndUpdateExecutor[D, I] {
-	f.opts.SetProjection(projection)
+func (f *FindOneAndUpdateExecutor[D, I]) Projection(projection *projections.ProjectionOptions) *FindOneAndUpdateExecutor[D, I] {
+	f.opts.SetProjection(projection.Marshal())
 	return f
 }
 
