@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/model/update"
@@ -16,14 +16,14 @@ import (
 
 type FindOneAndUpdateExecutor[D model.Document[I], I model.DocumentId] struct {
 	coll   *mongo.Collection
-	filter *filter.Filter
+	filter *filters.Filter
 	update *update.Update
 	opts   *rawopts.FindOneAndUpdateOptions
 }
 
 func NewFindOneAndUpdateExecutor[D model.Document[I], I model.DocumentId](
 	primary *mongo.Collection,
-	filter *filter.Filter,
+	filter *filters.Filter,
 	update *update.Update,
 ) *FindOneAndUpdateExecutor[D, I] {
 	return &FindOneAndUpdateExecutor[D, I]{

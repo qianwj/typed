@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -34,7 +34,7 @@ func (uom *TypedUpdateOneModel) Hint(index string) *TypedUpdateOneModel {
 // Filter specifies a filter to use to select the document to update. The filter must be a document containing query
 // operators. It cannot be nil. If the filter matches multiple documents, one will be selected from the matching
 // documents.
-func (uom *TypedUpdateOneModel) Filter(filter *filter.Filter) *TypedUpdateOneModel {
+func (uom *TypedUpdateOneModel) Filter(filter *filters.Filter) *TypedUpdateOneModel {
 	uom.internal.Filter = filter.Marshal()
 	return uom
 }
@@ -95,7 +95,7 @@ func (umm *TypedUpdateManyModel) SetHint(index string) *TypedUpdateManyModel {
 
 // SetFilter specifies a filter to use to select documents to update. The filter must be a document containing query
 // operators. It cannot be nil.
-func (umm *TypedUpdateManyModel) SetFilter(filter *filter.Filter) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateManyModel {
 	umm.internal.Filter = filter.Marshal()
 	return umm
 }

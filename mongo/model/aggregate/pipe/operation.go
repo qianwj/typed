@@ -3,7 +3,7 @@ package pipe
 import (
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregate"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
@@ -43,7 +43,7 @@ func (p *Pipeline) Lookup(join *aggregate.Lookup) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Match(match *filter.Filter) *Pipeline {
+func (p *Pipeline) Match(match *filters.Filter) *Pipeline {
 	p.put(operator.Match, match.Marshal())
 	return p
 }

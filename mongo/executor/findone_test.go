@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/util"
 	"github.com/stretchr/testify/assert"
@@ -33,11 +33,11 @@ func TestCollection_FindOne(t *testing.T) {
 		Err      error
 		Executor *FindOneExecutor[*TestDoc, primitive.ObjectID]
 	}{
-		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Eq("name", "Amy"))},
-		{Err: mongo.ErrNoDocuments, Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gt("createTime", createTime.Add(time.Hour)))},
-		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gte("createTime", createTime.Add(time.Hour)))},
-		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age"))},
-		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age")).Skip(1)},
+		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "Amy"))},
+		{Err: mongo.ErrNoDocuments, Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Gt("createTime", createTime.Add(time.Hour)))},
+		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Gte("createTime", createTime.Add(time.Hour)))},
+		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age"))},
+		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age")).Skip(1)},
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {
@@ -61,7 +61,7 @@ func TestCollection_FindOne(t *testing.T) {
 			Message: mongo.ErrNoDocuments.Error(),
 		}
 		mt.AddMockResponses(mtest.CreateCommandErrorResponse(mockError))
-		_, err := NewFindOneExecutor[model.BsonMap[string], string](mt.Coll, mt.Coll, filter.Eq("a", "b")).Execute(context.TODO())
+		_, err := NewFindOneExecutor[model.BsonMap[string], string](mt.Coll, mt.Coll, filters.Eq("a", "b")).Execute(context.TODO())
 		if !assert.Equal(mt, mockError.Message, err.Error()) {
 			mt.FailNow()
 		}

@@ -2,7 +2,7 @@ package aggregate
 
 import (
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	operator2 "github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -31,7 +31,7 @@ func AddToSet(variable model.StringVariable) bson.D {
 	}
 }
 
-func And(filters ...*filter.Filter) bson.D {
+func And(filters ...*filters.Filter) bson.D {
 	res := make(bson.A, len(filters))
 	for i, f := range filters {
 		res[i] = f.Marshal()

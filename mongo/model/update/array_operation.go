@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
@@ -61,7 +61,7 @@ func (u *Update) Pull(field string, value any) *Update {
 	return u
 }
 
-func (u *Update) PullConditioned(condition *filter.Filter) *Update {
+func (u *Update) PullConditioned(condition *filters.Filter) *Update {
 	cond := condition.Marshal()
 	for _, e := range cond {
 		u.pull[e.Key] = e.Value

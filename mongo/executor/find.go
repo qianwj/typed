@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,14 +15,14 @@ import (
 type FindExecutor[D model.Document[I], I model.DocumentId] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
-	filter          *filter.Filter
+	filter          *filters.Filter
 	primary         bool
 	opts            *rawopts.FindOptions
 }
 
 func NewFindExecutor[D model.Document[I], I model.DocumentId](
 	readprefPrimary, readprefDefault *raw.Collection,
-	filter *filter.Filter,
+	filter *filters.Filter,
 ) *FindExecutor[D, I] {
 	return &FindExecutor[D, I]{
 		readprefPrimary: readprefPrimary,

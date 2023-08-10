@@ -1,7 +1,7 @@
 package aggregate
 
 import (
-	"github.com/qianwj/typed/mongo/model/filter/text"
+	"github.com/qianwj/typed/mongo/model/filters/text"
 	"go.mongodb.org/mongo-driver/bson"
 )
 

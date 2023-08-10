@@ -3,7 +3,7 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -14,12 +14,12 @@ import (
 type FindOneExecutor[D model.Document[I], I model.DocumentId] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
-	filter          *filter.Filter
+	filter          *filters.Filter
 	primary         bool
 	opts            *rawopts.FindOneOptions
 }
 
-func NewFindOneExecutor[D model.Document[I], I model.DocumentId](readprefPrimary, readprefDefault *raw.Collection, filter *filter.Filter) *FindOneExecutor[D, I] {
+func NewFindOneExecutor[D model.Document[I], I model.DocumentId](readprefPrimary, readprefDefault *raw.Collection, filter *filters.Filter) *FindOneExecutor[D, I] {
 	return &FindOneExecutor[D, I]{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,

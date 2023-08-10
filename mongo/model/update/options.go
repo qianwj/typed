@@ -1,18 +1,18 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ArrayFilters struct {
-	items    []*filter.Filter
+	items    []*filters.Filter
 	registry *bsoncodec.Registry
 }
 
-func NewArrayFilters(filters ...*filter.Filter) *ArrayFilters {
+func NewArrayFilters(filters ...*filters.Filter) *ArrayFilters {
 	return &ArrayFilters{
 		items: filters,
 	}

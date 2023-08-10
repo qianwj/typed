@@ -1,7 +1,7 @@
 package update
 
 import (
-	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"go.mongodb.org/mongo-driver/bson"
 	"time"
@@ -138,7 +138,7 @@ func Pull(field string, value any) *Update {
 	return New().Pull(field, value)
 }
 
-func PullConditioned(condition *filter.Filter) *Update {
+func PullConditioned(condition *filters.Filter) *Update {
 	return New().PullConditioned(condition)
 }
 
