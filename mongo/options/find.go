@@ -1,14 +1,8 @@
 package options
 
 import (
-	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-)
-
-const (
-	Desc SortOrder = -1
-	Asc  SortOrder = 1
 )
 
 const (
@@ -22,35 +16,14 @@ const (
 )
 
 type (
-	CursorType  options.CursorType
-	Collation   options.Collation
-	SortOrder   int
-	SortOptions bson.D
-	SortOption  bson.E
-	Projection  bson.M
-	Page        struct {
+	CursorType options.CursorType
+	Collation  options.Collation
+	Projection bson.M
+	Page       struct {
 		pageNo   int64
 		pageSize int64
 	}
 )
-
-func (opts SortOptions) Append(next SortOptions) SortOptions {
-	return append(opts, next...)
-}
-
-func Ascending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: Asc}}
-}
-
-func Descending(field string) SortOptions {
-	return SortOptions{bson.E{Key: field, Value: Desc}}
-}
-
-func Meta(field string) SortOptions {
-	return SortOptions{
-		{Key: field, Value: bson.M{operator.Meta: "textScore"}},
-	}
-}
 
 func Need(field string) Projection {
 	return Projection{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -136,8 +137,8 @@ func (f *FindExecutor[D, I]) ShowRecordID() *FindExecutor[D, I] {
 	return f
 }
 
-func (f *FindExecutor[D, I]) Sort(sort options.SortOptions) *FindExecutor[D, I] {
-	f.opts.SetSort(sort)
+func (f *FindExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindExecutor[D, I] {
+	f.opts.SetSort(sort.Marshal())
 	return f
 }
 

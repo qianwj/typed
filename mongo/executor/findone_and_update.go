@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
@@ -83,8 +84,8 @@ func (f *FindOneAndUpdateExecutor[D, I]) ReturnAfter() *FindOneAndUpdateExecutor
 }
 
 // Sort sets the value for the Sort field.
-func (f *FindOneAndUpdateExecutor[D, I]) Sort(sort options.SortOptions) *FindOneAndUpdateExecutor[D, I] {
-	f.opts.SetSort(sort)
+func (f *FindOneAndUpdateExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindOneAndUpdateExecutor[D, I] {
+	f.opts.SetSort(sort.Marshal())
 	return f
 }
 

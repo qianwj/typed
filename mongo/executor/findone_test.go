@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filter"
-	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/util"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -36,8 +36,8 @@ func TestCollection_FindOne(t *testing.T) {
 		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Eq("name", "Amy"))},
 		{Err: mongo.ErrNoDocuments, Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gt("createTime", createTime.Add(time.Hour)))},
 		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Gte("createTime", createTime.Add(time.Hour)))},
-		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age"))},
-		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(options.Ascending("age")).Skip(1)},
+		{Expect: docs[0], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age"))},
+		{Expect: docs[3], Executor: NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filter.Nin("age", []any{19, 21})).Sort(sorts.Ascending("age")).Skip(1)},
 	}
 	for i, tc := range tests {
 		t.Run(fmt.Sprintf("case_%d", i), func(t *testing.T) {

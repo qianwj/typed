@@ -2,7 +2,7 @@ package update
 
 import (
 	"github.com/qianwj/typed/mongo/model/filter"
-	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"go.mongodb.org/mongo-driver/bson"
 	"time"
 )
@@ -126,7 +126,7 @@ func PushLimited(field string, value []string, limit int) *Update {
 	return New().PushLimited(field, value, limit)
 }
 
-func PushSorted(field string, value []string, sort options.SortOptions) *Update {
+func PushSorted(field string, value []string, sort *sorts.SortOptions) *Update {
 	return New().PushSorted(field, value, sort)
 }
 

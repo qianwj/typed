@@ -1,18 +1,18 @@
 package model
 
 import (
-	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Index struct {
-	keys []Pair[options.SortOrder]
+	keys []Pair[sorts.SortOrder]
 	opts *rawopts.IndexOptions
 }
 
-func NewIndex(keys ...Pair[options.SortOrder]) *Index {
+func NewIndex(keys ...Pair[sorts.SortOrder]) *Index {
 	return &Index{
 		keys: keys,
 		opts: rawopts.Index(),
@@ -20,13 +20,13 @@ func NewIndex(keys ...Pair[options.SortOrder]) *Index {
 }
 
 func From(model *mongo.IndexModel) *Index {
-	keys, idx := model.Keys, Index{keys: make([]Pair[options.SortOrder], 0)}
+	keys, idx := model.Keys, Index{keys: make([]Pair[sorts.SortOrder], 0)}
 	switch keys.(type) {
 	case bson.D:
 		for _, e := range keys.(bson.D) {
-			idx.keys = append(idx.keys, Pair[options.SortOrder]{
+			idx.keys = append(idx.keys, Pair[sorts.SortOrder]{
 				Key:   e.Key,
-				Value: e.Value.(options.SortOrder),
+				Value: e.Value.(sorts.SortOrder),
 			})
 		}
 	}
