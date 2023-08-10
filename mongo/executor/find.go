@@ -158,7 +158,7 @@ func (f *FindExecutor[D, I]) Snapshot() *FindExecutor[D, I] {
 	return f
 }
 
-func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
+func (f *FindExecutor[D, I]) ToArray(ctx context.Context) ([]D, error) {
 	var (
 		data   []D
 		err    error
@@ -178,7 +178,7 @@ func (f *FindExecutor[D, I]) Execute(ctx context.Context) ([]D, error) {
 	return data, nil
 }
 
-func (f *FindExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
+func (f *FindExecutor[D, I]) Collect(ctx context.Context, data any) error {
 	var (
 		err    error
 		cursor *raw.Cursor
@@ -192,4 +192,36 @@ func (f *FindExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 		return err
 	}
 	return cursor.All(ctx, &data)
+}
+
+func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], error) {
+	var (
+		err    error
+		cursor *raw.Cursor
+	)
+	if f.primary {
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
+	} else {
+		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &FindIterator[D, I]{cursor: cursor}, nil
+}
+
+type FindIterator[D model.Document[I], I model.DocumentId] struct {
+	cursor *raw.Cursor
+}
+
+func (f *FindIterator[D, I]) HasNext(ctx context.Context) bool {
+	return f.cursor.Next(ctx)
+}
+
+func (f *FindIterator[D, I]) Next() (D, error) {
+	var data D
+	if err := f.cursor.Decode(&data); err != nil {
+		return data, err
+	}
+	return data, nil
 }
