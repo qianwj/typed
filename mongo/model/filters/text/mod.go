@@ -3,6 +3,7 @@ package text
 import (
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Langeuage string
@@ -41,7 +42,9 @@ func (s *Search) DiacriticSensitive() *Search {
 	return s
 }
 
-func (s *Search) Marshal() bson.D {
+func (s *Search) Tag() {}
+
+func (s *Search) Marshal() primitive.D {
 	res := bson.D{
 		{Key: operator.Search, Value: s.search},
 	}
@@ -59,6 +62,20 @@ func (s *Search) Marshal() bson.D {
 		res = append(res, bson.E{
 			Key: operator.DiacriticSensitive, Value: *s.diacriticSensitive,
 		})
+	}
+	return res
+}
+
+func (s *Search) ToMap() primitive.M {
+	res := bson.M{}
+	if s.language != nil {
+		res[operator.Language] = *s.language
+	}
+	if s.caseSensitive != nil {
+		res[operator.CaseSensitive] = *s.caseSensitive
+	}
+	if s.diacriticSensitive != nil {
+		res[operator.DiacriticSensitive] = *s.diacriticSensitive
 	}
 	return res
 }
