@@ -24,11 +24,12 @@ func (p *Pipeline) Facet(facets ...*model.Facet) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Group(id GroupId, pipeline bson.A) *Pipeline {
-	p.put(operator.Group, bson.D{
-		{Key: "_id", Value: id},
-		//pipeline...,
-	})
+func (p *Pipeline) Group(id GroupId, fields ...*GroupField) *Pipeline {
+	op := append(primitive.D{}, primitive.E{Key: "_id", Value: id})
+	op = append(op, util.Map(fields, func(f *GroupField) primitive.E {
+		return f.Marshal()
+	})...)
+	p.put(operator.Group, op)
 	return p
 }
 
