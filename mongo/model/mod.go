@@ -46,18 +46,6 @@ type Pair[V any] struct {
 	Value V
 }
 
-type Variable interface {
-	varTag()
-}
-
-type StringVariable string
-
-func (v StringVariable) varTag() {}
-
-type LongVariable int64
-
-func (v LongVariable) varTag() {}
-
 type Addr struct {
 	Host string
 	Port int

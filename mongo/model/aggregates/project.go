@@ -35,3 +35,24 @@ type RootReplacer struct {
 func ReplaceRoot(expr Expression) *RootReplacer {
 	return &RootReplacer{expr: expr}
 }
+
+func (r *RootReplacer) Tag() {}
+
+func (r *RootReplacer) Marshal() primitive.D {
+	return primitive.D{
+		primitive.E{
+			Key: operator.ReplaceRoot,
+			Value: primitive.M{
+				"newRoot": r.expr,
+			},
+		},
+	}
+}
+
+func (r *RootReplacer) ToMap() primitive.M {
+	return primitive.M{
+		operator.ReplaceRoot: bson.M{
+			"newRoot": r.expr,
+		},
+	}
+}

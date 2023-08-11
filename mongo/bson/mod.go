@@ -50,6 +50,8 @@ func (d D) ToMap() primitive.M {
 	return m
 }
 
+func (d D) IsExpression() {}
+
 type M bson.M
 
 func (m M) Tag() {}
