@@ -33,6 +33,11 @@ func (p *Pipeline) Group(id GroupId, fields ...*GroupField) *Pipeline {
 	return p
 }
 
+func (p *Pipeline) Lookup(l *Lookup) *Pipeline {
+	p.put(operator.Lookup, l.Marshal())
+	return p
+}
+
 func (p *Pipeline) Match(query ...*filters.Filter) *Pipeline {
 	p.put(operator.Match, util.Map(query, func(f *filters.Filter) primitive.D {
 		return f.Marshal()

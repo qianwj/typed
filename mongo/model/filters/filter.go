@@ -85,11 +85,13 @@ func (f *Filter) get(key string) (any, bool) {
 	return nil, false
 }
 
-func (f *Filter) Document() bson.M {
+func (f *Filter) Tag() {}
+
+func (f *Filter) ToMap() primitive.M {
 	return f.d2m(f.entries)
 }
 
-func (f *Filter) Marshal() bson.D {
+func (f *Filter) Marshal() primitive.D {
 	return f.entries
 }
 
