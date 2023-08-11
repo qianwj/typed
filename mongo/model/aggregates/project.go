@@ -27,3 +27,11 @@ func (p *Projector) ToMap() primitive.M {
 		operator.Project: p.def.ToMap(),
 	}
 }
+
+type RootReplacer struct {
+	expr Expression
+}
+
+func ReplaceRoot(expr Expression) *RootReplacer {
+	return &RootReplacer{expr: expr}
+}
