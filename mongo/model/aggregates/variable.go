@@ -1,12 +1,12 @@
 package aggregates
 
 type Variable interface {
-	varTag()
+	IsVariable()
 }
 
 type StringVariable string
 
-func (v StringVariable) varTag() {}
+func (v StringVariable) IsVariable() {}
 
 func (v StringVariable) IsExpression() {}
 

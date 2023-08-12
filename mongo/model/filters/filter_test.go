@@ -54,7 +54,7 @@ func TestFilter_And(t *testing.T) {
 		{"d", Nil},
 		{"e", oid},
 	}))
-	if !assert.Equal(t, expected, f.Document()) {
+	if !assert.Equal(t, expected, f.ToMap()) {
 		t.FailNow()
 	}
 }

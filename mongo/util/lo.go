@@ -15,3 +15,15 @@ func Map[T, U any](arr []T, convert func(t T) U) []U {
 	}
 	return res
 }
+
+func ErrMap[T, U any](arr []T, convert func(t T) (U, error)) ([]U, error) {
+	res := make([]U, len(arr))
+	var err error
+	for i, t := range arr {
+		res[i], err = convert(t)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
