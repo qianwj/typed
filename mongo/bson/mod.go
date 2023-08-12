@@ -90,11 +90,11 @@ type bsonAIter struct {
 }
 
 func (b *bsonAIter) HasNext() bool {
-	b.cur++
 	return b.cur < b.total
 }
 
 func (b *bsonAIter) Next() (Bson, bool) {
 	ele, ok := b.data[b.cur].(Bson)
+	b.cur++
 	return ele, ok
 }

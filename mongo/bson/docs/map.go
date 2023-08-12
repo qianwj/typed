@@ -138,7 +138,7 @@ func (m *bsonMap) marshalBJSON(b bson.Bson) (any, error) {
 			return docs, nil
 		} else if bType.Implements(types.Document) {
 			doc := b.(bson.Document).ToMap()
-			return doc.MarshalJSON()
+			return doc, nil
 		}
 	}
 	return nil, errors.New("unknown type")

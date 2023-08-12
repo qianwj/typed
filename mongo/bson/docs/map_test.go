@@ -14,7 +14,7 @@ func TestBsonMap_MarshalJSON(t *testing.T) {
 	m.Put("cc", bson.Null{})
 	m.Put("dd", bson.A{
 		D{
-			{Key: "sdd", Value: "ddd"},
+			{Key: "sdd", Value: bson.String("ddd")},
 		},
 	})
 	bytes, err := m.MarshalJSON()
