@@ -7,6 +7,8 @@ import (
 
 func FromAny(v any) Bson {
 	switch v.(type) {
+	case nil:
+		return Null{}
 	case string:
 		return String(v.(string))
 	case int:

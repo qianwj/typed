@@ -43,7 +43,7 @@ func (m M) Marshal() raw.D {
 func (m M) ToMap() bson.Map {
 	res := New()
 	for k, v := range m {
-		res.Put(k, v.(bson.Bson))
+		res.Put(k, bson.FromAny(v))
 	}
 	return res
 }

@@ -106,6 +106,8 @@ func (m *bsonMap) MarshalJSON() ([]byte, error) {
 
 func (m *bsonMap) marshalBJSON(b any) (any, error) {
 	switch b.(type) {
+	case nil:
+		return nil, nil
 	case string:
 		return b, nil
 	case int, int8, int16, int32, int64, float32, float64, bool:
