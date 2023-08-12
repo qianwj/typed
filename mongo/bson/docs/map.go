@@ -3,7 +3,6 @@ package docs
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/bson/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -105,8 +104,12 @@ func (m *bsonMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(res)
 }
 
-func (m *bsonMap) marshalBJSON(b bson.Bson) (any, error) {
+func (m *bsonMap) marshalBJSON(b any) (any, error) {
 	switch b.(type) {
+	case string:
+		return b, nil
+	case int, int8, int16, int32, int64, float32, float64, bool:
+		return b, nil
 	case bson.String, bson.Int, bson.Long, bson.Bool, bson.Float, bson.Double:
 		return b, nil
 	case bson.DateTime:
@@ -117,7 +120,6 @@ func (m *bsonMap) marshalBJSON(b bson.Bson) (any, error) {
 		return b.(bson.ObjectId).String(), nil
 	default:
 		bType := reflect.TypeOf(b)
-		fmt.Printf("type: %+v\r\n", b)
 		if bType.Implements(types.Array) {
 			docs := make([]any, 0)
 			iter := b.(bson.Array).Iter()

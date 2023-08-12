@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+func FromAny(v any) Bson {
+	switch v.(type) {
+	case string:
+		return String(v.(string))
+	case int:
+		return Int(v.(int))
+	case int64:
+		return Long(v.(int64))
+	case bool:
+		return Bool(v.(bool))
+	}
+	return v.(Bson)
+}
+
 type ObjectId primitive.ObjectID
 
 func NewObjectId() ObjectId {
@@ -43,7 +57,7 @@ func (String) IsVariable() {}
 
 func (String) IsExpression() {}
 
-type Int int32
+type Int int
 
 func (i Int) Cast() any {
 	return i
@@ -51,7 +65,7 @@ func (i Int) Cast() any {
 
 func (Int) IsVariable() {}
 
-type Long int32
+type Long int64
 
 func (l Long) Cast() any {
 	return l

@@ -19,7 +19,7 @@ func (d D) Marshal() primitive.D {
 func (d D) ToMap() bson.Map {
 	m := New()
 	for _, e := range d {
-		m.Put(e.Key, e.Value.(bson.Bson))
+		m.Put(e.Key, bson.FromAny(e.Value))
 	}
 	return m
 }
