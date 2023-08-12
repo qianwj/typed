@@ -3,6 +3,7 @@ package docs
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/bson/types"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -116,6 +117,7 @@ func (m *bsonMap) marshalBJSON(b bson.Bson) (any, error) {
 		return b.(bson.ObjectId).String(), nil
 	default:
 		bType := reflect.TypeOf(b)
+		fmt.Printf("type: %+v\r\n", b)
 		if bType.Implements(types.Array) {
 			docs := make([]any, 0)
 			iter := b.(bson.Array).Iter()
@@ -133,6 +135,10 @@ func (m *bsonMap) marshalBJSON(b bson.Bson) (any, error) {
 				}
 				docs = append(docs, doc)
 			}
+			return docs, nil
+		} else if bType.Implements(types.Document) {
+			doc := b.(bson.Document).ToMap()
+			return doc.MarshalJSON()
 		}
 	}
 	return nil, errors.New("unknown type")
