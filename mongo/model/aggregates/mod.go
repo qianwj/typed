@@ -1,5 +1,9 @@
 package aggregates
 
+const (
+	Now = "$$NOW"
+)
+
 //func Facet(facets ...*model.Facet) *Pipeline {
 //	return New().Facet(facets...)
 //}
