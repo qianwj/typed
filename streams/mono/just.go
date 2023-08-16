@@ -3,6 +3,7 @@ package mono
 import (
 	"streams"
 	"streams/item"
+	"streams/publisher"
 	"time"
 )
 
@@ -19,7 +20,6 @@ func (m *monoJust) BlockWith(time.Duration) *item.Item {
 	return &m.val
 }
 
-func (m *monoJust) Subscribe(sub streams.Subscriber) {
-	//ScalarSubscription
-	sub.OnSubscribe(nil)
+func (m *monoJust) Subscribe(actual streams.Subscriber) {
+	actual.OnSubscribe(publisher.NewScalarSubscription(actual, m.val))
 }

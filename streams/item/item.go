@@ -1,11 +1,11 @@
 package item
 
-func Ok(data any) *Item {
-	return &Item{data: data}
+func Ok(data any) Item {
+	return Item{data: data}
 }
 
-func Err(err error) *Item {
-	return &Item{error: err}
+func Err(err error) Item {
+	return Item{error: err}
 }
 
 type Item struct {

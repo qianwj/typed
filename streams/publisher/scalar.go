@@ -11,7 +11,7 @@ type ScalarSubscription struct {
 	val    any
 }
 
-func newScalarSubscription(actual streams.Subscriber, val any) *ScalarSubscription {
+func NewScalarSubscription(actual streams.Subscriber, val any) *ScalarSubscription {
 	return &ScalarSubscription{
 		actual: actual,
 		val:    val,
