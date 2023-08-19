@@ -57,7 +57,8 @@ func (f *justSubscription) Request(n int64) {
 		select {
 		case it, ok := <-f.data:
 			if !ok {
-				break
+				f.actual.OnComplete()
+				return
 			}
 			switch it.(type) {
 			case error:
@@ -66,10 +67,10 @@ func (f *justSubscription) Request(n int64) {
 				f.actual.OnNext(it)
 			}
 		case <-f.ctx.Done():
-			break
+			f.actual.OnComplete()
+			return
 		}
 	}
-	f.actual.OnComplete()
 }
 
 func (f *justSubscription) Cancel() {
