@@ -1,32 +1,38 @@
 package flux
 
-import (
-	"streams"
-	"streams/item"
-)
+import "streams"
 
-func Just[T any](value ...T) streams.Flux {
-	if len(value) == 0 {
-		return &fluxEmpty{}
-	}
-	if len(value) == 1 {
-		return &fluxJust{val: item.Ok(value[0])}
-	}
-	items := make([]item.Item, len(value))
-	for i, val := range value {
-		items[i] = item.Ok(val)
-	}
-	return &fluxArray{val: items}
+type flux struct {
+	source      streams.Publisher
+	errConsumer func(error)
 }
 
-func FromChannel(ch chan<- any) streams.Flux {
-	return nil
+func (f *flux) Subscribe(consumer func(any)) {
+	f.source.Subscribe(streams.NewFunctionalSubscriber(consumer, f.errConsumer))
 }
 
-type fluxEmpty struct{}
+func (f *flux) OnError(errConsumer func(error)) streams.Flux {
+	f.errConsumer = errConsumer
+	return f
+}
 
-func (e *fluxEmpty) Subscribe(streams.Subscriber) {}
+func (f *flux) Map(mapper func(any) any) streams.Flux {
+	return &flux{
+		source: &fluxMap{f.source, mapper},
+	}
+}
 
-func (e *fluxEmpty) Consume(func(any)) {
+func (f *flux) MapT(mapFn any) streams.Flux {
+	selectGenericFunc, err := newGenericFunc(
+		"MapT", "mapFn", mapFn,
+		simpleParamValidator(newElemTypeSlice(new(genericType)), newElemTypeSlice(new(genericType))),
+	)
+	if err != nil {
+		panic(err)
+	}
 
+	selectorFunc := func(item interface{}) interface{} {
+		return selectGenericFunc.Call(item)
+	}
+	return f.Map(selectorFunc)
 }

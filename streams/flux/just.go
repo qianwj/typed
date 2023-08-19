@@ -2,18 +2,34 @@ package flux
 
 import (
 	"streams"
-	"streams/item"
-	"streams/publisher"
+	"time"
 )
 
-type fluxJust struct {
-	val item.Item
+type just struct {
+	data chan any
 }
 
-func (f *fluxJust) Subscribe(actual streams.Subscriber) {
-	actual.OnSubscribe(publisher.NewScalarSubscription(actual, f.val))
+func (f *just) Subscribe(sub streams.Subscriber) {
+	for it := range f.data {
+		switch it.(type) {
+		case error:
+			sub.OnError(it.(error))
+		default:
+			sub.OnNext(it)
+		}
+	}
 }
 
-func (f *fluxJust) Consume(consumer func(it any)) {
-	consumer(f.val)
+func Just(data ...any) streams.Flux {
+	ch := make(chan any)
+	go func() {
+		for _, it := range data {
+			ch <- it
+			time.Sleep(time.Second * 1)
+		}
+		close(ch)
+	}()
+	return &flux{
+		source: &just{data: ch},
+	}
 }

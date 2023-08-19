@@ -1,19 +1,8 @@
 package streams
 
-import "streams/item"
-
-type Mono interface {
-	Subscribe(actual Subscriber)
-	//Block() *item.Item
-	//BlockWith(d time.Duration) *item.Item
-}
-
 type Flux interface {
-	Subscribe(actual Subscriber)
-	Consume(func(any))
-}
-
-type QueueSubscription interface {
-	Subscription
-	Poll() *item.Item
+	Map(mapper func(any) any) Flux
+	MapT(mapFn any) Flux
+	OnError(errConsumer func(error)) Flux
+	Subscribe(consumer func(any))
 }
