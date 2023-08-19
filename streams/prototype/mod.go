@@ -9,6 +9,7 @@ import (
 
 type Flux interface {
 	Map(mapper func(any) any) Flux
+	MapT(mapFn any) Flux
 	OnError(errConsumer func(error)) Flux
 	Subscribe(consumer func(any))
 }
@@ -58,6 +59,21 @@ func (f *flux) Map(mapper func(any) any) Flux {
 	return &flux{
 		source: &fluxMap{f.source, mapper},
 	}
+}
+
+func (f *flux) MapT(mapFn any) Flux {
+	selectGenericFunc, err := newGenericFunc(
+		"MapT", "mapFn", mapFn,
+		simpleParamValidator(newElemTypeSlice(new(genericType)), newElemTypeSlice(new(genericType))),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	selectorFunc := func(item interface{}) interface{} {
+		return selectGenericFunc.Call(item)
+	}
+	return f.Map(selectorFunc)
 }
 
 type fluxMap struct {
@@ -114,8 +130,8 @@ func (f *fluxJust) Subscribe(sub Subscriber) {
 func main() {
 	f := just(1, 2, errors.New("an error"), 3, 4, 5).Map(func(a any) any {
 		return strconv.Itoa(a.(int))
-	}).Map(func(a any) any {
-		return a.(string) + " mapped"
+	}).MapT(func(a string) string {
+		return a + " mapped"
 	}).OnError(func(e error) {
 		fmt.Printf("error: %+v\r\n", e)
 	})
