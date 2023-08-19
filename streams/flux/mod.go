@@ -19,10 +19,14 @@ func Just[T any](value ...T) streams.Flux {
 	return &fluxArray{val: items}
 }
 
+func FromChannel(ch chan<- any) streams.Flux {
+	return nil
+}
+
 type fluxEmpty struct{}
 
 func (e *fluxEmpty) Subscribe(streams.Subscriber) {}
 
-func (e *fluxEmpty) Consume(func(item.Item)) {
+func (e *fluxEmpty) Consume(func(any)) {
 
 }

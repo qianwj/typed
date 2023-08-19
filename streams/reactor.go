@@ -10,7 +10,7 @@ type Mono interface {
 
 type Flux interface {
 	Subscribe(actual Subscriber)
-	Consume(func(item.Item))
+	Consume(func(any))
 }
 
 type QueueSubscription interface {
