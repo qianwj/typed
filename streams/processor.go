@@ -5,8 +5,10 @@ type Publisher interface {
 }
 
 type Subscriber interface {
+	OnSubScribe(sub Subscription)
 	OnNext(item any)
 	OnError(e error)
+	OnComplete()
 }
 
 type Subscription interface {

@@ -8,7 +8,8 @@ type flux struct {
 }
 
 func (f *flux) Subscribe(consumer func(any)) {
-	f.source.Subscribe(streams.NewFunctionalSubscriber(consumer, f.errConsumer))
+	actual := streams.NewFunctionalSubscriber(consumer, f.errConsumer)
+	f.source.Subscribe(actual)
 }
 
 func (f *flux) OnError(errConsumer func(error)) streams.Flux {

@@ -16,10 +16,18 @@ type mapSubscriber struct {
 	mapper func(any) any
 }
 
+func (m *mapSubscriber) OnSubScribe(sub streams.Subscription) {
+	m.actual.OnSubScribe(sub)
+}
+
 func (m *mapSubscriber) OnNext(it any) {
 	m.actual.OnNext(m.mapper(it))
 }
 
 func (m *mapSubscriber) OnError(err error) {
 	m.actual.OnError(err)
+}
+
+func (m *mapSubscriber) OnComplete() {
+	m.actual.OnComplete()
 }
