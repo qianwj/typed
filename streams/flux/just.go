@@ -8,11 +8,6 @@ import (
 
 func Just(data ...any) streams.Flux {
 	ch := make(chan any)
-	ctx, cancel := context.WithCancel(context.TODO())
-	go func() {
-		time.Sleep(time.Second * 3)
-		cancel()
-	}()
 	go func() {
 		for _, it := range data {
 			ch <- it
@@ -21,7 +16,7 @@ func Just(data ...any) streams.Flux {
 		close(ch)
 	}()
 	return &flux{
-		source: &just{data: ch, ctx: ctx},
+		source: &just{data: ch, ctx: context.Background()},
 	}
 }
 
