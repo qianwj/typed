@@ -23,17 +23,21 @@ func NewFunctionalSubscriber(consumer func(any), errConsumer func(error)) Subscr
 
 func (f *FunctionalSubscriber) OnSubScribe(sub Subscription) {
 	tick := time.NewTicker(time.Second * 2)
+	defer tick.Stop()
 	for !f.complete {
-		<-tick.C
-		if f.consumes < 1 {
-			// slow
-			sub.Request(1)
-		} else {
-			sub.Request(10)
+		select {
+		case <-tick.C:
+			if f.consumes < 1 {
+				// slow
+				sub.Request(1)
+			} else {
+				sub.Request(10)
+			}
+			f.consumes = 0
+		case <-f.ctx.Done():
+			break
 		}
-		f.consumes = 0
 	}
-	tick.Stop()
 }
 
 func (f *FunctionalSubscriber) OnNext(val any) {
