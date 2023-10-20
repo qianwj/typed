@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/options"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -80,9 +81,9 @@ func (c *CountExecutor[D, I]) Skip(i int64) *CountExecutor[D, I] {
 
 func (c *CountExecutor[D, I]) Execute(ctx context.Context) (int64, error) {
 	if c.primary {
-		return c.readprefPrimary.CountDocuments(ctx, c.filter.Marshal(), c.opts)
+		return c.readprefPrimary.CountDocuments(ctx, c.filter, c.opts)
 	} else {
-		return c.readprefDefault.CountDocuments(ctx, c.filter.Marshal(), c.opts)
+		return c.readprefDefault.CountDocuments(ctx, c.filter, c.opts)
 	}
 }
 

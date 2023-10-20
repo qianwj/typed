@@ -2,12 +2,13 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -102,13 +103,13 @@ func (f *FindOneAndUpdateExecutor[D, I]) Hint(index string) *FindOneAndUpdateExe
 }
 
 // Let sets the value for the Let field.
-func (f *FindOneAndUpdateExecutor[D, I]) Let(l bson.M) *FindOneAndUpdateExecutor[D, I] {
+func (f *FindOneAndUpdateExecutor[D, I]) Let(l rawbson.M) *FindOneAndUpdateExecutor[D, I] {
 	f.opts.SetLet(l)
 	return f
 }
 
 func (f *FindOneAndUpdateExecutor[D, I]) Execute(ctx context.Context) (D, error) {
-	res := f.coll.FindOneAndUpdate(ctx, f.filter.Marshal(), f.update.Marshal(), f.opts)
+	res := f.coll.FindOneAndUpdate(ctx, f.filter, f.update.Marshal(), f.opts)
 	var data D
 	if res.Err() != nil {
 		return data, res.Err()

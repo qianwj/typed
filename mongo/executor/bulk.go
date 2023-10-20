@@ -2,9 +2,10 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/update"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -44,7 +45,7 @@ func (b *BulkWriteExecutor[D, I]) BypassDocumentValidation() *BulkWriteExecutor[
 // This option is only valid for MongoDB versions >= 5.0. Older servers will report an error for using this option.
 // This must be a document mapping parameter names to values. Values must be constant or closed expressions that do not
 // reference document fields. Parameters can then be accessed as variables in an aggregate expression context (e.g. "$$var").
-func (b *BulkWriteExecutor[D, I]) Let(let bson.M) *BulkWriteExecutor[D, I] {
+func (b *BulkWriteExecutor[D, I]) Let(let rawbson.M) *BulkWriteExecutor[D, I] {
 	b.opts.SetLet(let)
 	return b
 }

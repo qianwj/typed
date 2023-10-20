@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
@@ -124,9 +125,9 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 		res  *raw.SingleResult
 	)
 	if f.primary {
-		res = f.readprefPrimary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefPrimary.FindOne(ctx, f.filter, f.opts)
 	} else {
-		res = f.readprefDefault.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefDefault.FindOne(ctx, f.filter, f.opts)
 	}
 	if res.Err() != nil {
 		return data, res.Err()
@@ -140,9 +141,9 @@ func (f *FindOneExecutor[D, I]) Execute(ctx context.Context) (D, error) {
 func (f *FindOneExecutor[D, I]) ExecuteTo(ctx context.Context, data any) error {
 	var res *raw.SingleResult
 	if f.primary {
-		res = f.readprefPrimary.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefPrimary.FindOne(ctx, f.filter, f.opts)
 	} else {
-		res = f.readprefDefault.FindOne(ctx, f.filter.Marshal(), f.opts)
+		res = f.readprefDefault.FindOne(ctx, f.filter, f.opts)
 	}
 	if res.Err() != nil {
 		return res.Err()

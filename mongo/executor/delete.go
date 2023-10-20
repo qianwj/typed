@@ -2,9 +2,10 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/options"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -52,7 +53,7 @@ func (d *DeleteExecutor[D, I]) Hint(index string) *DeleteExecutor[D, I] {
 }
 
 // Let sets the value for the Let field.
-func (d *DeleteExecutor[D, I]) Let(let bson.M) *DeleteExecutor[D, I] {
+func (d *DeleteExecutor[D, I]) Let(let rawbson.M) *DeleteExecutor[D, I] {
 	d.opts.SetLet(let)
 	return d
 }
@@ -63,9 +64,9 @@ func (d *DeleteExecutor[D, I]) Execute(ctx context.Context) (int64, error) {
 		res *mongo.DeleteResult
 	)
 	if d.multi {
-		res, err = d.coll.DeleteMany(ctx, d.filter.Marshal(), d.opts)
+		res, err = d.coll.DeleteMany(ctx, d.filter, d.opts)
 	} else {
-		res, err = d.coll.DeleteOne(ctx, d.filter.Marshal(), d.opts)
+		res, err = d.coll.DeleteOne(ctx, d.filter, d.opts)
 	}
 	if err != nil {
 		return -1, err

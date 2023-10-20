@@ -2,10 +2,11 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -79,7 +80,7 @@ func (f *FindExecutor[D, I]) Hint(index string) *FindExecutor[D, I] {
 }
 
 // Let sets the value for the Let field.
-func (f *FindExecutor[D, I]) Let(let bson.M) *FindExecutor[D, I] {
+func (f *FindExecutor[D, I]) Let(let rawbson.M) *FindExecutor[D, I] {
 	f.opts.SetLet(let)
 	return f
 }
@@ -164,9 +165,9 @@ func (f *FindExecutor[D, I]) ToArray(ctx context.Context) ([]D, error) {
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter, f.opts)
 	} else {
-		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
 	}
 	if err != nil {
 		return nil, err
@@ -183,9 +184,9 @@ func (f *FindExecutor[D, I]) Collect(ctx context.Context, data any) error {
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter, f.opts)
 	} else {
-		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
 	}
 	if err != nil {
 		return err
@@ -199,9 +200,9 @@ func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], e
 		cursor *raw.Cursor
 	)
 	if f.primary {
-		cursor, err = f.readprefPrimary.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefPrimary.Find(ctx, f.filter, f.opts)
 	} else {
-		cursor, err = f.readprefDefault.Find(ctx, f.filter.Marshal(), f.opts)
+		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
 	}
 	if err != nil {
 		return nil, err
