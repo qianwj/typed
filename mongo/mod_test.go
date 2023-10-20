@@ -3,8 +3,8 @@ package mongo
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/builder"
-	"github.com/qianwj/typed/mongo/builder/collection"
+	"github.com/qianwj/typed/mongo/client"
+	"github.com/qianwj/typed/mongo/collection"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -22,7 +22,7 @@ func (t *testDoc) GetId() primitive.ObjectID {
 }
 
 func TestClientBuilder_ApplyUri(t *testing.T) {
-	cli, err := builder.NewClient().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
+	cli, err := client.NewBuilder().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
 	if err != nil {
 		t.Error(err)
 		t.FailNow()

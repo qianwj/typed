@@ -1,7 +1,7 @@
 package mongo
 
 import (
-	"github.com/qianwj/typed/mongo/executor/collection"
+	"github.com/qianwj/typed/mongo/collection"
 	rawmongo "go.mongodb.org/mongo-driver/mongo"
 )
 

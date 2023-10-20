@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/model/filters"

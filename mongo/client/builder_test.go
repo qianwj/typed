@@ -1,4 +1,4 @@
-package builder
+package client
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 )
 
 func TestClientBuilder_ApplyUri(t *testing.T) {
-	cli, err := NewClient().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
+	cli, err := Builder().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
 	if err != nil {
 		t.Error(err)
 		t.FailNow()

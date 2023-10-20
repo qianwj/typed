@@ -1,4 +1,4 @@
-package collection
+package database
 
 import (
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
@@ -10,16 +10,16 @@ import (
 )
 
 type Builder struct {
-	db   *mongo.Database
+	cli  *mongo.Client
 	name string
-	opts *options.CollectionOptions
+	opts *options.DatabaseOptions
 }
 
-func NewCollection(db *mongo.Database, name string) *Builder {
+func NewBuilder(cli *mongo.Client, name string) *Builder {
 	return &Builder{
-		db:   db,
+		cli:  cli,
 		name: name,
-		opts: options.Collection(),
+		opts: options.Database(),
 	}
 }
 
@@ -47,9 +47,14 @@ func (b *Builder) Registry(r *bsoncodec.Registry) *Builder {
 	return b
 }
 
-//
-//func (b *Builder) Build() *collection.Collection {
-//	primary := b.db.Collection(b.name, options.Collection().SetReadPreference(readpref.Primary()), b.opts)
-//	defaultNode := b.db.Collection(b.name, b.opts)
-//	return collection.NewCollection[D, I](primary, defaultNode)
-//}
+// BSONOptions configures optional BSON marshaling and unmarshaling behavior.
+func (b *Builder) BSONOptions(opts *options.BSONOptions) *Builder {
+	b.opts.SetBSONOptions(opts)
+	return b
+}
+
+func (b *Builder) Build() *Database {
+	primary := b.cli.Database(b.name, options.Database().SetReadPreference(readpref.Primary()), b.opts)
+	defaultReadpref := b.cli.Database(b.name, b.opts)
+	return New(primary, defaultReadpref)
+}

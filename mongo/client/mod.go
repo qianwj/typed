@@ -2,8 +2,8 @@ package client
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/builder/database"
-	"github.com/qianwj/typed/mongo/builder/transaction"
+	"github.com/qianwj/typed/mongo/database"
+	"github.com/qianwj/typed/mongo/transaction"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -14,7 +14,7 @@ type Client struct {
 	defaultDatabaseName string
 }
 
-func NewClient(ctx context.Context, defaultDB string, opts *options.ClientOptions) (*Client, error) {
+func New(ctx context.Context, defaultDB string, opts *options.ClientOptions) (*Client, error) {
 	internal, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -25,12 +25,12 @@ func NewClient(ctx context.Context, defaultDB string, opts *options.ClientOption
 	}, nil
 }
 
-func (c *Client) DefaultDatabase() *database.DatabaseBuilder {
-	return database.NewDatabase(c.internal, c.defaultDatabaseName)
+func (c *Client) DefaultDatabase() *database.Builder {
+	return database.NewBuilder(c.internal, c.defaultDatabaseName)
 }
 
-func (c *Client) Database(name string) *database.DatabaseBuilder {
-	return database.NewDatabase(c.internal, name)
+func (c *Client) Database(name string) *database.Builder {
+	return database.NewBuilder(c.internal, name)
 }
 
 func (c *Client) Transaction() *transaction.TxSessionBuilder {

@@ -3,9 +3,8 @@ package collection
 import (
 	"fmt"
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/executor/client"
-	"github.com/qianwj/typed/mongo/executor/collection"
-	"github.com/qianwj/typed/mongo/executor/database"
+	"github.com/qianwj/typed/mongo/client"
+	"github.com/qianwj/typed/mongo/database"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -27,14 +26,14 @@ func FromNamespace[D bson.Doc[I], I bson.ID](cli *client.Client, ns string) (*Ty
 		return nil, fmt.Errorf("invalid ns: %s", ns)
 	}
 	db := cli.Database(pair[0]).Build().Raw()
-	return NewTypedCollection[D, I](db, pair[1]), nil
+	return NewTypedBuilder[D, I](db, pair[1]), nil
 }
 
 func FromDatabase[D bson.Doc[I], I bson.ID](db *database.Database, name string) *TypedBuilder[D, I] {
-	return NewTypedCollection[D, I](db.Raw(), name)
+	return NewTypedBuilder[D, I](db.Raw(), name)
 }
 
-func NewTypedCollection[D bson.Doc[I], I bson.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
+func NewTypedBuilder[D bson.Doc[I], I bson.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
 	return &TypedBuilder[D, I]{
 		db:   db,
 		name: name,
@@ -66,8 +65,8 @@ func (b *TypedBuilder[D, I]) Registry(r *bsoncodec.Registry) *TypedBuilder[D, I]
 	return b
 }
 
-func (b *TypedBuilder[D, I]) Build() *collection.TypedCollection[D, I] {
+func (b *TypedBuilder[D, I]) Build() *TypedCollection[D, I] {
 	primary := b.db.Collection(b.name, options.Collection().SetReadPreference(readpref.Primary()), b.opts)
 	defaultNode := b.db.Collection(b.name, b.opts)
-	return collection.NewTypedCollection[D, I](primary, defaultNode)
+	return NewTypedCollection[D, I](primary, defaultNode)
 }

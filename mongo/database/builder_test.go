@@ -19,7 +19,7 @@ func TestDatabaseBuilder_ReadConcern(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	db := NewDatabase(cli, "test_db").ReadConcern(readconcern.Majority()).Build()
+	db := NewBuilder(cli, "test_db").ReadConcern(readconcern.Majority()).Build()
 	assert.Equal(t, readconcern.Majority(), db.Raw().ReadConcern())
 }
 
@@ -29,7 +29,7 @@ func TestDatabaseBuilder_ReadPreference(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	db := NewDatabase(cli, "test_db").ReadPreference(readpref.Primary()).Build()
+	db := NewBuilder(cli, "test_db").ReadPreference(readpref.Primary()).Build()
 	assert.Equal(t, readpref.Primary(), db.Raw().ReadPreference())
 }
 
@@ -39,7 +39,7 @@ func TestDatabaseBuilder_Build(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	db := NewDatabase(cli, "test_db").Build()
+	db := NewBuilder(cli, "test_db").Build()
 	collectionNames, err := db.Raw().ListCollectionNames(context.TODO(), bson.M{})
 	if err != nil {
 		t.Error(err)

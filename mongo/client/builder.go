@@ -1,9 +1,8 @@
-package builder
+package client
 
 import (
 	"context"
 	"crypto/tls"
-	"github.com/qianwj/typed/mongo/executor/client"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/event"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,16 +14,16 @@ import (
 	"time"
 )
 
-type ClientBuilder struct {
+type Builder struct {
 	opts                *options.ClientOptions
 	defaultDatabaseName string
 }
 
-func NewClient() *ClientBuilder {
-	return &ClientBuilder{opts: options.Client()}
+func NewBuilder() *Builder {
+	return &Builder{opts: options.Client()}
 }
 
-func (b *ClientBuilder) ApplyUri(uri string) *ClientBuilder {
+func (b *Builder) ApplyUri(uri string) *Builder {
 	b.opts.ApplyURI(uri)
 	return b
 }
@@ -32,7 +31,7 @@ func (b *ClientBuilder) ApplyUri(uri string) *ClientBuilder {
 // AppName specifies an application name that is sent to the server when creating new connections. It is used by the
 // server to log connection and profiling information (e.g. slow query logs). This can also be set through the "appName"
 // URI option (e.g "appName=example_application"). The default is empty, meaning no app name will be sent.
-func (b *ClientBuilder) AppName(name string) *ClientBuilder {
+func (b *Builder) AppName(name string) *Builder {
 	b.opts.SetAppName(name)
 	return b
 }
@@ -40,7 +39,7 @@ func (b *ClientBuilder) AppName(name string) *ClientBuilder {
 // Auth specifies a Credential containing options for configuring authentication. See the options.Credential
 // documentation for more information about Credential fields. The default is an empty Credential, meaning no
 // authentication will be configured.
-func (b *ClientBuilder) Auth(auth options.Credential) *ClientBuilder {
+func (b *Builder) Auth(auth options.Credential) *Builder {
 	b.opts.SetAuth(auth)
 	return b
 }
@@ -61,7 +60,7 @@ func (b *ClientBuilder) Auth(auth options.Credential) *ClientBuilder {
 //
 // This can also be set through the "compressors" URI option (e.g. "compressors=zstd,zlib,snappy"). The default is
 // an empty slice, meaning no compression will be enabled.
-func (b *ClientBuilder) Compressors(comps []string) *ClientBuilder {
+func (b *Builder) Compressors(comps []string) *Builder {
 	b.opts.SetCompressors(comps)
 	return b
 }
@@ -70,7 +69,7 @@ func (b *ClientBuilder) Compressors(comps []string) *ClientBuilder {
 // specified through Dialer, this option must not be used. This can be set through ApplyURI with the
 // "connectTimeoutMS" (e.g "connectTimeoutMS=30") option. If set to 0, no timeout will be used. The default is 30
 // seconds.
-func (b *ClientBuilder) ConnectTimeout(d time.Duration) *ClientBuilder {
+func (b *Builder) ConnectTimeout(d time.Duration) *Builder {
 	b.opts.SetConnectTimeout(d)
 	return b
 }
@@ -78,7 +77,7 @@ func (b *ClientBuilder) ConnectTimeout(d time.Duration) *ClientBuilder {
 // Dialer specifies a custom ContextDialer to be used to create new connections to the server. The default is a
 // net.Dialer with the Timeout field set to ConnectTimeout. See https://golang.org/pkg/net/#Dialer for more information
 // about the net.Dialer type.
-func (b *ClientBuilder) Dialer(d options.ContextDialer) *ClientBuilder {
+func (b *Builder) Dialer(d options.ContextDialer) *Builder {
 	b.opts.SetDialer(d)
 	return b
 }
@@ -98,14 +97,14 @@ func (b *ClientBuilder) Dialer(d options.ContextDialer) *ClientBuilder {
 // If the "connect" and "directConnection" URI options are both specified in the connection string, their values must
 // not conflict. Direct connections are not valid if multiple hosts are specified or an SRV URI is used. The default
 // value for this option is false. If you use this, this option will be true.
-func (b *ClientBuilder) Direct() *ClientBuilder {
+func (b *Builder) Direct() *Builder {
 	b.opts.SetDirect(true)
 	return b
 }
 
 // HeartbeatInterval specifies the amount of time to wait between periodic background server checks. This can also be
 // set through the "heartbeatIntervalMS" URI option (e.g. "heartbeatIntervalMS=10000"). The default is 10 seconds.
-func (b *ClientBuilder) HeartbeatInterval(d time.Duration) *ClientBuilder {
+func (b *Builder) HeartbeatInterval(d time.Duration) *Builder {
 	b.opts.SetHeartbeatInterval(d)
 	return b
 }
@@ -115,7 +114,7 @@ func (b *ClientBuilder) HeartbeatInterval(d time.Duration) *ClientBuilder {
 //
 // Hosts can also be specified as a comma-separated list in a URI. For example, to include "localhost:27017" and
 // "localhost:27018", a URI could be "mongodb://localhost:27017,localhost:27018". The default is ["localhost:27017"]
-func (b *ClientBuilder) Hosts(s []string) *ClientBuilder {
+func (b *Builder) Hosts(s []string) *Builder {
 	b.opts.SetHosts(s)
 	return b
 }
@@ -130,7 +129,7 @@ func (b *ClientBuilder) Hosts(s []string) *ClientBuilder {
 // 3. The options specify whether or not a direct connection should be made, either via the URI or the Direct method.
 //
 // The default value is false.
-func (b *ClientBuilder) LoadBalanced(lb bool) *ClientBuilder {
+func (b *Builder) LoadBalanced(lb bool) *Builder {
 	b.opts.SetLoadBalanced(lb)
 	return b
 }
@@ -139,14 +138,14 @@ func (b *ClientBuilder) LoadBalanced(lb bool) *ClientBuilder {
 // operation, this is the acceptable non-negative delta between shortest and longest average round-trip times. A server
 // within the latency window is selected randomly. This can also be set through the "localThresholdMS" URI option (e.g.
 // "localThresholdMS=15000"). The default is 15 milliseconds.
-func (b *ClientBuilder) LocalThreshold(d time.Duration) *ClientBuilder {
+func (b *Builder) LocalThreshold(d time.Duration) *Builder {
 	b.opts.SetLocalThreshold(d)
 	return b
 }
 
 // LoggerOptions specifies a LoggerOptions containing options for
 // configuring a logger.
-func (b *ClientBuilder) LoggerOptions(opts *options.LoggerOptions) *ClientBuilder {
+func (b *Builder) LoggerOptions(opts *options.LoggerOptions) *Builder {
 	b.opts.SetLoggerOptions(opts)
 	return b
 }
@@ -154,7 +153,7 @@ func (b *ClientBuilder) LoggerOptions(opts *options.LoggerOptions) *ClientBuilde
 // MaxConnIdleTime specifies the maximum amount of time that a connection will remain idle in a connection pool
 // before it is removed from the pool and closed. This can also be set through the "maxIdleTimeMS" URI option (e.g.
 // "maxIdleTimeMS=10000"). The default is 0, meaning a connection can remain unused indefinitely.
-func (b *ClientBuilder) MaxConnIdleTime(d time.Duration) *ClientBuilder {
+func (b *Builder) MaxConnIdleTime(d time.Duration) *Builder {
 	b.opts.SetMaxConnIdleTime(d)
 	return b
 }
@@ -162,7 +161,7 @@ func (b *ClientBuilder) MaxConnIdleTime(d time.Duration) *ClientBuilder {
 // MaxPoolSize specifies that maximum number of connections allowed in the driver's connection pool to each server.
 // Requests to a server will block if this maximum is reached. This can also be set through the "maxPoolSize" URI option
 // (e.g. "maxPoolSize=100"). If this is 0, maximum connection pool size is not limited. The default is 100.
-func (b *ClientBuilder) MaxPoolSize(u uint64) *ClientBuilder {
+func (b *Builder) MaxPoolSize(u uint64) *Builder {
 	b.opts.SetMaxPoolSize(u)
 	return b
 }
@@ -170,7 +169,7 @@ func (b *ClientBuilder) MaxPoolSize(u uint64) *ClientBuilder {
 // MinPoolSize specifies the minimum number of connections allowed in the driver's connection pool to each server. If
 // this is non-zero, each server's pool will be maintained in the background to ensure that the size does not fall below
 // the minimum. This can also be set through the "minPoolSize" URI option (e.g. "minPoolSize=100"). The default is 0.
-func (b *ClientBuilder) MinPoolSize(u uint64) *ClientBuilder {
+func (b *Builder) MinPoolSize(u uint64) *Builder {
 	b.opts.SetMinPoolSize(u)
 	return b
 }
@@ -178,27 +177,27 @@ func (b *ClientBuilder) MinPoolSize(u uint64) *ClientBuilder {
 // MaxConnecting specifies the maximum number of connections a connection pool may establish simultaneously. This can
 // also be set through the "maxConnecting" URI option (e.g. "maxConnecting=2"). If this is 0, the default is used. The
 // default is 2. Values greater than 100 are not recommended.
-func (b *ClientBuilder) MaxConnecting(u uint64) *ClientBuilder {
+func (b *Builder) MaxConnecting(u uint64) *Builder {
 	b.opts.SetMaxConnecting(u)
 	return b
 }
 
 // PoolMonitor specifies a PoolMonitor to receive connection pool events. See the event.PoolMonitor documentation
 // for more information about the structure of the monitor and events that can be received.
-func (b *ClientBuilder) PoolMonitor(m *event.PoolMonitor) *ClientBuilder {
+func (b *Builder) PoolMonitor(m *event.PoolMonitor) *Builder {
 	b.opts.SetPoolMonitor(m)
 	return b
 }
 
 // Monitor specifies a CommandMonitor to receive command events. See the event.CommandMonitor documentation for more
 // information about the structure of the monitor and events that can be received.
-func (b *ClientBuilder) Monitor(m *event.CommandMonitor) *ClientBuilder {
+func (b *Builder) Monitor(m *event.CommandMonitor) *Builder {
 	b.opts.SetMonitor(m)
 	return b
 }
 
 // ServerMonitor specifies an SDAM monitor used to monitor SDAM events.
-func (b *ClientBuilder) ServerMonitor(m *event.ServerMonitor) *ClientBuilder {
+func (b *Builder) ServerMonitor(m *event.ServerMonitor) *Builder {
 	b.opts.SetServerMonitor(m)
 	return b
 }
@@ -206,7 +205,7 @@ func (b *ClientBuilder) ServerMonitor(m *event.ServerMonitor) *ClientBuilder {
 // ReadConcern specifies the read concern to use for read operations. A read concern level can also be set through
 // the "readConcernLevel" URI option (e.g. "readConcernLevel=majority"). The default is nil, meaning the server will use
 // its configured default.
-func (b *ClientBuilder) ReadConcern(rc *readconcern.ReadConcern) *ClientBuilder {
+func (b *Builder) ReadConcern(rc *readconcern.ReadConcern) *Builder {
 	b.opts.SetReadConcern(rc)
 	return b
 }
@@ -224,20 +223,20 @@ func (b *ClientBuilder) ReadConcern(rc *readconcern.ReadConcern) *ClientBuilder 
 //
 // The default is readpref.Primary(). See https://www.mongodb.com/docs/manual/core/read-preference/#read-preference for
 // more information about read preferences.
-func (b *ClientBuilder) ReadPreference(rp *readpref.ReadPref) *ClientBuilder {
+func (b *Builder) ReadPreference(rp *readpref.ReadPref) *Builder {
 	b.opts.SetReadPreference(rp)
 	return b
 }
 
 // BSONOptions configures optional BSON marshaling and unmarshaling behavior.
-func (b *ClientBuilder) BSONOptions(opts *options.BSONOptions) *ClientBuilder {
+func (b *Builder) BSONOptions(opts *options.BSONOptions) *Builder {
 	b.opts.SetBSONOptions(opts)
 	return b
 }
 
 // Registry specifies the BSON registry to use for BSON marshalling/unmarshalling operations. The default is
 // bson.DefaultRegistry.
-func (b *ClientBuilder) Registry(registry *bsoncodec.Registry) *ClientBuilder {
+func (b *Builder) Registry(registry *bsoncodec.Registry) *Builder {
 	b.opts.SetRegistry(registry)
 	return b
 }
@@ -247,7 +246,7 @@ func (b *ClientBuilder) Registry(registry *bsoncodec.Registry) *ClientBuilder {
 // ApplyURI or Hosts. All nodes in the replica set must have the same replica set name, or they will not be
 // considered as part of the set by the Client. This can also be set through the "replica" URI option (e.g.
 // "replica=replset"). The default is empty.
-func (b *ClientBuilder) ReplicaSet(s string) *ClientBuilder {
+func (b *Builder) ReplicaSet(s string) *Builder {
 	b.opts.SetReplicaSet(s)
 	return b
 }
@@ -263,7 +262,7 @@ func (b *ClientBuilder) ReplicaSet(s string) *ClientBuilder {
 // This option requires server version >= 3.6 and a replica set or sharded cluster and will be ignored for any other
 // cluster type. This can also be set through the "retryWrites" URI option (e.g. "retryWrites=true"). The default is
 // true.
-func (b *ClientBuilder) DisableRetryWrites() *ClientBuilder {
+func (b *Builder) DisableRetryWrites() *Builder {
 	b.opts.SetRetryWrites(false)
 	return b
 }
@@ -276,7 +275,7 @@ func (b *ClientBuilder) DisableRetryWrites() *ClientBuilder {
 // operations run through RunCommand are not retried.
 //
 // This option requires server version >= 3.6 and driver version >= 1.1.0. The default is true.
-func (b *ClientBuilder) DisableRetryReads() *ClientBuilder {
+func (b *Builder) DisableRetryReads() *Builder {
 	b.opts.SetRetryReads(false)
 	return b
 }
@@ -284,7 +283,7 @@ func (b *ClientBuilder) DisableRetryReads() *ClientBuilder {
 // ServerSelectionTimeout specifies how long the driver will wait to find an available, suitable server to execute an
 // operation. This can also be set through the "serverSelectionTimeoutMS" URI option (e.g.
 // "serverSelectionTimeoutMS=30000"). The default value is 30 seconds.
-func (b *ClientBuilder) ServerSelectionTimeout(d time.Duration) *ClientBuilder {
+func (b *Builder) ServerSelectionTimeout(d time.Duration) *Builder {
 	b.opts.SetServerSelectionTimeout(d)
 	return b
 }
@@ -296,7 +295,7 @@ func (b *ClientBuilder) ServerSelectionTimeout(d time.Duration) *ClientBuilder {
 // NOTE(benjirewis): SocketTimeout will be deprecated in a future release. The more general Timeout option may be used
 // in its place to control the amount of time that a single operation can run before returning an error. ting
 // SocketTimeout and Timeout on a single client will result in undefined behavior.
-func (b *ClientBuilder) SocketTimeout(d time.Duration) *ClientBuilder {
+func (b *Builder) SocketTimeout(d time.Duration) *Builder {
 	b.opts.SetSocketTimeout(d)
 	return b
 }
@@ -312,7 +311,7 @@ func (b *ClientBuilder) SocketTimeout(d time.Duration) *ClientBuilder {
 //
 // NOTE(benjirewis): Timeout represents unstable, provisional API. The behavior of the driver when a Timeout is specified is
 // subject to change.
-func (b *ClientBuilder) Timeout(d time.Duration) *ClientBuilder {
+func (b *Builder) Timeout(d time.Duration) *Builder {
 	b.opts.SetTimeout(d)
 	return b
 }
@@ -341,7 +340,7 @@ func (b *ClientBuilder) Timeout(d time.Duration) *ClientBuilder {
 // man-in-the-middle attacks and should only be done for testing.
 //
 // The default is nil, meaning no TLS will be enabled.
-func (b *ClientBuilder) TLSConfig(cfg *tls.Config) *ClientBuilder {
+func (b *Builder) TLSConfig(cfg *tls.Config) *Builder {
 	b.opts.SetTLSConfig(cfg)
 	return b
 }
@@ -349,7 +348,7 @@ func (b *ClientBuilder) TLSConfig(cfg *tls.Config) *ClientBuilder {
 // HTTPClient specifies the http.Client to be used for any HTTP requests.
 //
 // This should only be used to set custom HTTP client configurations. By default, the connection will use an internal.DefaultHTTPClient.
-func (b *ClientBuilder) HTTPClient(client *http.Client) *ClientBuilder {
+func (b *Builder) HTTPClient(client *http.Client) *Builder {
 	b.opts.SetHTTPClient(client)
 	return b
 }
@@ -368,7 +367,7 @@ func (b *ClientBuilder) HTTPClient(client *http.Client) *ClientBuilder {
 // returning (e.g. "journal=true").
 //
 // The default is nil, meaning the server will use its configured default.
-func (b *ClientBuilder) WriteConcern(wc *writeconcern.WriteConcern) *ClientBuilder {
+func (b *Builder) WriteConcern(wc *writeconcern.WriteConcern) *Builder {
 	b.opts.SetWriteConcern(wc)
 	return b
 }
@@ -377,7 +376,7 @@ func (b *ClientBuilder) WriteConcern(wc *writeconcern.WriteConcern) *ClientBuild
 // compressor through ApplyURI or Compressors. Supported values are -1 through 9, inclusive. -1 tells the zlib
 // library to use its default, 0 means no compression, 1 means best speed, and 9 means best compression.
 // This can also be set through the "zlibCompressionLevel" URI option (e.g. "zlibCompressionLevel=-1"). Defaults to -1.
-func (b *ClientBuilder) ZlibLevel(level int) *ClientBuilder {
+func (b *Builder) ZlibLevel(level int) *Builder {
 	b.opts.SetZlibLevel(level)
 	return b
 }
@@ -385,7 +384,7 @@ func (b *ClientBuilder) ZlibLevel(level int) *ClientBuilder {
 // ZstdLevel sets the level for the zstd compressor. This option is ignored if zstd is not specified as a compressor
 // through ApplyURI or Compressors. Supported values are 1 through 20, inclusive. 1 means best speed and 20 means
 // best compression. This can also be set through the "zstdCompressionLevel" URI option. Defaults to 6.
-func (b *ClientBuilder) ZstdLevel(level int) *ClientBuilder {
+func (b *Builder) ZstdLevel(level int) *Builder {
 	b.opts.SetZstdLevel(level)
 	return b
 }
@@ -393,7 +392,7 @@ func (b *ClientBuilder) ZstdLevel(level int) *ClientBuilder {
 // AutoEncryptionOptions specifies an AutoEncryptionOptions instance to automatically encrypt and decrypt commands
 // and their results. See the options.AutoEncryptionOptions documentation for more information about the supported
 // options.
-func (b *ClientBuilder) AutoEncryptionOptions(opts *options.AutoEncryptionOptions) *ClientBuilder {
+func (b *Builder) AutoEncryptionOptions(opts *options.AutoEncryptionOptions) *Builder {
 	b.opts.SetAutoEncryptionOptions(opts)
 	return b
 }
@@ -407,7 +406,7 @@ func (b *ClientBuilder) AutoEncryptionOptions(opts *options.AutoEncryptionOption
 //
 // This can also be set through the tlsDisableOCSPEndpointCheck URI option. Both this URI option and tlsInsecure must
 // not be set at the same time and will error if they are. The default value is false.
-func (b *ClientBuilder) DisableOCSPEndpointCheck() *ClientBuilder {
+func (b *Builder) DisableOCSPEndpointCheck() *Builder {
 	b.opts.SetDisableOCSPEndpointCheck(true)
 	return b
 }
@@ -415,7 +414,7 @@ func (b *ClientBuilder) DisableOCSPEndpointCheck() *ClientBuilder {
 // ServerAPIOptions specifies a ServerAPIOptions instance used to configure the API version sent to the server
 // when running commands. See the options.ServerAPIOptions documentation for more information about the supported
 // options.
-func (b *ClientBuilder) ServerAPIOptions(opts *options.ServerAPIOptions) *ClientBuilder {
+func (b *Builder) ServerAPIOptions(opts *options.ServerAPIOptions) *Builder {
 	b.opts.SetServerAPIOptions(opts)
 	return b
 }
@@ -423,7 +422,7 @@ func (b *ClientBuilder) ServerAPIOptions(opts *options.ServerAPIOptions) *Client
 // SRVMaxHosts specifies the maximum number of SRV results to randomly select during polling. To limit the number
 // of hosts selected in SRV discovery, this function must be called before ApplyURI. This can also be set through
 // the "srvMaxHosts" URI option.
-func (b *ClientBuilder) SRVMaxHosts(srvMaxHosts int) *ClientBuilder {
+func (b *Builder) SRVMaxHosts(srvMaxHosts int) *Builder {
 	b.opts.SetSRVMaxHosts(srvMaxHosts)
 	return b
 }
@@ -431,16 +430,16 @@ func (b *ClientBuilder) SRVMaxHosts(srvMaxHosts int) *ClientBuilder {
 // SRVServiceName specifies a custom SRV service name to use in SRV polling. To use a custom SRV service name
 // in SRV discovery, this function must be called before ApplyURI. This can also be set through the "srvServiceName"
 // URI option.
-func (b *ClientBuilder) SRVServiceName(srvName string) *ClientBuilder {
+func (b *Builder) SRVServiceName(srvName string) *Builder {
 	b.opts.SetSRVServiceName(srvName)
 	return b
 }
 
-func (b *ClientBuilder) Build(ctx context.Context) (*client.Client, error) {
+func (b *Builder) Build(ctx context.Context) (*Client, error) {
 	uri, err := connstring.ParseAndValidate(b.opts.GetURI())
 	if err != nil {
 		return nil, err
 	}
 	b.defaultDatabaseName = uri.Database
-	return client.NewClient(ctx, b.defaultDatabaseName, b.opts)
+	return New(ctx, b.defaultDatabaseName, b.opts)
 }
