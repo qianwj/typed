@@ -2,11 +2,12 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/update"
 	"github.com/qianwj/typed/mongo/options"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -78,7 +79,7 @@ func (u *UpdateExecutor[D, I]) Upsert() *UpdateExecutor[D, I] {
 }
 
 // Let sets the value for the Let field.
-func (u *UpdateExecutor[D, I]) Let(l bson.M) *UpdateExecutor[D, I] {
+func (u *UpdateExecutor[D, I]) Let(l rawbson.M) *UpdateExecutor[D, I] {
 	u.opts.SetLet(l)
 	return u
 }
@@ -91,9 +92,9 @@ func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult
 	if u.docId != nil {
 		res, err = u.coll.UpdateByID(ctx, u.docId, u.update.Marshal(), u.opts)
 	} else if u.multi {
-		res, err = u.coll.UpdateMany(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateMany(ctx, u.filter, u.update.Marshal(), u.opts)
 	} else {
-		res, err = u.coll.UpdateOne(ctx, u.filter.Marshal(), u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateOne(ctx, u.filter, u.update.Marshal(), u.opts)
 	}
 	return model.FromUpdateResult[I](res), err
 }

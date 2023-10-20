@@ -1,6 +1,8 @@
 package regex
 
 import (
+	"encoding/json"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -75,4 +77,12 @@ func (m *Matcher) Compile() primitive.Regex {
 		}
 	}
 	return primitive.Regex{Pattern: m.pattern, Options: options}
+}
+
+func (m *Matcher) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Compile())
+}
+
+func (m *Matcher) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(m.Compile())
 }

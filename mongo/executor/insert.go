@@ -2,6 +2,7 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
