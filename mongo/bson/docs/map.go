@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/bson/types"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"reflect"
 )
@@ -104,6 +105,10 @@ func (m *bsonMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(res)
 }
 
+func (m *bsonMap) MarshalBSON() ([]byte, error) {
+	return rawbson.Marshal(m.entries)
+}
+
 func (m *bsonMap) marshalBJSON(b any) (any, error) {
 	switch b.(type) {
 	case nil:
@@ -147,34 +152,3 @@ func (m *bsonMap) marshalBJSON(b any) (any, error) {
 	}
 	return nil, errors.New("unknown type")
 }
-
-//func (m *bsonMap) d2m(d bson.D) bson.M {
-//	res := bson.M{}
-//	for _, e := range d {
-//		res[e.Key] = e
-//		switch e.Value.(type) {
-//		case bson.A:
-//			res[e.Key] = m.a2m(e.Value.(bson.A))
-//		case bson.D:
-//			res[e.Key] = m.d2m(e.Value.(bson.D))
-//		case primitive.Null:
-//			res[e.Key] = "null"
-//		case primitive.Regex:
-//			regex := e.Value.(primitive.Regex)
-//			res[e.Key] = "/" + regex.Pattern + "/" + regex.Options
-//		case primitive.ObjectID:
-//			res[e.Key] = e.Value.(primitive.ObjectID).String()
-//		default:
-//			res[e.Key] = e.Value
-//		}
-//	}
-//	return res
-//}
-//
-//func (m *bsonMap) a2m(a primitive.A) []Document {
-//	arr := make([]bson.M, len(a))
-//	for i, d := range a {
-//		arr[i] = m.d2m(d.(bson.D))
-//	}
-//	return arr
-//}
