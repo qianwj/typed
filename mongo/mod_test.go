@@ -31,8 +31,8 @@ func TestClientBuilder_ApplyUri(t *testing.T) {
 		t.Error(err)
 		t.FailNow()
 	}
-	db := cli.DefaultDatabase().Build()
-	coll := collection.FromDatabase[testDoc, primitive.ObjectID](db, "test").Build()
+	db := cli.DefaultDatabase().Build().Raw()
+	coll := collection.NewTypedBuilder[testDoc, primitive.ObjectID](db, "test").Build()
 	iter, err := coll.Find(filters.Eq("name", "aaa")).Cursor(context.TODO())
 	if err != nil {
 		t.Errorf("curosr error: %+v", err)

@@ -1,36 +1,19 @@
 package collection
 
 import (
-	"fmt"
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/client"
-	"github.com/qianwj/typed/mongo/database"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
-	"strings"
 )
 
 type TypedBuilder[D bson.Doc[I], I bson.ID] struct {
 	db   *mongo.Database
 	name string
 	opts *options.CollectionOptions
-}
-
-func FromNamespace[D bson.Doc[I], I bson.ID](cli *client.Client, ns string) (*TypedBuilder[D, I], error) {
-	pair := strings.Split(ns, ".")
-	if len(pair) != 2 {
-		return nil, fmt.Errorf("invalid ns: %s", ns)
-	}
-	db := cli.Database(pair[0]).Build().Raw()
-	return NewTypedBuilder[D, I](db, pair[1]), nil
-}
-
-func FromDatabase[D bson.Doc[I], I bson.ID](db *database.Database, name string) *TypedBuilder[D, I] {
-	return NewTypedBuilder[D, I](db.Raw(), name)
 }
 
 func NewTypedBuilder[D bson.Doc[I], I bson.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
