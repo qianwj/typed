@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/builder"
 	"github.com/qianwj/typed/mongo/builder/collection"
 	"github.com/qianwj/typed/mongo/model/filters"

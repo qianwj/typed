@@ -2,9 +2,10 @@ package executor
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/options"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -88,7 +89,7 @@ func (a *AggregateExecutor[D, I]) Hint(index string) *AggregateExecutor[D, I] {
 }
 
 // Let sets the value for the Let field.
-func (a *AggregateExecutor[D, I]) Let(let bson.M) *AggregateExecutor[D, I] {
+func (a *AggregateExecutor[D, I]) Let(let rawbson.M) *AggregateExecutor[D, I] {
 	a.opts.SetLet(let)
 	return a
 }
@@ -97,7 +98,7 @@ func (a *AggregateExecutor[D, I]) Let(let bson.M) *AggregateExecutor[D, I] {
 // with desired option names and values. Values must be Marshalable. Custom options may conflict
 // with non-custom options, and custom options bypass client-side validation. Prefer using non-custom
 // options where possible.
-func (a *AggregateExecutor[D, I]) Custom(c bson.M) *AggregateExecutor[D, I] {
+func (a *AggregateExecutor[D, I]) Custom(c rawbson.M) *AggregateExecutor[D, I] {
 	a.opts.SetCustom(c)
 	return a
 }
@@ -193,7 +194,7 @@ func (a *DatabaseAggregateExecutor) Hint(index string) *DatabaseAggregateExecuto
 }
 
 // Let sets the value for the Let field.
-func (a *DatabaseAggregateExecutor) Let(let bson.M) *DatabaseAggregateExecutor {
+func (a *DatabaseAggregateExecutor) Let(let rawbson.M) *DatabaseAggregateExecutor {
 	a.opts.SetLet(let)
 	return a
 }
@@ -202,7 +203,7 @@ func (a *DatabaseAggregateExecutor) Let(let bson.M) *DatabaseAggregateExecutor {
 // with desired option names and values. Values must be Marshalable. Custom options may conflict
 // with non-custom options, and custom options bypass client-side validation. Prefer using non-custom
 // options where possible.
-func (a *DatabaseAggregateExecutor) Custom(c bson.M) *DatabaseAggregateExecutor {
+func (a *DatabaseAggregateExecutor) Custom(c rawbson.M) *DatabaseAggregateExecutor {
 	a.opts.SetCustom(c)
 	return a
 }
