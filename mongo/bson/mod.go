@@ -1,7 +1,6 @@
 package bson
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -16,6 +15,4 @@ type ID interface {
 
 type Doc[I ID] interface {
 	GetID() I
-	bson.Marshaler
-	bson.Unmarshaler
 }
