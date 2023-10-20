@@ -55,61 +55,61 @@ func BitsAnySetByPositions(key string, pos []int) *Filter {
 }
 
 func (f *Filter) BitsAllClear(key string, mask int) *Filter {
-	f.put(key, bson.M{operator.BitsAllClear: mask})
+	f.data.Put(key, bson.M{operator.BitsAllClear: mask})
 	return f
 }
 
 func (f *Filter) BitsAllClearByBinary(key string, bin primitive.Binary) *Filter {
-	f.put(key, bson.M{operator.BitsAllClear: bin})
+	f.data.Put(key, bson.M{operator.BitsAllClear: bin})
 	return f
 }
 
 func (f *Filter) BitsAllClearByPositions(key string, pos []int) *Filter {
-	f.put(key, bson.M{operator.BitsAllClear: pos})
+	f.data.Put(key, bson.M{operator.BitsAllClear: pos})
 	return f
 }
 
 func (f *Filter) BitsAllSet(key string, mask int) *Filter {
-	f.put(key, bson.M{operator.BitsAllSet: mask})
+	f.data.Put(key, bson.M{operator.BitsAllSet: mask})
 	return f
 }
 
 func (f *Filter) BitsAllSetByBinary(key string, bin primitive.Binary) *Filter {
-	f.put(key, bson.M{operator.BitsAllSet: bin})
+	f.data.Put(key, bson.M{operator.BitsAllSet: bin})
 	return f
 }
 
 func (f *Filter) BitsAllSetByPositions(key string, pos []int) *Filter {
-	f.put(key, bson.M{operator.BitsAllSet: pos})
+	f.data.Put(key, bson.M{operator.BitsAllSet: pos})
 	return f
 }
 
 func (f *Filter) BitsAnyClear(key string, mask int) *Filter {
-	f.put(key, bson.M{operator.BitsAnyClear: mask})
+	f.data.Put(key, bson.M{operator.BitsAnyClear: mask})
 	return f
 }
 
 func (f *Filter) BitsAnyClearByBinary(key string, bin primitive.Binary) *Filter {
-	f.put(key, bson.M{operator.BitsAnyClear: bin})
+	f.data.Put(key, bson.M{operator.BitsAnyClear: bin})
 	return f
 }
 
 func (f *Filter) BitsAnyClearByPositions(key string, pos []int) *Filter {
-	f.put(key, bson.M{operator.BitsAnySet: pos})
+	f.data.Put(key, bson.M{operator.BitsAnySet: pos})
 	return f
 }
 
 func (f *Filter) BitsAnySet(key string, mask int) *Filter {
-	f.put(key, bson.M{operator.BitsAnySet: mask})
+	f.data.Put(key, bson.M{operator.BitsAnySet: mask})
 	return f
 }
 
 func (f *Filter) BitsAnySetByBinary(key string, bin primitive.Binary) *Filter {
-	f.put(key, bson.M{operator.BitsAnySet: bin})
+	f.data.Put(key, bson.M{operator.BitsAnySet: bin})
 	return f
 }
 
 func (f *Filter) BitsAnySetByPositions(key string, pos []int) *Filter {
-	f.put(key, bson.M{operator.BitsAnySet: pos})
+	f.data.Put(key, bson.M{operator.BitsAnySet: pos})
 	return f
 }

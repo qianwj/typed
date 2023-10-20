@@ -3,7 +3,7 @@ package bson
 import (
 	"encoding/json"
 	"github.com/qianwj/typed/mongo/util"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -19,7 +19,7 @@ func NewMap() *Map {
 	}
 }
 
-func FromM(m bson.M) *Map {
+func FromM(m rawbson.M) *Map {
 	f := NewMap()
 	for k, v := range m {
 		f.Put(k, v)
@@ -27,7 +27,7 @@ func FromM(m bson.M) *Map {
 	return f
 }
 
-func FromD(d bson.D) *Map {
+func FromD(d rawbson.D) *Map {
 	f := NewMap()
 	for _, e := range d {
 		f.Put(e.Key, e.Value)
@@ -48,9 +48,55 @@ func (m *Map) Put(key string, value any) *Map {
 	return m
 }
 
-func (m *Map) Raw() bson.D {
-	return util.Map(m.entries, func(e Entry) bson.E {
-		return bson.E(e)
+func (m *Map) PutAsArray(key string, others ...*Map) {
+	val, exist := m.Get(key)
+	if !exist {
+		m.Put(key, others)
+	} else {
+		switch val.(type) {
+		case rawbson.M:
+			val = append([]*Map{FromM(val.(rawbson.M))}, others...)
+		case rawbson.D:
+			val = append([]*Map{FromD(val.(rawbson.D))}, others...)
+		case rawbson.A:
+			arr := make([]any, 0)
+			for i, elem := range val.(rawbson.A) {
+				switch elem.(type) {
+				case rawbson.M:
+					arr[i] = FromM(elem.(rawbson.M))
+				case rawbson.D:
+					arr[i] = FromD(elem.(rawbson.D))
+				default:
+					arr[i] = elem
+				}
+			}
+			for _, other := range others {
+				arr = append(arr, other)
+			}
+			val = arr
+		}
+		m.Put(key, val)
+	}
+}
+
+func (m *Map) Get(key string) (any, bool) {
+	if index, exists := m.dict[key]; exists {
+		return m.entries[index].Value, true
+	}
+	return nil, false
+}
+
+func (m *Map) Entries() []Entry {
+	entries := make([]Entry, len(m.entries))
+	for i, entry := range m.entries {
+		entries[i] = entry
+	}
+	return entries
+}
+
+func (m *Map) Raw() rawbson.D {
+	return util.Map(m.entries, func(e Entry) rawbson.E {
+		return rawbson.E(e)
 	})
 }
 
@@ -58,10 +104,12 @@ func (m *Map) ToMap() map[string]any {
 	dst := make(map[string]any)
 	for _, entry := range m.entries {
 		switch entry.Value.(type) {
-		case bson.D:
-			dst[entry.Key] = m.d2m(entry.Value.(bson.D))
-		case bson.A:
-			dst[entry.Key] = m.a2m(entry.Value.(bson.A))
+		case primitive.Null:
+			dst[entry.Key] = nil
+		case rawbson.D:
+			dst[entry.Key] = m.d2m(entry.Value.(rawbson.D))
+		case rawbson.A:
+			dst[entry.Key] = m.a2m(entry.Value.(rawbson.A))
 		default:
 			dst[entry.Key] = entry.Value
 		}
@@ -70,7 +118,7 @@ func (m *Map) ToMap() map[string]any {
 }
 
 func (m *Map) UnmarshalJSON(bytes []byte) error {
-	var bMap bson.M
+	var bMap rawbson.M
 	if err := json.Unmarshal(bytes, &bMap); err != nil {
 		return err
 	}
@@ -85,8 +133,8 @@ func (m *Map) MarshalJSON() ([]byte, error) {
 }
 
 func (m *Map) UnmarshalBSON(bytes []byte) error {
-	var doc bson.D
-	if err := bson.Unmarshal(bytes, doc); err != nil {
+	var doc rawbson.D
+	if err := rawbson.Unmarshal(bytes, doc); err != nil {
 		return err
 	}
 	newMap := FromD(doc)
@@ -96,25 +144,23 @@ func (m *Map) UnmarshalBSON(bytes []byte) error {
 }
 
 func (m *Map) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(m.Raw())
+	return rawbson.Marshal(m.Raw())
 }
 
-func (m *Map) d2m(d bson.D) bson.M {
-	res := bson.M{}
+func (m *Map) d2m(d rawbson.D) map[string]any {
+	res := make(map[string]any)
 	for _, e := range d {
 		res[e.Key] = e
 		switch e.Value.(type) {
-		case bson.A:
-			res[e.Key] = m.a2m(e.Value.(bson.A))
-		case bson.D:
-			res[e.Key] = m.d2m(e.Value.(bson.D))
+		case rawbson.A:
+			res[e.Key] = m.a2m(e.Value.(rawbson.A))
+		case rawbson.D:
+			res[e.Key] = m.d2m(e.Value.(rawbson.D))
 		case primitive.Null:
 			res[e.Key] = nil
 		case primitive.Regex:
 			regex := e.Value.(primitive.Regex)
 			res[e.Key] = "/" + regex.Pattern + "/" + regex.Options
-		case primitive.ObjectID:
-			res[e.Key] = e.Value.(primitive.ObjectID)
 		case *Map:
 			res[e.Key] = e.Value.(*Map).ToMap()
 		default:
@@ -124,12 +170,12 @@ func (m *Map) d2m(d bson.D) bson.M {
 	return res
 }
 
-func (m *Map) a2m(a bson.A) []any {
+func (m *Map) a2m(a rawbson.A) []any {
 	arr := make([]any, len(a))
 	for i, d := range a {
 		switch d.(type) {
-		case bson.D:
-			arr[i] = m.d2m(d.(bson.D))
+		case rawbson.D:
+			arr[i] = m.d2m(d.(rawbson.D))
 		case *Map:
 			arr[i] = m.d2m(d.(*Map).Raw())
 		default:

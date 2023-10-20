@@ -15,11 +15,11 @@ func Type(key string, val *model.DataType) *Filter {
 }
 
 func (f *Filter) Exists(key string, val bool) *Filter {
-	f.put(key, bson.M{operator.Exists: val})
+	f.data.Put(key, bson.M{operator.Exists: val})
 	return f
 }
 
 func (f *Filter) Type(key string, val *model.DataType) *Filter {
-	f.put(key, bson.M{operator.Type: val.Order()})
+	f.data.Put(key, bson.M{operator.Type: val.Order()})
 	return f
 }

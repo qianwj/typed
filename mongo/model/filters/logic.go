@@ -2,7 +2,7 @@ package filters
 
 import (
 	"github.com/qianwj/typed/mongo/operator"
-	"go.mongodb.org/mongo-driver/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 )
 
 func And(others ...*Filter) *Filter {
@@ -27,7 +27,7 @@ func (f *Filter) And(others ...*Filter) *Filter {
 }
 
 func (f *Filter) Not(key string, sub *Filter) *Filter {
-	f.put(key, bson.M{operator.Not: bson.D(sub.entries)})
+	f.data.Put(key, rawbson.M{operator.Not: sub.data.Raw()})
 	return f
 }
 

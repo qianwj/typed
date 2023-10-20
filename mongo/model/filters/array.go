@@ -18,16 +18,16 @@ func ElemMatch(sub *Filter) *Filter {
 }
 
 func (f *Filter) All(key string, items []any) *Filter {
-	f.put(key, bson.M{operator.All: items})
+	f.data.Put(key, bson.M{operator.All: items})
 	return f
 }
 
 func (f *Filter) Size(key string, size int64) *Filter {
-	f.put(key, bson.M{operator.Size: size})
+	f.data.Put(key, bson.M{operator.Size: size})
 	return f
 }
 
 func (f *Filter) ElemMatch(sub *Filter) *Filter {
-	f.put(operator.ElemMatch, bson.D(sub.entries))
+	f.data.Put(operator.ElemMatch, sub.data.Raw())
 	return f
 }

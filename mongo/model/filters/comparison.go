@@ -38,41 +38,41 @@ func Ne(key string, val any) *Filter {
 }
 
 func (f *Filter) Eq(key string, val any) *Filter {
-	f.put(key, val)
+	f.data.Put(key, val)
 	return f
 }
 
 func (f *Filter) Gt(key string, val any) *Filter {
-	f.put(key, bson.M{operator.Gt: val})
+	f.data.Put(key, bson.M{operator.Gt: val})
 	return f
 }
 
 func (f *Filter) Gte(key string, val any) *Filter {
-	f.put(key, bson.M{operator.Gte: val})
+	f.data.Put(key, bson.M{operator.Gte: val})
 	return f
 }
 
 func (f *Filter) In(key string, items []any) *Filter {
-	f.put(key, bson.M{operator.In: items})
+	f.data.Put(key, bson.M{operator.In: items})
 	return f
 }
 
 func (f *Filter) Lt(key string, val any) *Filter {
-	f.put(key, bson.M{operator.Lt: val})
+	f.data.Put(key, bson.M{operator.Lt: val})
 	return f
 }
 
 func (f *Filter) Lte(key string, val any) *Filter {
-	f.put(key, bson.M{operator.Lte: val})
+	f.data.Put(key, bson.M{operator.Lte: val})
 	return f
 }
 
 func (f *Filter) Nin(key string, items []any) *Filter {
-	f.put(key, bson.M{operator.Nin: items})
+	f.data.Put(key, bson.M{operator.Nin: items})
 	return f
 }
 
 func (f *Filter) Ne(key string, val any) *Filter {
-	f.put(key, bson.M{operator.Ne: val})
+	f.data.Put(key, bson.M{operator.Ne: val})
 	return f
 }

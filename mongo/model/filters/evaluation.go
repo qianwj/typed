@@ -28,26 +28,26 @@ func Where(key, expression string) *Filter {
 }
 
 func (f *Filter) Expr(expression any) *Filter {
-	f.put(operator.Expr, expression)
+	f.data.Put(operator.Expr, expression)
 	return f
 }
 
 func (f *Filter) Mod(key string, divisor, remainder float64) *Filter {
-	f.put(key, bson.M{operator.Mod: []float64{divisor, remainder}})
+	f.data.Put(key, bson.M{operator.Mod: []float64{divisor, remainder}})
 	return f
 }
 
 func (f *Filter) Like(key string, matcher *regex.Matcher) *Filter {
-	f.put(key, bson.M{operator.Regex: matcher.Compile()})
+	f.data.Put(key, bson.M{operator.Regex: matcher.Compile()})
 	return f
 }
 
 func (f *Filter) Text(search *text.Search) *Filter {
-	f.put(operator.Text, search.Marshal())
+	f.data.Put(operator.Text, search.Marshal())
 	return f
 }
 
 func (f *Filter) Where(key, expression string) *Filter {
-	f.put(key, bson.M{operator.Where: expression})
+	f.data.Put(key, bson.M{operator.Where: expression})
 	return f
 }

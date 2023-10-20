@@ -1,127 +1,67 @@
 package filters
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
-
-var (
-	Null = primitive.Null{}
-	Nil  = Null
+	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/util"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 )
 
 type Filter struct {
-	entries []bson.E
-	dict    map[string]int
+	data *bson.Map
+}
+
+func From(m rawbson.M) *Filter {
+	return &Filter{data: bson.FromM(m)}
+}
+
+func Cast(d rawbson.D) *Filter {
+	return &Filter{data: bson.FromD(d)}
 }
 
 func New() *Filter {
-	return &Filter{
-		entries: make([]bson.E, 0),
-		dict:    make(map[string]int),
-	}
-}
-
-func From(m bson.M) *Filter {
-	f := New()
-	for k, v := range m {
-		f.put(k, v)
-	}
-	return f
-}
-
-func Cast(d bson.D) *Filter {
-	f := New()
-	for _, e := range d {
-		f.put(e.Key, e.Value)
-	}
-	return f
+	return &Filter{data: bson.NewMap()}
 }
 
 func (f *Filter) Append(other *Filter) *Filter {
-	for _, entry := range other.entries {
-		f.put(entry.Key, entry.Value)
+	for _, entry := range other.data.Entries() {
+		f.data.Put(entry.Key, entry.Value)
 	}
 	return f
 }
 
-func (f *Filter) put(key string, value any) {
-	if index, exists := f.dict[key]; exists {
-		// 键已存在，更新值
-		f.entries[index].Value = value
-	} else {
-		// 键不存在，添加新的键值对
-		entry := bson.E{Key: key, Value: value}
-		f.entries = append(f.entries, entry)
-		f.dict[key] = len(f.entries) - 1
+func (f *Filter) Get(key string) (any, bool) {
+	return f.data.Get(key)
+}
+
+func (f *Filter) ToMap() map[string]any {
+	return f.data.ToMap()
+}
+
+func (f *Filter) MarshalJSON() ([]byte, error) {
+	return f.data.MarshalJSON()
+}
+
+func (f *Filter) UnmarshalJSON(bytes []byte) error {
+	if f.data == nil {
+		f.data = bson.NewMap()
 	}
+	return f.data.UnmarshalJSON(bytes)
 }
 
-func (f *Filter) putAsArray(key string, others ...*Filter) {
-	val, exist := f.get(key)
-	if !exist {
-		f.put(key, _map(others, func(it *Filter) bson.D {
-			return it.entries
-		}))
-	} else {
-		f.put(
-			key,
-			append(
-				val.(bson.A),
-				_map(others, func(it *Filter) bson.D {
-					return it.entries
-				})...,
-			),
-		)
+func (f *Filter) MarshalBSON() ([]byte, error) {
+	return f.data.MarshalBSON()
+}
+
+func (f *Filter) UnmarshalBSON(bytes []byte) error {
+	if f.data == nil {
+		f.data = bson.NewMap()
 	}
+	return f.data.UnmarshalBSON(bytes)
 }
 
-func (f *Filter) get(key string) (any, bool) {
-	if index, exists := f.dict[key]; exists {
-		// 键存在，返回对应值
-		return f.entries[index].Value, true
-	}
-	// 键不存在
-	return nil, false
-}
-
-func (f *Filter) Tag() {}
-
-func (f *Filter) ToMap() primitive.M {
-	return f.d2m(f.entries)
-}
-
-func (f *Filter) Marshal() primitive.D {
-	return f.entries
-}
-
-func (f *Filter) d2m(d bson.D) bson.M {
-	res := bson.M{}
-	for _, e := range d {
-		res[e.Key] = e
-		switch e.Value.(type) {
-		case bson.A:
-			res[e.Key] = f.a2m(e.Value.(bson.A))
-		case bson.D:
-			res[e.Key] = f.d2m(e.Value.(bson.D))
-		case primitive.Null:
-			res[e.Key] = "null"
-		case primitive.Regex:
-			regex := e.Value.(primitive.Regex)
-			res[e.Key] = "/" + regex.Pattern + "/" + regex.Options
-		case primitive.ObjectID:
-			res[e.Key] = e.Value.(primitive.ObjectID).String()
-		default:
-			res[e.Key] = e.Value
-		}
-	}
-	return res
-}
-
-func (f *Filter) a2m(a bson.A) []bson.M {
-	arr := make([]bson.M, len(a))
-	for i, d := range a {
-		arr[i] = f.d2m(d.(bson.D))
-	}
-	return arr
+func (f *Filter) putAsArray(key string, others ...*Filter) *Filter {
+	f.data.PutAsArray(key, util.Map(others, func(it *Filter) *bson.Map {
+		return it.data
+	})...)
+	return f
 }
