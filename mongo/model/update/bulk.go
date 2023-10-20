@@ -35,7 +35,7 @@ func (uom *TypedUpdateOneModel) Hint(index string) *TypedUpdateOneModel {
 // operators. It cannot be nil. If the filter matches multiple documents, one will be selected from the matching
 // documents.
 func (uom *TypedUpdateOneModel) Filter(filter *filters.Filter) *TypedUpdateOneModel {
-	uom.internal.Filter = filter.Marshal()
+	uom.internal.Filter = filter.Raw()
 	return uom
 }
 
@@ -96,7 +96,7 @@ func (umm *TypedUpdateManyModel) SetHint(index string) *TypedUpdateManyModel {
 // SetFilter specifies a filter to use to select documents to update. The filter must be a document containing query
 // operators. It cannot be nil.
 func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateManyModel {
-	umm.internal.Filter = filter.Marshal()
+	umm.internal.Filter = filter.Raw()
 	return umm
 }
 

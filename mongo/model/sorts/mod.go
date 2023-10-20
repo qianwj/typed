@@ -48,8 +48,6 @@ func (s *SortOptions) Meta(field string) *SortOptions {
 	return s
 }
 
-func (s *SortOptions) Tag() {}
-
 func (s *SortOptions) Marshal() primitive.D {
 	if s == nil {
 		return bson.D{}

@@ -37,6 +37,10 @@ func (f *Filter) ToMap() map[string]any {
 	return f.data.ToMap()
 }
 
+func (f *Filter) Raw() rawbson.D {
+	return f.data.Raw()
+}
+
 func (f *Filter) MarshalJSON() ([]byte, error) {
 	return f.data.MarshalJSON()
 }
