@@ -2,10 +2,10 @@ package collection
 
 import (
 	"fmt"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/executor/client"
 	"github.com/qianwj/typed/mongo/executor/collection"
 	"github.com/qianwj/typed/mongo/executor/database"
-	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,13 +15,13 @@ import (
 	"strings"
 )
 
-type TypedBuilder[D model.Document[I], I model.DocumentId] struct {
+type TypedBuilder[D bson.Doc[I], I bson.ID] struct {
 	db   *mongo.Database
 	name string
 	opts *options.CollectionOptions
 }
 
-func FromNamespace[D model.Document[I], I model.DocumentId](cli *client.Client, ns string) (*TypedBuilder[D, I], error) {
+func FromNamespace[D bson.Doc[I], I bson.ID](cli *client.Client, ns string) (*TypedBuilder[D, I], error) {
 	pair := strings.Split(ns, ".")
 	if len(pair) != 2 {
 		return nil, fmt.Errorf("invalid ns: %s", ns)
@@ -30,11 +30,11 @@ func FromNamespace[D model.Document[I], I model.DocumentId](cli *client.Client, 
 	return NewTypedCollection[D, I](db, pair[1]), nil
 }
 
-func FromDatabase[D model.Document[I], I model.DocumentId](db *database.Database, name string) *TypedBuilder[D, I] {
+func FromDatabase[D bson.Doc[I], I bson.ID](db *database.Database, name string) *TypedBuilder[D, I] {
 	return NewTypedCollection[D, I](db.Raw(), name)
 }
 
-func NewTypedCollection[D model.Document[I], I model.DocumentId](db *mongo.Database, name string) *TypedBuilder[D, I] {
+func NewTypedCollection[D bson.Doc[I], I bson.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
 	return &TypedBuilder[D, I]{
 		db:   db,
 		name: name,

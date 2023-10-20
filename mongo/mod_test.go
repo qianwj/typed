@@ -4,7 +4,6 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/builder"
 	"github.com/qianwj/typed/mongo/builder/collection"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -12,7 +11,7 @@ import (
 )
 
 type testDoc struct {
-	model.Document[primitive.ObjectID]
+	bson.Doc[primitive.ObjectID]
 	Id   primitive.ObjectID `bson:"_id"`
 	Name string             `bson:"name"`
 }

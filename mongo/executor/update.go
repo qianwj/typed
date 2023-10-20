@@ -11,7 +11,7 @@ import (
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type UpdateExecutor[D model.Document[I], I model.DocumentId] struct {
+type UpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
 	update *update.Update
@@ -20,7 +20,7 @@ type UpdateExecutor[D model.Document[I], I model.DocumentId] struct {
 	opts   *rawopts.UpdateOptions
 }
 
-func NewUpdateOneExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -29,7 +29,7 @@ func NewUpdateOneExecutor[D model.Document[I], I model.DocumentId](primary *mong
 	}
 }
 
-func NewUpdateManyExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -39,7 +39,7 @@ func NewUpdateManyExecutor[D model.Document[I], I model.DocumentId](primary *mon
 	}
 }
 
-func NewUpdateByIdExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection, id I, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *update.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		docId:  &id,

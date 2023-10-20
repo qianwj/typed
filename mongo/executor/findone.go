@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
@@ -11,7 +10,7 @@ import (
 	"time"
 )
 
-type FindOneExecutor[D model.Document[I], I model.DocumentId] struct {
+type FindOneExecutor[D bson.Doc[I], I bson.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
 	filter          *filters.Filter
@@ -19,7 +18,7 @@ type FindOneExecutor[D model.Document[I], I model.DocumentId] struct {
 	opts            *rawopts.FindOneOptions
 }
 
-func NewFindOneExecutor[D model.Document[I], I model.DocumentId](readprefPrimary, readprefDefault *raw.Collection, filter *filters.Filter) *FindOneExecutor[D, I] {
+func NewFindOneExecutor[D bson.Doc[I], I bson.ID](readprefPrimary, readprefDefault *raw.Collection, filter *filters.Filter) *FindOneExecutor[D, I] {
 	return &FindOneExecutor[D, I]{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,

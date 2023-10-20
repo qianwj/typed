@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,7 +10,7 @@ import (
 	"time"
 )
 
-type AggregateExecutor[D model.Document[I], I model.DocumentId] struct {
+type AggregateExecutor[D bson.Doc[I], I bson.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
 	pipe            aggregate.Pipeline
@@ -19,7 +18,7 @@ type AggregateExecutor[D model.Document[I], I model.DocumentId] struct {
 	opts            *rawopts.AggregateOptions
 }
 
-func NewAggregateExecutor[D model.Document[I], I model.DocumentId](
+func NewAggregateExecutor[D bson.Doc[I], I bson.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
 	pipe aggregate.Pipeline,
 ) *AggregateExecutor[D, I] {

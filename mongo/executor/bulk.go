@@ -9,13 +9,13 @@ import (
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type BulkWriteExecutor[D model.Document[I], I model.DocumentId] struct {
+type BulkWriteExecutor[D bson.Doc[I], I bson.ID] struct {
 	coll   *mongo.Collection
 	models []mongo.WriteModel
 	opts   *rawopts.BulkWriteOptions
 }
 
-func NewBulkWriteExecutor[D model.Document[I], I model.DocumentId](primary *mongo.Collection) *BulkWriteExecutor[D, I] {
+func NewBulkWriteExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection) *BulkWriteExecutor[D, I] {
 	return &BulkWriteExecutor[D, I]{
 		coll: primary,
 		opts: rawopts.BulkWrite(),

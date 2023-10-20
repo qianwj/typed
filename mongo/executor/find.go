@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
@@ -12,7 +11,7 @@ import (
 	"time"
 )
 
-type FindExecutor[D model.Document[I], I model.DocumentId] struct {
+type FindExecutor[D bson.Doc[I], I bson.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
 	filter          *filters.Filter
@@ -20,7 +19,7 @@ type FindExecutor[D model.Document[I], I model.DocumentId] struct {
 	opts            *rawopts.FindOptions
 }
 
-func NewFindExecutor[D model.Document[I], I model.DocumentId](
+func NewFindExecutor[D bson.Doc[I], I bson.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
 	filter *filters.Filter,
 ) *FindExecutor[D, I] {
@@ -210,7 +209,7 @@ func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], e
 	return &FindIterator[D, I]{cursor: cursor}, nil
 }
 
-type FindIterator[D model.Document[I], I model.DocumentId] struct {
+type FindIterator[D bson.Doc[I], I bson.ID] struct {
 	cursor *raw.Cursor
 }
 

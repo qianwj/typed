@@ -2,7 +2,6 @@ package executor
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
@@ -22,11 +21,11 @@ var (
 )
 
 type TestDoc struct {
-	model.Document[primitive.ObjectID] `bson:"-"`
-	Id                                 primitive.ObjectID `bson:"_id"`
-	Name                               string             `bson:"name"`
-	Age                                int                `bson:"age"`
-	CreateTime                         time.Time          `bson:"createTime"`
+	bson.Doc[primitive.ObjectID] `bson:"-"`
+	Id                           primitive.ObjectID `bson:"_id"`
+	Name                         string             `bson:"name"`
+	Age                          int                `bson:"age"`
+	CreateTime                   time.Time          `bson:"createTime"`
 }
 
 func (t *TestDoc) GetId() primitive.ObjectID {

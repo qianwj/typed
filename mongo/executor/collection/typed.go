@@ -2,7 +2,6 @@ package collection
 
 import (
 	"github.com/qianwj/typed/mongo/executor"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/update"
@@ -10,12 +9,12 @@ import (
 	raw "go.mongodb.org/mongo-driver/mongo"
 )
 
-type TypedCollection[D model.Document[I], I model.DocumentId] struct {
+type TypedCollection[D bson.Doc[I], I bson.ID] struct {
 	primary         *raw.Collection
 	defaultReadpref *raw.Collection
 }
 
-func NewTypedCollection[D model.Document[I], I model.DocumentId](primary, defaultReadpref *raw.Collection) *TypedCollection[D, I] {
+func NewTypedCollection[D bson.Doc[I], I bson.ID](primary, defaultReadpref *raw.Collection) *TypedCollection[D, I] {
 	return &TypedCollection[D, I]{
 		primary:         primary,
 		defaultReadpref: defaultReadpref,
