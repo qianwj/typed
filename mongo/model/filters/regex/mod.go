@@ -86,3 +86,17 @@ func (m *Matcher) MarshalJSON() ([]byte, error) {
 func (m *Matcher) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(m.Compile())
 }
+
+func (m *Matcher) UnmarshalBSON(bytes []byte) error {
+	var reg primitive.Regex
+	if err := bson.Unmarshal(bytes, &reg); err != nil {
+		return err
+	}
+	m.pattern = reg.Pattern
+	opts := make(map[string]bool)
+	for _, r := range []rune(reg.Options) {
+		opts[string(r)] = true
+	}
+	m.options = opts
+	return nil
+}
