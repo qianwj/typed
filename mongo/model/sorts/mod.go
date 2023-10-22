@@ -5,53 +5,53 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-type SortOrder int
+type Order int
 
 const (
-	Desc SortOrder = -1
-	Asc  SortOrder = 1
+	Desc Order = -1
+	Asc  Order = 1
 )
 
-type SortOptions struct {
+type Options struct {
 	fields bson.D
 }
 
-func New() *SortOptions {
-	return &SortOptions{fields: bson.D{}}
+func New() *Options {
+	return &Options{fields: bson.D{}}
 }
 
-func Ascending(field string) *SortOptions {
+func Ascending(field string) *Options {
 	return New().Ascending(field)
 }
 
-func Descending(field string) *SortOptions {
+func Descending(field string) *Options {
 	return New().Descending(field)
 }
 
-func Meta(field string) *SortOptions {
+func Meta(field string) *Options {
 	return New().Meta(field)
 }
 
-func (s *SortOptions) Ascending(field string) *SortOptions {
+func (s *Options) Ascending(field string) *Options {
 	s.fields = append(s.fields, bson.E{Key: field, Value: Asc})
 	return s
 }
 
-func (s *SortOptions) Descending(field string) *SortOptions {
+func (s *Options) Descending(field string) *Options {
 	s.fields = append(s.fields, bson.E{Key: field, Value: Desc})
 	return s
 }
 
-func (s *SortOptions) Meta(field string) *SortOptions {
+func (s *Options) Meta(field string) *Options {
 	s.fields = append(s.fields, bson.E{Key: field, Value: bson.M{operator.Meta: "textScore"}})
 	return s
 }
 
-func (s *SortOptions) MarshalBSON() ([]byte, error) {
+func (s *Options) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(s.fields)
 }
 
-func (s *SortOptions) UnmarshalBSON(bytes []byte) error {
+func (s *Options) UnmarshalBSON(bytes []byte) error {
 	var fields bson.D
 	if err := bson.Unmarshal(bytes, fields); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (s *SortOptions) UnmarshalBSON(bytes []byte) error {
 	return nil
 }
 
-func (s *SortOptions) ToMap() bson.M {
+func (s *Options) ToMap() bson.M {
 	res := bson.M{}
 	for _, field := range s.fields {
 		res[field.Key] = field.Value
