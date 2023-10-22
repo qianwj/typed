@@ -13,8 +13,12 @@ func Size(key string, size int64) *Filter {
 	return New().Size(key, size)
 }
 
-func ElemMatch(sub *Filter) *Filter {
-	return New().ElemMatch(sub)
+func ElemMatch(key string, sub *Filter) *Filter {
+	return New().ElemMatch(key, sub)
+}
+
+func ElemMatchWithInterval(key string, interval *Interval) *Filter {
+	return New().ElemMatchWithInterval(key, interval)
 }
 
 func (f *Filter) All(key string, items []any) *Filter {
@@ -27,7 +31,12 @@ func (f *Filter) Size(key string, size int64) *Filter {
 	return f
 }
 
-func (f *Filter) ElemMatch(sub *Filter) *Filter {
-	f.data.Put(operator.ElemMatch, sub.data.Raw())
+func (f *Filter) ElemMatch(key string, sub *Filter) *Filter {
+	f.data.Put(key, bson.M{operator.ElemMatch: sub.data.Raw()})
+	return f
+}
+
+func (f *Filter) ElemMatchWithInterval(key string, interval *Interval) *Filter {
+	f.data.Put(key, bson.M{operator.ElemMatch: interval.query()})
 	return f
 }

@@ -37,6 +37,10 @@ func Ne(key string, val any) *Filter {
 	return New().Ne(key, val)
 }
 
+func WithInterval(key string, val *Interval) *Filter {
+	return New().WithInterval(key, val)
+}
+
 func (f *Filter) Eq(key string, val any) *Filter {
 	f.data.Put(key, val)
 	return f
@@ -74,5 +78,10 @@ func (f *Filter) Nin(key string, items []any) *Filter {
 
 func (f *Filter) Ne(key string, val any) *Filter {
 	f.data.Put(key, bson.M{operator.Ne: val})
+	return f
+}
+
+func (f *Filter) WithInterval(key string, val *Interval) *Filter {
+	f.data.Put(key, val.query())
 	return f
 }
