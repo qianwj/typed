@@ -70,7 +70,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) MaxTime(d time.Duration) *FindOneAndUpd
 
 // Projection sets the value for the Projection field.
 func (f *FindOneAndUpdateExecutor[D, I]) Projection(projection *projections.ProjectionOptions) *FindOneAndUpdateExecutor[D, I] {
-	f.opts.SetProjection(projection.Marshal())
+	f.opts.SetProjection(projection)
 	return f
 }
 
@@ -86,7 +86,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) ReturnAfter() *FindOneAndUpdateExecutor
 
 // Sort sets the value for the Sort field.
 func (f *FindOneAndUpdateExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindOneAndUpdateExecutor[D, I] {
-	f.opts.SetSort(sort.Marshal())
+	f.opts.SetSort(sort)
 	return f
 }
 

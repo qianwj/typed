@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/database"
-	"github.com/qianwj/typed/mongo/transaction"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -33,8 +32,8 @@ func (c *Client) Database(name string) *database.Builder {
 	return database.NewBuilder(c.internal, name)
 }
 
-func (c *Client) Transaction() *transaction.TxSessionBuilder {
-	return transaction.NewTxSessionBuilder(c.internal)
+func (c *Client) Transaction() *TxSessionBuilder {
+	return NewTxSessionBuilder(c.internal)
 }
 
 func (c *Client) Ping(ctx context.Context, rp *readpref.ReadPref) error {
