@@ -10,7 +10,19 @@ var (
 )
 
 type ID interface {
-	~string | primitive.ObjectID
+	~string | Number | primitive.ObjectID
+}
+
+type Number interface {
+	Int | Float
+}
+
+type Int interface {
+	~int | ~int32 | ~int64
+}
+
+type Float interface {
+	~float32 | ~float64
 }
 
 type Doc[I ID] interface {

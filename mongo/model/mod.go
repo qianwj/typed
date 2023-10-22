@@ -5,18 +5,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-type Number interface {
-	Int | Float
-}
-
-type Int interface {
-	~int | ~int32 | ~int64
-}
-
-type Float interface {
-	~float32 | ~float64
-}
-
 type Bson interface {
 	bson.M | bson.D | bson.A | bson.E
 }
