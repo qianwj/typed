@@ -11,7 +11,7 @@
  limitations under the License.
 */
 
-package model
+package filters
 
 type DataType struct {
 	number int8
