@@ -69,7 +69,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) MaxTime(d time.Duration) *FindOneAndUpd
 }
 
 // Projection sets the value for the Projection field.
-func (f *FindOneAndUpdateExecutor[D, I]) Projection(projection *projections.ProjectionOptions) *FindOneAndUpdateExecutor[D, I] {
+func (f *FindOneAndUpdateExecutor[D, I]) Projection(projection *projections.Options) *FindOneAndUpdateExecutor[D, I] {
 	f.opts.SetProjection(projection)
 	return f
 }

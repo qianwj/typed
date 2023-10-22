@@ -92,7 +92,7 @@ func (f *FindOneExecutor[D, I]) ShowRecordID() *FindOneExecutor[D, I] {
 	return f
 }
 
-func (f *FindOneExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindOneExecutor[D, I] {
+func (f *FindOneExecutor[D, I]) Sort(sort *sorts.Options) *FindOneExecutor[D, I] {
 	f.opts.SetSort(sort)
 	return f
 }

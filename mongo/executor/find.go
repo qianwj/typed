@@ -138,12 +138,12 @@ func (f *FindExecutor[D, I]) ShowRecordID() *FindExecutor[D, I] {
 	return f
 }
 
-func (f *FindExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindExecutor[D, I] {
+func (f *FindExecutor[D, I]) Sort(sort *sorts.Options) *FindExecutor[D, I] {
 	f.opts.SetSort(sort)
 	return f
 }
 
-func (f *FindExecutor[D, I]) Projection(projection *projections.ProjectionOptions) *FindExecutor[D, I] {
+func (f *FindExecutor[D, I]) Projection(projection *projections.Options) *FindExecutor[D, I] {
 	f.opts.SetProjection(projection)
 	return f
 }

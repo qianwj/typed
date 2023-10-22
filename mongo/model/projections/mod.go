@@ -10,41 +10,41 @@ const (
 	Exclude = -1
 )
 
-type ProjectionOptions struct {
+type Options struct {
 	fields bson.D
 }
 
-func New() *ProjectionOptions {
-	return &ProjectionOptions{
+func New() *Options {
+	return &Options{
 		fields: bson.D{},
 	}
 }
 
-func Includes(fields ...string) *ProjectionOptions {
+func Includes(fields ...string) *Options {
 	return New().Includes(fields...)
 }
 
-func ExcludeId() *ProjectionOptions {
+func ExcludeId() *Options {
 	return New().ExcludeId()
 }
 
-func (p *ProjectionOptions) Includes(fields ...string) *ProjectionOptions {
+func (p *Options) Includes(fields ...string) *Options {
 	p.fields = append(p.fields, util.Map(fields, func(f string) bson.E {
 		return bson.E{Key: f, Value: Include}
 	})...)
 	return p
 }
 
-func (p *ProjectionOptions) ExcludeId() *ProjectionOptions {
+func (p *Options) ExcludeId() *Options {
 	p.fields = append(p.fields, bson.E{Key: "_id", Value: Exclude})
 	return p
 }
 
-func (p *ProjectionOptions) MarshalBSON() ([]byte, error) {
+func (p *Options) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(p.fields)
 }
 
-func (p *ProjectionOptions) UnmarshalBSON(bytes []byte) error {
+func (p *Options) UnmarshalBSON(bytes []byte) error {
 	var fields bson.D
 	if err := bson.Unmarshal(bytes, fields); err != nil {
 		return err
