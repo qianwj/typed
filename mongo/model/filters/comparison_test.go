@@ -43,6 +43,12 @@ func TestLte(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestWithInterval(t *testing.T) {
+	expected, _ := bson.Marshal(bson.D{{"a", bson.M{operator.Gte: "b", operator.Lte: "c"}}})
+	actual, _ := bson.Marshal(WithInterval("a", ClosedInterval("b", "c")))
+	assert.Equal(t, expected, actual)
+}
+
 func TestIn(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$in": []string{"b", "c"}}}})
 	actual, _ := bson.Marshal(In("a", []any{"b", "c"}))
@@ -58,15 +64,16 @@ func TestNin(t *testing.T) {
 func TestAll(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
 		{"a", "b"},
-		{"p", bson.M{"$ne": "q"}},
-		{"r", bson.M{"$gt": 10, "$lt": 20}},
+		{"p", bson.M{operator.Ne: "q"}},
+		{"r", bson.M{operator.Gt: 10, operator.Lt: 20}},
 		{"d", bson.M{operator.Gte: 1}},
 		{"c", bson.M{operator.In: []string{"666"}}},
 	})
 	actual, _ := bson.Marshal(
 		Eq("a", "b").
 			Ne("p", "q").
-			Gt("r", 10).Lt("r", 20).
+			Gt("r", 10).
+			WithInterval("r", OpenInterval(10, 20)).
 			Gte("d", 1).
 			In("c", []any{"666"}),
 	)
