@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/filters"
+	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
@@ -138,7 +139,12 @@ func (f *FindExecutor[D, I]) ShowRecordID() *FindExecutor[D, I] {
 }
 
 func (f *FindExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindExecutor[D, I] {
-	f.opts.SetSort(sort.Marshal())
+	f.opts.SetSort(sort)
+	return f
+}
+
+func (f *FindExecutor[D, I]) Projection(projection *projections.ProjectionOptions) *FindExecutor[D, I] {
+	f.opts.SetProjection(projection)
 	return f
 }
 

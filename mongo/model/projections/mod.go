@@ -40,9 +40,15 @@ func (p *ProjectionOptions) ExcludeId() *ProjectionOptions {
 	return p
 }
 
-func (p *ProjectionOptions) Marshal() bson.D {
-	if p == nil {
-		return bson.D{}
+func (p *ProjectionOptions) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(p.fields)
+}
+
+func (p *ProjectionOptions) UnmarshalBSON(bytes []byte) error {
+	var fields bson.D
+	if err := bson.Unmarshal(bytes, fields); err != nil {
+		return err
 	}
-	return p.fields
+	p.fields = fields
+	return nil
 }
