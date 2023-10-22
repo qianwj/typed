@@ -79,6 +79,17 @@ func (m *Map) PutAsArray(key string, others ...*Map) {
 	}
 }
 
+func (m *Map) PutAsHash(key, hashKey string, val any) *Map {
+	prev, exist := m.Get(key)
+	if !exist {
+		m.Put(key, rawbson.M{hashKey: val})
+	} else {
+		prev.(rawbson.M)[hashKey] = val
+		m.Put(key, prev)
+	}
+	return m
+}
+
 func (m *Map) Get(key string) (any, bool) {
 	if index, exists := m.dict[key]; exists {
 		return m.entries[index].Value, true

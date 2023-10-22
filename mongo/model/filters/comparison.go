@@ -43,12 +43,12 @@ func (f *Filter) Eq(key string, val any) *Filter {
 }
 
 func (f *Filter) Gt(key string, val any) *Filter {
-	f.data.Put(key, bson.M{operator.Gt: val})
+	f.data.PutAsHash(key, operator.Gt, val)
 	return f
 }
 
 func (f *Filter) Gte(key string, val any) *Filter {
-	f.data.Put(key, bson.M{operator.Gte: val})
+	f.data.PutAsHash(key, operator.Gte, val)
 	return f
 }
 
@@ -58,12 +58,12 @@ func (f *Filter) In(key string, items []any) *Filter {
 }
 
 func (f *Filter) Lt(key string, val any) *Filter {
-	f.data.Put(key, bson.M{operator.Lt: val})
+	f.data.PutAsHash(key, operator.Lt, val)
 	return f
 }
 
 func (f *Filter) Lte(key string, val any) *Filter {
-	f.data.Put(key, bson.M{operator.Lte: val})
+	f.data.PutAsHash(key, operator.Lte, val)
 	return f
 }
 
