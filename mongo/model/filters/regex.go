@@ -1,4 +1,4 @@
-package regex
+package filters
 
 import (
 	"encoding/json"
@@ -42,7 +42,7 @@ type Matcher struct {
 	options map[string]bool
 }
 
-func New(pattern string) *Matcher {
+func NewMatcher(pattern string) *Matcher {
 	return &Matcher{
 		options: make(map[string]bool),
 		pattern: pattern,

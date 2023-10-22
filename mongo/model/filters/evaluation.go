@@ -1,7 +1,6 @@
 package filters
 
 import (
-	"github.com/qianwj/typed/mongo/model/filters/regex"
 	"github.com/qianwj/typed/mongo/model/filters/text"
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,7 +14,7 @@ func Mod(key string, divisor, remainder float64) *Filter {
 	return New().Mod(key, divisor, remainder)
 }
 
-func Like(key string, matcher *regex.Matcher) *Filter {
+func Like(key string, matcher *Matcher) *Filter {
 	return New().Like(key, matcher)
 }
 
@@ -37,7 +36,7 @@ func (f *Filter) Mod(key string, divisor, remainder float64) *Filter {
 	return f
 }
 
-func (f *Filter) Like(key string, matcher *regex.Matcher) *Filter {
+func (f *Filter) Like(key string, matcher *Matcher) *Filter {
 	f.data.Put(key, bson.M{operator.Regex: matcher.Compile()})
 	return f
 }
