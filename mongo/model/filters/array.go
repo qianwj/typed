@@ -2,11 +2,12 @@ package filters
 
 import (
 	"github.com/qianwj/typed/mongo/operator"
+	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func All(key string, items []any) *Filter {
-	return New().All(key, items)
+func All[T any](key string, items []T) *Filter {
+	return New().All(key, util.ToAny(items))
 }
 
 func Size(key string, size int64) *Filter {

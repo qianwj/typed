@@ -2,6 +2,7 @@ package filters
 
 import (
 	"github.com/qianwj/typed/mongo/operator"
+	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -17,8 +18,8 @@ func Gte(key string, val any) *Filter {
 	return New().Gte(key, val)
 }
 
-func In(key string, items []any) *Filter {
-	return New().In(key, items)
+func In[T any](key string, items []T) *Filter {
+	return New().In(key, util.ToAny(items))
 }
 
 func Lt(key string, val any) *Filter {
@@ -29,8 +30,8 @@ func Lte(key string, val any) *Filter {
 	return New().Lte(key, val)
 }
 
-func Nin(key string, items []any) *Filter {
-	return New().Nin(key, items)
+func Nin[T any](key string, items []T) *Filter {
+	return New().Nin(key, util.ToAny(items))
 }
 
 func Ne(key string, val any) *Filter {

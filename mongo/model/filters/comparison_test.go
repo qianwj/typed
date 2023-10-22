@@ -51,17 +51,17 @@ func TestWithInterval(t *testing.T) {
 
 func TestIn(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$in": []string{"b", "c"}}}})
-	actual, _ := bson.Marshal(In("a", []any{"b", "c"}))
+	actual, _ := bson.Marshal(In[string]("a", []string{"b", "c"}))
 	assert.Equal(t, expected, actual)
 }
 
 func TestNin(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$nin": []string{"b", "c"}}}})
-	actual, _ := bson.Marshal(Nin("a", []any{"b", "c"}))
+	actual, _ := bson.Marshal(Nin[string]("a", []string{"b", "c"}))
 	assert.Equal(t, expected, actual)
 }
 
-func TestAll(t *testing.T) {
+func TestMixed(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
 		{"a", "b"},
 		{"p", bson.M{operator.Ne: "q"}},

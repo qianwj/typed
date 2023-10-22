@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+func TestAll(t *testing.T) {
+	expected, _ := bson.Marshal(bson.D{
+		{"a", bson.D{{operator.All, []int{12, 14, 13}}}},
+	})
+	actual, _ := bson.Marshal(All[int]("a", []int{12, 14, 13}))
+	assert.Equal(t, expected, actual)
+}
+
 func TestElemMatch(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
 		{"a", bson.D{
