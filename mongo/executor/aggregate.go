@@ -3,7 +3,6 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/aggregate"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -14,14 +13,14 @@ import (
 type AggregateExecutor[D bson.Doc[I], I bson.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
-	pipe            aggregate.Pipeline
+	pipe            raw.Pipeline
 	primary         bool
 	opts            *rawopts.AggregateOptions
 }
 
 func NewAggregateExecutor[D bson.Doc[I], I bson.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
-	pipe aggregate.Pipeline,
+	pipe raw.Pipeline,
 ) *AggregateExecutor[D, I] {
 	return &AggregateExecutor[D, I]{
 		readprefPrimary: readprefPrimary,
@@ -109,9 +108,9 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 		cursor *raw.Cursor
 	)
 	if a.primary {
-		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe, a.opts)
 	} else {
-		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe, a.opts)
 	}
 	if err != nil {
 		return err
@@ -122,12 +121,12 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 type DatabaseAggregateExecutor struct {
 	readprefPrimary *raw.Database
 	readprefDefault *raw.Database
-	pipe            aggregate.Pipeline
+	pipe            raw.Pipeline
 	primary         bool
 	opts            *rawopts.AggregateOptions
 }
 
-func NewDatabaseAggregateExecutor(readprefPrimary, readprefDefault *raw.Database, pipe aggregate.Pipeline) *DatabaseAggregateExecutor {
+func NewDatabaseAggregateExecutor(readprefPrimary, readprefDefault *raw.Database, pipe raw.Pipeline) *DatabaseAggregateExecutor {
 	return &DatabaseAggregateExecutor{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,
@@ -214,9 +213,9 @@ func (a *DatabaseAggregateExecutor) ExecuteTo(ctx context.Context, result interf
 		cursor *raw.Cursor
 	)
 	if a.primary {
-		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe, a.opts)
 	} else {
-		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Marshal(), a.opts)
+		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe, a.opts)
 	}
 	if err != nil {
 		return err

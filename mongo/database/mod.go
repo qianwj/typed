@@ -3,7 +3,6 @@ package database
 import (
 	"github.com/qianwj/typed/mongo/collection"
 	"github.com/qianwj/typed/mongo/executor"
-	"github.com/qianwj/typed/mongo/model/aggregate"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -23,10 +22,10 @@ func (d *Database) Raw() *mongo.Database {
 	return d.defaultReadpref
 }
 
-func (d *Database) Aggregate(pipe aggregate.Pipeline) *executor.DatabaseAggregateExecutor {
+func (d *Database) Aggregate(pipe mongo.Pipeline) *executor.DatabaseAggregateExecutor {
 	return executor.NewDatabaseAggregateExecutor(d.primary, d.defaultReadpref, pipe)
 }
 
 func (d *Database) Collection(name string) *collection.Builder {
-	return collection.NewCollection(d.defaultReadpref, name)
+	return collection.NewBuilder(d.defaultReadpref, name)
 }
