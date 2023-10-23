@@ -90,11 +90,11 @@ func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult
 		res *mongo.UpdateResult
 	)
 	if u.docId != nil {
-		res, err = u.coll.UpdateByID(ctx, u.docId, u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateByID(ctx, u.docId, u.update, u.opts)
 	} else if u.multi {
-		res, err = u.coll.UpdateMany(ctx, u.filter, u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateMany(ctx, u.filter, u.update, u.opts)
 	} else {
-		res, err = u.coll.UpdateOne(ctx, u.filter, u.update.Marshal(), u.opts)
+		res, err = u.coll.UpdateOne(ctx, u.filter, u.update, u.opts)
 	}
 	return model.FromUpdateResult[I](res), err
 }
