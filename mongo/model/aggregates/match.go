@@ -16,7 +16,7 @@ func Match(filter *filters.Filter) *Matcher {
 
 func (m *Matcher) Marshal() primitive.D {
 	return primitive.D{
-		{Key: operator.Match, Value: m.f.Marshal()},
+		{Key: operator.Match, Value: m.f},
 	}
 }
 
