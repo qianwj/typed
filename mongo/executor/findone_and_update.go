@@ -109,7 +109,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) Let(l rawbson.M) *FindOneAndUpdateExecu
 }
 
 func (f *FindOneAndUpdateExecutor[D, I]) Execute(ctx context.Context) (D, error) {
-	res := f.coll.FindOneAndUpdate(ctx, f.filter, f.update.Marshal(), f.opts)
+	res := f.coll.FindOneAndUpdate(ctx, f.filter, f.update, f.opts)
 	var data D
 	if res.Err() != nil {
 		return data, res.Err()
