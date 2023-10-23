@@ -3,6 +3,7 @@ package update
 import (
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/sorts"
+	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"time"
 )
@@ -106,8 +107,8 @@ func AddToSet(field string, value any) *Update {
 	return New().AddToSet(field, value)
 }
 
-func AddEachToSet(field string, value []any) *Update {
-	return New().AddEachToSet(field, value)
+func AddEachToSet[T any](field string, value []T) *Update {
+	return New().AddEachToSet(field, util.ToAny(value))
 }
 
 func Push(field string, value any) *Update {

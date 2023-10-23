@@ -44,10 +44,6 @@ func New() *Update {
 }
 
 func (u *Update) Document() bson.M {
-	return u.Marshal()
-}
-
-func (u *Update) Marshal() bson.M {
 	res := bson.M{}
 	if len(u.currentDate) > 0 {
 		res[operator.CurrentDate] = u.currentDate
@@ -73,6 +69,9 @@ func (u *Update) Marshal() bson.M {
 	if len(u.setOnInsert) > 0 {
 		res[operator.SetOnInsert] = u.setOnInsert
 	}
+	if len(u.unset) > 0 {
+		res[operator.Unset] = u.unset
+	}
 	if len(u.push) > 0 {
 		res[operator.Push] = u.push
 	}
@@ -92,4 +91,8 @@ func (u *Update) Marshal() bson.M {
 		res[operator.Bit] = u.bit
 	}
 	return res
+}
+
+func (u *Update) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(u.Document())
 }

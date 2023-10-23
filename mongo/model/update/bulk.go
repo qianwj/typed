@@ -42,7 +42,7 @@ func (uom *TypedUpdateOneModel) Filter(filter *filters.Filter) *TypedUpdateOneMo
 // Update specifies the modifications to be made to the selected document. The value must be a document containing
 // update operators (https://docs.mongodb.com/manual/reference/operator/update/). It cannot be nil or empty.
 func (uom *TypedUpdateOneModel) Update(update *Update) *TypedUpdateOneModel {
-	uom.internal.Update = update.Marshal()
+	uom.internal.Update = update
 	return uom
 }
 
@@ -103,7 +103,7 @@ func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateM
 // SetUpdate specifies the modifications to be made to the selected documents. The value must be a document containing
 // update operators (https://www.mongodb.com/docs/manual/reference/operator/update/). It cannot be nil or empty.
 func (umm *TypedUpdateManyModel) SetUpdate(update Update) *TypedUpdateManyModel {
-	umm.internal.Update = update.Marshal()
+	umm.internal.Update = update
 	return umm
 }
 
