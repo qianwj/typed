@@ -5,9 +5,9 @@ import (
 	"github.com/qianwj/typed/mongo/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	rawopts "go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"os"
-	"testing"
 	"time"
 )
 
@@ -34,19 +34,21 @@ func (t *TestDoc) GetId() primitive.ObjectID {
 }
 
 func init() {
-	uri := os.Getenv("CI_MONGO_URI")
-	var err error
-	testCli, err = mongo.Connect(context.TODO(), rawopts.Client().ApplyURI(uri))
+	err := mtest.Setup(mtest.NewSetupOptions())
 	if err != nil {
 		panic(err)
 	}
-	err = testCli.Database(testDBName).Collection(testCollName).Drop(context.TODO())
+	uri := os.Getenv("MONGO_URI")
+	if uri == "" {
+		uri = "mongodb://localhost:27017"
+	}
+	cli, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri))
 	if err != nil {
 		panic(err)
 	}
-	testColl = testCli.Database(testDBName).Collection(testCollName)
-}
-
-func TestMain(m *testing.M) {
-	_ = m.Run()
+	err = cli.Database(testDBName).Drop(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+	testCli, testColl = cli, cli.Database(testDBName).Collection(testCollName)
 }

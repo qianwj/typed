@@ -85,7 +85,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) ReturnAfter() *FindOneAndUpdateExecutor
 }
 
 // Sort sets the value for the Sort field.
-func (f *FindOneAndUpdateExecutor[D, I]) Sort(sort *sorts.SortOptions) *FindOneAndUpdateExecutor[D, I] {
+func (f *FindOneAndUpdateExecutor[D, I]) Sort(sort *sorts.Options) *FindOneAndUpdateExecutor[D, I] {
 	f.opts.SetSort(sort)
 	return f
 }

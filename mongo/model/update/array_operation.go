@@ -43,7 +43,7 @@ func (u *Update) PushLimited(field string, value []string, limit int) *Update {
 	return u
 }
 
-func (u *Update) PushSorted(field string, value []string, sort *sorts.SortOptions) *Update {
+func (u *Update) PushSorted(field string, value []string, sort *sorts.Options) *Update {
 	u.push[field] = bson.M{
 		operator.Each: value,
 		operator.Sort: sort,

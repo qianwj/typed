@@ -126,7 +126,7 @@ func PushLimited(field string, value []string, limit int) *Update {
 	return New().PushLimited(field, value, limit)
 }
 
-func PushSorted(field string, value []string, sort *sorts.SortOptions) *Update {
+func PushSorted(field string, value []string, sort *sorts.Options) *Update {
 	return New().PushSorted(field, value, sort)
 }
 

@@ -8,11 +8,11 @@ import (
 )
 
 type Index struct {
-	keys []Pair[sorts.SortOrder]
+	keys []Pair[sorts.Order]
 	opts *rawopts.IndexOptions
 }
 
-func NewIndex(keys ...Pair[sorts.SortOrder]) *Index {
+func NewIndex(keys ...Pair[sorts.Order]) *Index {
 	return &Index{
 		keys: keys,
 		opts: rawopts.Index(),
@@ -20,13 +20,13 @@ func NewIndex(keys ...Pair[sorts.SortOrder]) *Index {
 }
 
 func From(model *mongo.IndexModel) *Index {
-	keys, idx := model.Keys, Index{keys: make([]Pair[sorts.SortOrder], 0)}
+	keys, idx := model.Keys, Index{keys: make([]Pair[sorts.Order], 0)}
 	switch keys.(type) {
 	case bson.D:
 		for _, e := range keys.(bson.D) {
-			idx.keys = append(idx.keys, Pair[sorts.SortOrder]{
+			idx.keys = append(idx.keys, Pair[sorts.Order]{
 				Key:   e.Key,
-				Value: e.Value.(sorts.SortOrder),
+				Value: e.Value.(sorts.Order),
 			})
 		}
 	}

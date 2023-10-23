@@ -197,7 +197,7 @@ func (f *FindExecutor[D, I]) Collect(ctx context.Context, data any) error {
 	if err != nil {
 		return err
 	}
-	return cursor.All(ctx, &data)
+	return cursor.All(ctx, data)
 }
 
 func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], error) {
@@ -222,6 +222,10 @@ type FindIterator[D bson.Doc[I], I bson.ID] struct {
 
 func (f *FindIterator[D, I]) HasNext(ctx context.Context) bool {
 	return f.cursor.Next(ctx)
+}
+
+func (f *FindIterator[D, I]) TryHasNext(ctx context.Context) bool {
+	return f.cursor.TryNext(ctx)
 }
 
 func (f *FindIterator[D, I]) Next() (D, error) {
