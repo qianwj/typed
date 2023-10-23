@@ -30,6 +30,14 @@ func (p *Pipeline) put(key string, value any) {
 	}
 }
 
-func (p *Pipeline) Marshal() mongo.Pipeline {
-	return p.stages
+func (p *Pipeline) get(key string) (any, bool) {
+	idx, exist := p.dict[key]
+	if !exist {
+		return nil, false
+	}
+	return p.stages[idx], true
+}
+
+func (p *Pipeline) MarshalBSON() ([]byte, error) {
+	return bson.Marshal(p.stages)
 }
