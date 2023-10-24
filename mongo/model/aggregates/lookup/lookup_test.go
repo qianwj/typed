@@ -1,4 +1,4 @@
-package aggregates
+package lookup
 
 //import (
 //	"github.com/qianwj/typed/mongo/bson"

@@ -1,26 +1,25 @@
-package aggregates
+package lookup
 
-//import (
-//	"github.com/qianwj/typed/mongo/bson"
-//	"github.com/qianwj/typed/mongo/model/filters"
-//	"go.mongodb.org/mongo-driver/bson/primitive"
-//)
-//
-//type Lookup struct {
-//	from         string       // <collection to join>
-//	localField   string       // <field from the input documents>,
-//	foreignField string       // <field from the documents of the "from" collection>,
-//	let          []Expression // { <var_1>: <expression>, …, <var_n>: <expression> }
-//	pipeline     bson.Array   // [ <pipeline to run on joined collection> ]
-//	as           string       // <output array field>
-//}
-//
-//func NewLookup(from, as string) *Lookup {
-//	return &Lookup{
-//		from: from,
-//		as:   as,
-//	}
-//}
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
+type JoinCondition struct {
+	from         string        // <collection to join>
+	localField   string        // <field from the input documents>,
+	foreignField string        // <field from the documents of the "from" collection>,
+	let          primitive.M   // { <var_1>: <expression>, …, <var_n>: <expression> }
+	pipeline     []primitive.D // [ <pipeline to run on joined collection> ]
+	as           string        // <output array field>
+}
+
+func New(from, as string) *JoinCondition {
+	return &JoinCondition{
+		from: from,
+		as:   as,
+	}
+}
+
 //
 //func (l *Lookup) Join(localField, foreignField string) *Lookup {
 //	l.localField = localField
