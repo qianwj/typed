@@ -4,7 +4,7 @@ import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model/filters"
-	"github.com/qianwj/typed/mongo/model/update"
+	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/util"
 	raw "go.mongodb.org/mongo-driver/mongo"
 )
@@ -49,19 +49,19 @@ func (c *TypedCollection[D, I]) CountDocuments(filter *filters.Filter) *executor
 	return executor.NewCountExecutor[D, I](c.primary, c.defaultReadpref, filter)
 }
 
-func (c *TypedCollection[D, I]) FindOneAndUpdate(filter *filters.Filter, update *update.Update) *executor.FindOneAndUpdateExecutor[D, I] {
+func (c *TypedCollection[D, I]) FindOneAndUpdate(filter *filters.Filter, update *updates.Update) *executor.FindOneAndUpdateExecutor[D, I] {
 	return executor.NewFindOneAndUpdateExecutor[D, I](c.primary, filter, update)
 }
 
-func (c *TypedCollection[D, I]) UpdateOne(filter *filters.Filter, update *update.Update) *executor.UpdateExecutor[D, I] {
+func (c *TypedCollection[D, I]) UpdateOne(filter *filters.Filter, update *updates.Update) *executor.UpdateExecutor[D, I] {
 	return executor.NewUpdateOneExecutor[D, I](c.primary, filter, update)
 }
 
-func (c *TypedCollection[D, I]) UpdateMany(filter *filters.Filter, update *update.Update) *executor.UpdateExecutor[D, I] {
+func (c *TypedCollection[D, I]) UpdateMany(filter *filters.Filter, update *updates.Update) *executor.UpdateExecutor[D, I] {
 	return executor.NewUpdateManyExecutor[D, I](c.primary, filter, update)
 }
 
-func (c *TypedCollection[D, I]) UpdateById(id I, update *update.Update) *executor.UpdateExecutor[D, I] {
+func (c *TypedCollection[D, I]) UpdateById(id I, update *updates.Update) *executor.UpdateExecutor[D, I] {
 	return executor.NewUpdateByIdExecutor[D, I](c.primary, id, update)
 }
 
@@ -73,7 +73,7 @@ func (c *TypedCollection[D, I]) DeleteMany(filter *filters.Filter) *executor.Del
 	return executor.NewDeleteManyExecutor[D, I](c.primary, filter)
 }
 
-func (c *TypedCollection[D, I]) BulkWrite() *executor.BulkWriteExecutor[D, I] {
+func (c *TypedCollection[D, I]) BulkWrite() *executor.TypedBulkWriteExecutor[D, I] {
 	return executor.NewBulkWriteExecutor[D, I](c.primary)
 }
 

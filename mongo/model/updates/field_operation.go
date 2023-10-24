@@ -1,4 +1,4 @@
-package update
+package updates
 
 import (
 	operator2 "github.com/qianwj/typed/mongo/operator"

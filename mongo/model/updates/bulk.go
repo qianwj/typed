@@ -1,4 +1,4 @@
-package update
+package updates
 
 import (
 	"github.com/qianwj/typed/mongo/model/filters"
@@ -31,7 +31,7 @@ func (uom *TypedUpdateOneModel) Hint(index string) *TypedUpdateOneModel {
 	return uom
 }
 
-// Filter specifies a filter to use to select the document to update. The filter must be a document containing query
+// Filter specifies a filter to use to select the document to updates. The filter must be a document containing query
 // operators. It cannot be nil. If the filter matches multiple documents, one will be selected from the matching
 // documents.
 func (uom *TypedUpdateOneModel) Filter(filter *filters.Filter) *TypedUpdateOneModel {
@@ -40,7 +40,7 @@ func (uom *TypedUpdateOneModel) Filter(filter *filters.Filter) *TypedUpdateOneMo
 }
 
 // Update specifies the modifications to be made to the selected document. The value must be a document containing
-// update operators (https://docs.mongodb.com/manual/reference/operator/update/). It cannot be nil or empty.
+// updates operators (https://docs.mongodb.com/manual/reference/operator/update/). It cannot be nil or empty.
 func (uom *TypedUpdateOneModel) Update(update *Update) *TypedUpdateOneModel {
 	uom.internal.Update = update
 	return uom
@@ -93,7 +93,7 @@ func (umm *TypedUpdateManyModel) SetHint(index string) *TypedUpdateManyModel {
 	return umm
 }
 
-// SetFilter specifies a filter to use to select documents to update. The filter must be a document containing query
+// SetFilter specifies a filter to use to select documents to updates. The filter must be a document containing query
 // operators. It cannot be nil.
 func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateManyModel {
 	umm.internal.Filter = filter.Raw()
@@ -101,7 +101,7 @@ func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateM
 }
 
 // SetUpdate specifies the modifications to be made to the selected documents. The value must be a document containing
-// update operators (https://www.mongodb.com/docs/manual/reference/operator/update/). It cannot be nil or empty.
+// updates operators (https://www.mongodb.com/docs/manual/reference/operator/update/). It cannot be nil or empty.
 func (umm *TypedUpdateManyModel) SetUpdate(update Update) *TypedUpdateManyModel {
 	umm.internal.Update = update
 	return umm

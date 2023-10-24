@@ -6,7 +6,7 @@ import (
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
-	"github.com/qianwj/typed/mongo/model/update"
+	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,14 +17,14 @@ import (
 type FindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
-	update *update.Update
+	update *updates.Update
 	opts   *rawopts.FindOneAndUpdateOptions
 }
 
 func NewFindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID](
 	primary *mongo.Collection,
 	filter *filters.Filter,
-	update *update.Update,
+	update *updates.Update,
 ) *FindOneAndUpdateExecutor[D, I] {
 	return &FindOneAndUpdateExecutor[D, I]{
 		coll:   primary,

@@ -1,4 +1,4 @@
-package update
+package updates
 
 import (
 	"github.com/qianwj/typed/mongo/model/filters"

@@ -10,10 +10,6 @@ import (
 	"testing"
 )
 
-type testDocProj struct {
-	Name string `bson:"name"`
-}
-
 func TestFindExecutor_ToArray(t *testing.T) {
 	prepared := []*TestDoc{
 		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},

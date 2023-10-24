@@ -33,6 +33,10 @@ func (t *TestDoc) GetId() primitive.ObjectID {
 	return t.Id
 }
 
+type testDocProj struct {
+	Name string `bson:"name"`
+}
+
 func init() {
 	err := mtest.Setup(mtest.NewSetupOptions())
 	if err != nil {

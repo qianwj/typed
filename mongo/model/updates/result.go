@@ -1,4 +1,4 @@
-package model
+package updates
 
 import (
 	"github.com/qianwj/typed/mongo/bson"

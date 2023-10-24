@@ -1,6 +1,6 @@
 package operator
 
-// define the update operators
+// define the updates operators
 // refer: https://docs.mongodb.com/manual/reference/operator/update/
 const (
 	// Fields

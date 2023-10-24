@@ -3,9 +3,8 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
-	"github.com/qianwj/typed/mongo/model/update"
+	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,13 +14,13 @@ import (
 type UpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
-	update *update.Update
+	update *updates.Update
 	multi  bool
 	docId  *I
 	opts   *rawopts.UpdateOptions
 }
 
-func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -30,7 +29,7 @@ func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, f
 	}
 }
 
-func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -40,7 +39,7 @@ func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, 
 	}
 }
 
-func NewUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *update.Update) *UpdateExecutor[D, I] {
+func NewUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		docId:  &id,
@@ -84,7 +83,7 @@ func (u *UpdateExecutor[D, I]) Let(l rawbson.M) *UpdateExecutor[D, I] {
 	return u
 }
 
-func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult[I], error) {
+func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*updates.UpdateResult[I], error) {
 	var (
 		err error
 		res *mongo.UpdateResult
@@ -96,5 +95,5 @@ func (u *UpdateExecutor[D, I]) Execute(ctx context.Context) (*model.UpdateResult
 	} else {
 		res, err = u.coll.UpdateOne(ctx, u.filter, u.update, u.opts)
 	}
-	return model.FromUpdateResult[I](res), err
+	return updates.FromUpdateResult[I](res), err
 }
