@@ -441,5 +441,8 @@ func (b *Builder) Build(ctx context.Context) (*Client, error) {
 		return nil, err
 	}
 	b.defaultDatabaseName = uri.Database
+	if b.defaultDatabaseName == "" {
+		b.defaultDatabaseName = "admin"
+	}
 	return New(ctx, b.defaultDatabaseName, b.opts)
 }
