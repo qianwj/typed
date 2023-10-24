@@ -119,3 +119,11 @@ func (f *FindOneAndUpdateExecutor[D, I]) Execute(ctx context.Context) (D, error)
 	}
 	return data, nil
 }
+
+func (f *FindOneAndUpdateExecutor[D, I]) Collect(ctx context.Context, data any) error {
+	res := f.coll.FindOneAndUpdate(ctx, f.filter, f.update, f.opts)
+	if res.Err() != nil {
+		return res.Err()
+	}
+	return res.Decode(data)
+}
