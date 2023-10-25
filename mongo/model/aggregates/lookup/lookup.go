@@ -5,37 +5,33 @@ import (
 )
 
 type JoinCondition struct {
-	from         string        // <collection to join>
-	localField   string        // <field from the input documents>,
-	foreignField string        // <field from the documents of the "from" collection>,
-	let          primitive.M   // { <var_1>: <expression>, …, <var_n>: <expression> }
-	pipeline     []primitive.D // [ <pipeline to run on joined collection> ]
-	as           string        // <output array field>
+	From         string        `bson:"from,omitempty"`         // <collection to join>
+	LocalField   string        `bson:"localField,omitempty"`   // <field from the input documents>,
+	ForeignField string        `bson:"foreignField,omitempty"` // <field from the documents of the "from" collection>,
+	Let          primitive.M   `bson:"let,omitempty"`          // { <var_1>: <expression>, …, <var_n>: <expression> }
+	Pipeline     []primitive.D `bson:"pipeline,omitempty"`     // [ <pipeline to run on joined collection> ]
+	As           string        `bson:"as,omitempty"`           // <output array field>
 }
 
 func New(from, as string) *JoinCondition {
 	return &JoinCondition{
-		from: from,
-		as:   as,
+		From: from,
+		As:   as,
 	}
 }
 
-//
-//func (l *Lookup) Join(localField, foreignField string) *Lookup {
-//	l.localField = localField
-//	l.foreignField = foreignField
-//	l.let = nil
-//	l.pipeline = nil
-//	return l
-//}
-//
-//func (l *Lookup) Pipeline(pipeline bson.Array, let ...Expression) *Lookup {
-//	l.localField = ""
-//	l.foreignField = ""
-//	l.let = let
-//	l.pipeline = pipeline
-//	return l
-//}
+func (j *JoinCondition) Join(localField, foreignField string) *JoinCondition {
+	j.LocalField = localField
+	j.ForeignField = foreignField
+	return j
+}
+
+func (j *JoinCondition) Pipe(pipeline []primitive.D, let primitive.M) *JoinCondition {
+	j.Let = let
+	j.Pipeline = pipeline
+	return j
+}
+
 //
 //func (l *Lookup) Marshal() primitive.D {
 //	res := primitive.D{
