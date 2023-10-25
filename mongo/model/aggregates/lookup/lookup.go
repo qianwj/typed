@@ -1,6 +1,7 @@
 package lookup
 
 import (
+	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -32,56 +33,38 @@ func (j *JoinCondition) Pipe(pipeline []primitive.D, let primitive.M) *JoinCondi
 	return j
 }
 
-//
-//func (l *Lookup) Marshal() primitive.D {
-//	res := primitive.D{
-//		{Key: "from", Value: l.from},
-//		{Key: "as", Value: l.as},
-//	}
-//	if l.localField != "" && l.foreignField != "" {
-//		res = append(
-//			res,
-//			primitive.E{Key: "localField", Value: l.localField},
-//			primitive.E{Key: "foreignField", Value: l.foreignField},
-//		)
-//	}
-//	if len(l.let) > 0 {
-//		res = append(res, primitive.E{Key: "let", Value: l.let})
-//	}
-//	if l.pipeline != nil {
-//		res = append(res, primitive.E{Key: "pipeline", Value: l.pipeline.Marshal()})
-//	}
-//	return res
-//}
-//
-//func (l *Lookup) Tag() {}
-//
-//func (l *Lookup) ToMap() primitive.M {
-//	arr, res := l.Marshal(), primitive.M{}
-//	for _, e := range arr {
-//		res[e.Key] = e.Value
-//	}
-//	return res
-//}
-//
-//type GraphLookup struct {
-//	from                    string          // <collection>,
-//	startWith               string          // <expression>,
-//	connectFromField        string          // <string>,
-//	connectToField          string          // <string>,
-//	as                      string          // <string>,
-//	maxDepth                int             // <number>,
-//	depthField              string          // <string>,
-//	restrictSearchWithMatch *filters.Filter // <document>
-//}
-//
-//func (l *GraphLookup) Tag() {}
-//
-//func (l *GraphLookup) Marshal() primitive.D {
-//	// complete this function
-//	return primitive.D{}
-//}
-//
-//func (l *GraphLookup) ToMap() primitive.M {
-//	return primitive.M{}
-//}
+type GraphJoinCondition struct {
+	From                    string          `bson:"from,omitempty"`                    // <collection>,
+	StartWith               any             `bson:"startWith,omitempty"`               // <expression>,
+	ConnectFromField        string          `bson:"connectFromField,omitempty"`        // <string>,
+	ConnectToField          string          `bson:"connectToField,omitempty"`          // <string>,
+	As                      string          `bson:"as,omitempty"`                      // <string>,
+	MaxDepth                int             `bson:"maxDepth,omitempty"`                // <number>,
+	DepthField              string          `bson:"depthField,omitempty"`              // <string>,
+	RestrictSearchWithMatch *filters.Filter `bson:"restrictSearchWithMatch,omitempty"` // <document>
+}
+
+func NewGraph(from, connectFromField, connectToField, as string, startsWith any) *GraphJoinCondition {
+	return &GraphJoinCondition{
+		From:             from,
+		StartWith:        startsWith,
+		ConnectFromField: connectFromField,
+		ConnectToField:   connectToField,
+		As:               as,
+	}
+}
+
+func (g *GraphJoinCondition) SetMaxDepth(max int) *GraphJoinCondition {
+	g.MaxDepth = max
+	return g
+}
+
+func (g *GraphJoinCondition) SetDepthField(field string) *GraphJoinCondition {
+	g.DepthField = field
+	return g
+}
+
+func (g *GraphJoinCondition) SetRestrictSearchWithMatch(filter *filters.Filter) *GraphJoinCondition {
+	g.RestrictSearchWithMatch = filter
+	return g
+}

@@ -3,6 +3,7 @@ package collection
 import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/executor"
+	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/util"
@@ -77,7 +78,7 @@ func (c *TypedCollection[D, I]) BulkWrite() *executor.TypedBulkWriteExecutor[D, 
 	return executor.NewBulkWriteExecutor[D, I](c.primary)
 }
 
-func (c *TypedCollection[D, I]) Aggregate(pipe raw.Pipeline) *executor.AggregateExecutor[D, I] {
+func (c *TypedCollection[D, I]) Aggregate(pipe *aggregates.Pipeline) *executor.AggregateExecutor[D, I] {
 	return executor.NewAggregateExecutor[D, I](c.primary, c.defaultReadpref, pipe)
 }
 

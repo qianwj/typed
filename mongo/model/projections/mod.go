@@ -3,11 +3,12 @@ package projections
 import (
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
-	Include = 1
-	Exclude = -1
+	Include = true
+	Exclude = false
 )
 
 type Options struct {
@@ -16,7 +17,7 @@ type Options struct {
 
 func New() *Options {
 	return &Options{
-		fields: bson.D{},
+		fields: primitive.D{},
 	}
 }
 
@@ -32,6 +33,11 @@ func (p *Options) Includes(fields ...string) *Options {
 	p.fields = append(p.fields, util.Map(fields, func(f string) bson.E {
 		return bson.E{Key: f, Value: Include}
 	})...)
+	return p
+}
+
+func (p *Options) AddField(field string, expression any) *Options {
+	p.fields = append(p.fields, primitive.E{Key: field, Value: expression})
 	return p
 }
 

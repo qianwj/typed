@@ -3,6 +3,7 @@ package executor
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -13,14 +14,14 @@ import (
 type AggregateExecutor[D bson.Doc[I], I bson.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
-	pipe            raw.Pipeline
+	pipe            *aggregates.Pipeline
 	primary         bool
 	opts            *rawopts.AggregateOptions
 }
 
 func NewAggregateExecutor[D bson.Doc[I], I bson.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
-	pipe raw.Pipeline,
+	pipe *aggregates.Pipeline,
 ) *AggregateExecutor[D, I] {
 	return &AggregateExecutor[D, I]{
 		readprefPrimary: readprefPrimary,
@@ -121,12 +122,12 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 type DatabaseAggregateExecutor struct {
 	readprefPrimary *raw.Database
 	readprefDefault *raw.Database
-	pipe            raw.Pipeline
+	pipe            *aggregates.Pipeline
 	primary         bool
 	opts            *rawopts.AggregateOptions
 }
 
-func NewDatabaseAggregateExecutor(readprefPrimary, readprefDefault *raw.Database, pipe raw.Pipeline) *DatabaseAggregateExecutor {
+func NewDatabaseAggregateExecutor(readprefPrimary, readprefDefault *raw.Database, pipe *aggregates.Pipeline) *DatabaseAggregateExecutor {
 	return &DatabaseAggregateExecutor{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,
