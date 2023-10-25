@@ -18,6 +18,7 @@ const (
 
 var (
 	testCli  *mongo.Client
+	testDB   *mongo.Database
 	testColl *mongo.Collection
 )
 
@@ -54,5 +55,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	testCli, testColl = cli, cli.Database(testDBName).Collection(testCollName)
+	testDB = cli.Database(testDBName)
+	testCli, testColl = cli, testDB.Collection(testCollName)
 }

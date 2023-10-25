@@ -103,7 +103,7 @@ func (a *AggregateExecutor[D, I]) Custom(c rawbson.M) *AggregateExecutor[D, I] {
 	return a
 }
 
-func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interface{}) error {
+func (a *AggregateExecutor[D, I]) Collect(ctx context.Context, result any) error {
 	var (
 		err    error
 		cursor *raw.Cursor
@@ -116,7 +116,7 @@ func (a *AggregateExecutor[D, I]) ExecuteTo(ctx context.Context, result interfac
 	if err != nil {
 		return err
 	}
-	return cursor.All(ctx, &result)
+	return cursor.All(ctx, result)
 }
 
 type DatabaseAggregateExecutor struct {
@@ -208,7 +208,7 @@ func (a *DatabaseAggregateExecutor) Custom(c rawbson.M) *DatabaseAggregateExecut
 	return a
 }
 
-func (a *DatabaseAggregateExecutor) ExecuteTo(ctx context.Context, result interface{}) error {
+func (a *DatabaseAggregateExecutor) Collect(ctx context.Context, result any) error {
 	var (
 		err    error
 		cursor *raw.Cursor
@@ -221,5 +221,5 @@ func (a *DatabaseAggregateExecutor) ExecuteTo(ctx context.Context, result interf
 	if err != nil {
 		return err
 	}
-	return cursor.All(ctx, &result)
+	return cursor.All(ctx, result)
 }

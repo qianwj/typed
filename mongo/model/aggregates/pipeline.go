@@ -2,6 +2,7 @@ package aggregates
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -23,4 +24,8 @@ func (p *Pipeline) append(key string, value any) {
 
 func (p *Pipeline) MarshalBSON() ([]byte, error) {
 	return bson.Marshal(p.stages)
+}
+
+func (p *Pipeline) Stages() []primitive.D {
+	return p.stages
 }

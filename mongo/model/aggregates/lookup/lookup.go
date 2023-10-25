@@ -27,9 +27,13 @@ func (j *JoinCondition) Join(localField, foreignField string) *JoinCondition {
 	return j
 }
 
-func (j *JoinCondition) Pipe(pipeline []primitive.D, let primitive.M) *JoinCondition {
-	j.Let = let
+func (j *JoinCondition) SetPipeline(pipeline []primitive.D) *JoinCondition {
 	j.Pipeline = pipeline
+	return j
+}
+
+func (j *JoinCondition) SetLet(let primitive.M) *JoinCondition {
+	j.Let = let
 	return j
 }
 
