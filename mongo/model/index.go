@@ -156,7 +156,7 @@ func (i *Index) Hidden() *Index {
 	return i
 }
 
-func (i *Index) Marshal() mongo.IndexModel {
+func (i *Index) Build() mongo.IndexModel {
 	keys := bson.D{}
 	for _, key := range i.keys {
 		keys = append(keys, bson.E{Key: key.Key, Value: key.Value})

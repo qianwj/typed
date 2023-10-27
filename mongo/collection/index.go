@@ -97,13 +97,13 @@ func (c *IndexCreateBuilder) Execute(ctx context.Context) ([]string, error) {
 	if len(c.idx) > 1 {
 		models := make([]mongo.IndexModel, len(c.idx))
 		for i, idx := range c.idx {
-			models[i] = idx.Marshal()
+			models[i] = idx.Build()
 		}
 		return c.view.CreateMany(ctx, models, c.opts)
 	} else if len(c.idx) == 0 {
 		return nil, ErrEmptyIndex
 	}
-	name, err := c.view.CreateOne(ctx, c.idx[0].Marshal(), c.opts)
+	name, err := c.view.CreateOne(ctx, c.idx[0].Build(), c.opts)
 	if err != nil {
 		return nil, err
 	}
