@@ -164,6 +164,13 @@ func (f *FindExecutor[D, I]) Snapshot() *FindExecutor[D, I] {
 	return f
 }
 
+// Page sets the values for the skip and limit
+func (f *FindExecutor[D, I]) Page(pageNo, pageSize int64) *FindExecutor[D, I] {
+	f.opts.SetSkip((pageNo - 1) * pageSize)
+	f.opts.SetLimit(pageSize)
+	return f
+}
+
 func (f *FindExecutor[D, I]) ToArray(ctx context.Context) ([]D, error) {
 	var (
 		data   []D
