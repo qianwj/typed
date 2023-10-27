@@ -7,6 +7,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+// Map based on `bson.E` is an ordered map, unlike `bson.M` which is unordered.
+// Additionally, Map can be converted to and from `bson.D` and `bson.M` as well.
 type Map struct {
 	entries []Entry
 	dict    map[string]int
