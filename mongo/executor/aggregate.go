@@ -109,9 +109,9 @@ func (a *AggregateExecutor[D, I]) Collect(ctx context.Context, result any) error
 		cursor *raw.Cursor
 	)
 	if a.primary {
-		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe, a.opts)
+		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe.Stages(), a.opts)
 	} else {
-		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe, a.opts)
+		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Stages(), a.opts)
 	}
 	if err != nil {
 		return err
@@ -214,9 +214,9 @@ func (a *DatabaseAggregateExecutor) Collect(ctx context.Context, result any) err
 		cursor *raw.Cursor
 	)
 	if a.primary {
-		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe, a.opts)
+		cursor, err = a.readprefPrimary.Aggregate(ctx, a.pipe.Stages(), a.opts)
 	} else {
-		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe, a.opts)
+		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Stages(), a.opts)
 	}
 	if err != nil {
 		return err
