@@ -30,6 +30,7 @@ func newClient(ctx context.Context, pingReadpref *readpref.ReadPref, defaultDB s
 	}, nil
 }
 
+// DefaultDatabase the database which specified in uri, if not present, the default database is admin.
 func (c *Client) DefaultDatabase() *database.Builder {
 	return database.NewBuilder(c.internal, c.defaultDatabaseName)
 }
