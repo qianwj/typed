@@ -2,12 +2,7 @@ package model
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
 )
-
-type Bson interface {
-	bson.M | bson.D | bson.A | bson.E
-}
 
 type Pair[V any] struct {
 	Key   string
