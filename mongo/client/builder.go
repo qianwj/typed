@@ -17,6 +17,7 @@ import (
 type Builder struct {
 	opts                *options.ClientOptions
 	defaultDatabaseName string
+	pingReadpref        *readpref.ReadPref
 }
 
 func NewBuilder() *Builder {
@@ -25,6 +26,11 @@ func NewBuilder() *Builder {
 
 func (b *Builder) ApplyUri(uri string) *Builder {
 	b.opts.ApplyURI(uri)
+	return b
+}
+
+func (b *Builder) Ping(readpref *readpref.ReadPref) *Builder {
+	b.pingReadpref = readpref
 	return b
 }
 
@@ -444,5 +450,5 @@ func (b *Builder) Build(ctx context.Context) (*Client, error) {
 	if b.defaultDatabaseName == "" {
 		b.defaultDatabaseName = "admin"
 	}
-	return New(ctx, b.defaultDatabaseName, b.opts)
+	return newClient(ctx, b.pingReadpref, b.defaultDatabaseName, b.opts)
 }

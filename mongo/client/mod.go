@@ -13,10 +13,16 @@ type Client struct {
 	defaultDatabaseName string
 }
 
-func New(ctx context.Context, defaultDB string, opts *options.ClientOptions) (*Client, error) {
+func newClient(ctx context.Context, pingReadpref *readpref.ReadPref, defaultDB string, opts *options.ClientOptions) (*Client, error) {
 	internal, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return nil, err
+	}
+	if pingReadpref != nil {
+		err := internal.Ping(ctx, pingReadpref)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &Client{
 		internal:            internal,
@@ -38,4 +44,11 @@ func (c *Client) Transaction() *TxSessionBuilder {
 
 func (c *Client) Ping(ctx context.Context, rp *readpref.ReadPref) error {
 	return c.internal.Ping(ctx, rp)
+}
+
+func (c *Client) Disconnect(ctx context.Context) error {
+	if c != nil && c.internal != nil {
+		return c.internal.Disconnect(ctx)
+	}
+	return nil
 }

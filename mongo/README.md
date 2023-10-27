@@ -1,6 +1,17 @@
 # Typed Mongo
 
-An easy to use mongodb go driver. provided generic types.
+Typed Mongo is an easy to use mongodb go driver, provided generic types. It's based on [mongo-go-driver](https://github.com/mongodb/mongo-go-driver).
+
+## Requirements
+
+- `Go 1.18` and higher
+- `Mongo 3.6` and higher
+
+## Installation
+
+```shell
+go get github.com/qianwj/typed/mongo
+```
 
 ## Quick Start
 
@@ -46,4 +57,26 @@ func main() {
 	}
 	log.Printf("person: %+v", dbPerson)
 }
+```
+
+## Compare with `mongo-go-driver`
+
+### Connect to server
+
+1. mongo-go-driver
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+if err != nil {
+	log.Fatal(err)
+}
+err = client.Ping(ctx, readpref.Primary())
+```
+
+2. typed mongo
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+cli, err := client.NewBuilder().ApplyUri("mongodb://localhost:27017").Ping(readpref.Primary()).Build(ctx)
 ```
