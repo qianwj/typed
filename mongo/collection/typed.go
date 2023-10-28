@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"context"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model/aggregates"
@@ -88,4 +89,8 @@ func (c *TypedCollection[D, I]) Distinct(field string) *executor.DistinctExecuto
 
 func (c *TypedCollection[D, I]) Indexes() *IndexViewer {
 	return FromIndexView(c.primary.Indexes())
+}
+
+func (c *TypedCollection[D, I]) Drop(ctx context.Context) error {
+	return c.primary.Drop(ctx)
 }
