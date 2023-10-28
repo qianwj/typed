@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/database"
-	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -49,8 +48,8 @@ func (c *Client) Ping(ctx context.Context, rp *readpref.ReadPref) error {
 	return c.internal.Ping(ctx, rp)
 }
 
-func (c *Client) ListDatabases(filter *filters.Filter) *executor.ListDatabasesExecutor {
-	return executor.NewListDatabasesExecutor(c.internal, filter)
+func (c *Client) ListDatabases(filter *filters.Filter) *ListDatabasesExecutor {
+	return newListDatabasesExecutor(c.internal, filter)
 }
 
 func (c *Client) Disconnect(ctx context.Context) error {

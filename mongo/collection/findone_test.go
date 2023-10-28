@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func TestFindOneExecutor_Execute(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
 		actual, err := exec.Execute(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -30,7 +30,7 @@ func TestFindOneExecutor_Execute(t *testing.T) {
 		assert.Equal(t, prepared[0], actual)
 	})
 	t.Run("test multi", func(t *testing.T) {
-		exec := NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3").Eq("age", 30))
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3").Eq("age", 30))
 		actual, err := exec.Execute(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -39,7 +39,7 @@ func TestFindOneExecutor_Execute(t *testing.T) {
 		assert.Equal(t, prepared[4], actual)
 	})
 	t.Run("test by id", func(t *testing.T) {
-		exec := NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("_id", prepared[3].Id))
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("_id", prepared[3].Id))
 		actual, err := exec.Execute(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -56,7 +56,7 @@ func TestFindOneExecutor_Collect(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := NewFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual testDocProj
 		err := exec.Collect(context.TODO(), &actual)

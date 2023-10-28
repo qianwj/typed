@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type DeleteExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts   *rawopts.DeleteOptions
 }
 
-func NewDeleteOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
+func newDeleteOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
 	return &DeleteExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -25,7 +25,7 @@ func NewDeleteOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, f
 	}
 }
 
-func NewDeleteManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
+func newDeleteManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
 	return &DeleteExecutor[D, I]{
 		coll:   primary,
 		filter: filter,

@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type FindOneExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts            *rawopts.FindOneOptions
 }
 
-func NewFindOneExecutor[D bson.Doc[I], I bson.ID](readprefPrimary, readprefDefault *raw.Collection, filter *filters.Filter) *FindOneExecutor[D, I] {
+func newFindOneExecutor[D bson.Doc[I], I bson.ID](readprefPrimary, readprefDefault *raw.Collection, filter *filters.Filter) *FindOneExecutor[D, I] {
 	return &FindOneExecutor[D, I]{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,

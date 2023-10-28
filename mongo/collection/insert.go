@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type InsertOneExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts *rawopts.InsertOneOptions
 }
 
-func NewInsertOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, doc D) *InsertOneExecutor[D, I] {
+func newInsertOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, doc D) *InsertOneExecutor[D, I] {
 	return &InsertOneExecutor[D, I]{
 		coll: primary,
 		data: doc,
@@ -49,7 +49,7 @@ type InsertManyExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts *rawopts.InsertManyOptions
 }
 
-func NewInsertManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, docs ...D) *InsertManyExecutor[D, I] {
+func newInsertManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, docs ...D) *InsertManyExecutor[D, I] {
 	return &InsertManyExecutor[D, I]{
 		coll: primary,
 		data: util.ToAny(docs),

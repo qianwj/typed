@@ -18,7 +18,7 @@ type IndexViewer struct {
 	view mongo.IndexView
 }
 
-func FromIndexView(view mongo.IndexView) *IndexViewer {
+func fromIndexView(view mongo.IndexView) *IndexViewer {
 	return &IndexViewer{view: view}
 }
 

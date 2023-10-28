@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -55,7 +55,7 @@ func TestAggregateExecutor_Collect(t *testing.T) {
 	)
 	//pipe := aggregates.Match(filters.Eq("name", "gala"))
 	var result []primitive.M
-	err := NewAggregateExecutor[*fruit, primitive.ObjectID](fruitColl, fruitColl, pipe).Collect(ctx, &result)
+	err := newAggregateExecutor[*fruit, primitive.ObjectID](fruitColl, fruitColl, pipe).Collect(ctx, &result)
 	if err != nil {
 		t.Errorf("agg error: %+v", err)
 		t.FailNow()

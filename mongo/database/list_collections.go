@@ -1,4 +1,4 @@
-package executor
+package database
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type ListCollectionsExecutor struct {
 	opts   *options.ListCollectionsOptions
 }
 
-func NewListCollectionsExecutor(db *mongo.Database, filter *filters.Filter) *ListCollectionsExecutor {
+func newListCollectionsExecutor(db *mongo.Database, filter *filters.Filter) *ListCollectionsExecutor {
 	return &ListCollectionsExecutor{
 		db:     db,
 		filter: filter,

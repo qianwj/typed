@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type DistinctExecutor struct {
 	opts            *rawopts.DistinctOptions
 }
 
-func NewDistinctExecutor(readprefPrimary, readprefDefault *raw.Collection, field string) *DistinctExecutor {
+func newDistinctExecutor(readprefPrimary, readprefDefault *raw.Collection, field string) *DistinctExecutor {
 	return &DistinctExecutor{
 		readprefPrimary: readprefPrimary,
 		readprefDefault: readprefDefault,

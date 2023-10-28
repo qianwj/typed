@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -21,7 +21,7 @@ type FindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts   *rawopts.FindOneAndUpdateOptions
 }
 
-func NewFindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID](
+func newFindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID](
 	primary *mongo.Collection,
 	filter *filters.Filter,
 	update *updates.Update,

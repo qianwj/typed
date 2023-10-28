@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -21,7 +21,7 @@ func TestFindExecutor_ToArray(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
 		actual, err := exec.ToArray(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -31,7 +31,7 @@ func TestFindExecutor_ToArray(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
 		actual, err := exec.ToArray(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -53,7 +53,7 @@ func TestFindExecutor_Collect(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual []*testDocProj
 		err := exec.Collect(context.TODO(), &actual)
@@ -65,7 +65,7 @@ func TestFindExecutor_Collect(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3")).
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual []*testDocProj
 		err := exec.Collect(context.TODO(), &actual)
@@ -89,7 +89,7 @@ func TestFindExecutor_Cursor(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
 		cursor, err := exec.Cursor(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -108,7 +108,7 @@ func TestFindExecutor_Cursor(t *testing.T) {
 		}
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := NewFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
 		cursor, err := exec.Cursor(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)

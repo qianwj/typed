@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type TypedBulkWriteExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts   *rawopts.BulkWriteOptions
 }
 
-func NewBulkWriteExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection) *TypedBulkWriteExecutor[D, I] {
+func newBulkWriteExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection) *TypedBulkWriteExecutor[D, I] {
 	return &TypedBulkWriteExecutor[D, I]{
 		coll: primary,
 		opts: rawopts.BulkWrite(),

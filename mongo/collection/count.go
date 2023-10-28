@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type CountExecutor[D bson.Doc[I], I bson.ID] struct {
 	estimateOpts    *rawopts.EstimatedDocumentCountOptions
 }
 
-func NewCountExecutor[D bson.Doc[I], I bson.ID](
+func newCountExecutor[D bson.Doc[I], I bson.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
 	filter *filters.Filter,
 ) *CountExecutor[D, I] {

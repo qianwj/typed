@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/collection"
-	"github.com/qianwj/typed/mongo/executor"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -25,16 +24,16 @@ func (d *Database) Raw() *mongo.Database {
 	return d.defaultReadpref
 }
 
-func (d *Database) Aggregate(pipe *aggregates.Pipeline) *executor.DatabaseAggregateExecutor {
-	return executor.NewDatabaseAggregateExecutor(d.primary, d.defaultReadpref, pipe)
+func (d *Database) Aggregate(pipe *aggregates.Pipeline) *AggregateExecutor {
+	return newAggregateExecutor(d.primary, d.defaultReadpref, pipe)
 }
 
 func (d *Database) Collection(name string) *collection.Builder {
 	return collection.NewBuilder(d.defaultReadpref, name)
 }
 
-func (d *Database) ListCollections(filter *filters.Filter) *executor.ListCollectionsExecutor {
-	return executor.NewListCollectionsExecutor(d.defaultReadpref, filter)
+func (d *Database) ListCollections(filter *filters.Filter) *ListCollectionsExecutor {
+	return newListCollectionsExecutor(d.defaultReadpref, filter)
 }
 
 func (d *Database) Drop(ctx context.Context) error {

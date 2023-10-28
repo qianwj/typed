@@ -1,4 +1,4 @@
-package executor
+package client
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type ListDatabasesExecutor struct {
 	opts   *options.ListDatabasesOptions
 }
 
-func NewListDatabasesExecutor(cli *mongo.Client, filter *filters.Filter) *ListDatabasesExecutor {
+func newListDatabasesExecutor(cli *mongo.Client, filter *filters.Filter) *ListDatabasesExecutor {
 	return &ListDatabasesExecutor{
 		cli:    cli,
 		filter: filter,

@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -20,7 +20,7 @@ type UpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts   *rawopts.UpdateOptions
 }
 
-func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -29,7 +29,7 @@ func NewUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, f
 	}
 }
 
-func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -39,7 +39,7 @@ func NewUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, 
 	}
 }
 
-func NewUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		docId:  &id,

@@ -1,4 +1,4 @@
-package executor
+package collection
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func TestFindOneAndUpdateExecutor_Execute(t *testing.T) {
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test upsert", func(t *testing.T) {
-		doc, err := NewFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
+		doc, err := newFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
 			testColl, filters.Eq("name", "test3"), updates.Set("age", 18),
 		).Upsert().ReturnAfter().Execute(context.TODO())
 		if err != nil {
@@ -29,11 +29,11 @@ func TestFindOneAndUpdateExecutor_Execute(t *testing.T) {
 		assert.Equal(t, 18, doc.Age)
 	})
 	t.Run("test update only exist", func(t *testing.T) {
-		_, err := NewFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
+		_, err := newFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
 			testColl, filters.Eq("name", "test4"), updates.Set("age", 18),
 		).ReturnAfter().Execute(context.TODO())
 		assert.Equal(t, mongo.ErrNoDocuments, err)
-		doc, err := NewFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
+		doc, err := newFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
 			testColl, filters.Eq("name", "test2"), updates.Set("age", 22),
 		).ReturnAfter().Execute(context.TODO())
 		if err != nil {
@@ -52,7 +52,7 @@ func TestFindOneAndUpdateExecutor_Collect(t *testing.T) {
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test upsert", func(t *testing.T) {
 		var doc testDocProj
-		err := NewFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
+		err := newFindOneAndUpdateExecutor[*TestDoc, primitive.ObjectID](
 			testColl, filters.Eq("name", "test3"), updates.Set("age", 18),
 		).Upsert().ReturnAfter().Collect(context.TODO(), &doc)
 		if err != nil {
