@@ -8,13 +8,13 @@ import (
 )
 
 func TestExists(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{operator.Exists, true}}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{Key: operator.Exists, Value: true}}}})
 	actual, _ := bson.Marshal(Exists("a", true))
 	assert.Equal(t, expected, actual)
 }
 
 func TestType(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{operator.Type, 9}}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{Key: operator.Type, Value: 9}}}})
 	actual, _ := bson.Marshal(Type("a", DataTypeDate))
 	assert.Equal(t, expected, actual)
 }

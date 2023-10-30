@@ -9,7 +9,7 @@ import (
 )
 
 func TestLike(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.D{{operator.Regex, primitive.Regex{
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{Key: operator.Regex, Value: primitive.Regex{
 		Pattern: "abc",
 		Options: "im",
 	}}}}})

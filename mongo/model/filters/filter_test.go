@@ -24,9 +24,9 @@ func TestFrom(t *testing.T) {
 
 func TestCast(t *testing.T) {
 	m := rawbson.D{
-		{"a", "a"},
-		{"a", "b"},
-		{"b", 1},
+		{Key: "a", Value: "a"},
+		{Key: "a", Value: "b"},
+		{Key: "b", Value: 1},
 	}
 	f := Cast(m)
 	val, ok := f.Get("a")
@@ -51,12 +51,12 @@ func TestFilter_And(t *testing.T) {
 	eBytes, _ := json.Marshal(expected)
 	t.Logf("expect: %s", string(eBytes))
 	actual := New().And(Cast(rawbson.D{
-		{"a", "a"},
-		{"a", "b"},
-		{"b", 1},
-		{"c", bson.Null},
-		{"d", bson.Nil},
-		{"e", oid},
+		{Key: "a", Value: "a"},
+		{Key: "a", Value: "b"},
+		{Key: "b", Value: 1},
+		{Key: "c", Value: bson.Null},
+		{Key: "d", Value: bson.Nil},
+		{Key: "e", Value: oid},
 	}))
 	aBytes, _ := json.Marshal(actual)
 	t.Logf("actual: %s", string(aBytes))

@@ -7,7 +7,7 @@ import (
 )
 
 func TestClientBuilder_ApplyUri(t *testing.T) {
-	cli, err := Builder().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
+	cli, err := NewBuilder().ApplyUri("mongodb://localhost:27017").Build(context.TODO())
 	if err != nil {
 		t.Error(err)
 		t.FailNow()

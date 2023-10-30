@@ -9,9 +9,9 @@ import (
 
 func TestAnd(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
-		{operator.And, bson.A{
-			bson.D{{"a", "b"}},
-			bson.D{{"p", "q"}},
+		{Key: operator.And, Value: bson.A{
+			bson.D{{Key: "a", Value: "b"}},
+			bson.D{{Key: "p", Value: "q"}},
 		}},
 	})
 	actual, _ := bson.Marshal(And(Eq("a", "b"), Eq("p", "q")))
@@ -20,9 +20,9 @@ func TestAnd(t *testing.T) {
 
 func TestOr(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
-		{operator.Or, bson.A{
-			bson.D{{"a", "b"}},
-			bson.D{{"p", "q"}},
+		{Key: operator.Or, Value: bson.A{
+			bson.D{{Key: "a", Value: "b"}},
+			bson.D{{Key: "p", Value: "q"}},
 		}},
 	})
 	actual, _ := bson.Marshal(Or(Eq("a", "b"), Eq("p", "q")))
