@@ -7,7 +7,7 @@ import (
 )
 
 func TestExcludeId(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{Key: "_id", Value: -1}})
+	expected, _ := bson.Marshal(bson.D{{Key: "_id", Value: Exclude}})
 	actual, _ := bson.Marshal(ExcludeId())
 	assert.Equal(t, expected, actual)
 }

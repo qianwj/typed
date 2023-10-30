@@ -64,9 +64,9 @@ func TestNin(t *testing.T) {
 func TestMixed(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
 		{Key: "a", Value: "b"},
-		{Key: "p", Value: bson.M{operator.Ne: "q"}},
-		{Key: "r", Value: bson.M{operator.Gt: 10, operator.Lt: 20}},
-		{Key: "d", Value: bson.M{operator.Gte: 1}},
+		{Key: "p", Value: bson.D{{operator.Ne, "q"}}},
+		{Key: "r", Value: bson.D{{operator.Gt, 10}, {operator.Lt, 20}}},
+		{Key: "d", Value: bson.D{{operator.Gte, 1}}},
 		{Key: "c", Value: bson.M{operator.In: []string{"666"}}},
 	})
 	actual, _ := bson.Marshal(

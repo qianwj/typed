@@ -14,9 +14,13 @@ type Map struct {
 	dict    map[string]int
 }
 
-func NewMap() *Map {
+func NewMap(pairs ...Entry) *Map {
+	entries := pairs
+	if len(entries) == 0 {
+		entries = make([]Entry, 0)
+	}
 	return &Map{
-		entries: make([]Entry, 0),
+		entries: entries,
 		dict:    make(map[string]int),
 	}
 }
@@ -84,9 +88,9 @@ func (m *Map) PutAsArray(key string, others ...*Map) {
 func (m *Map) PutAsHash(key, hashKey string, val any) *Map {
 	prev, exist := m.Get(key)
 	if !exist {
-		m.Put(key, rawbson.M{hashKey: val})
+		m.Put(key, NewMap(Entry{Key: hashKey, Value: val}))
 	} else {
-		prev.(rawbson.M)[hashKey] = val
+		prev.(*Map).Put(hashKey, val)
 		m.Put(key, prev)
 	}
 	return m
