@@ -8,66 +8,66 @@ import (
 )
 
 func TestEq(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", "b"}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: "b"}})
 	actual, _ := bson.Marshal(Eq("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestNe(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$ne": "b"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$ne": "b"}}})
 	actual, _ := bson.Marshal(Ne("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestGt(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$gt": "b"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$gt": "b"}}})
 	actual, _ := bson.Marshal(Gt("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestGte(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$gte": "b"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$gte": "b"}}})
 	actual, _ := bson.Marshal(Gte("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestLt(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$lt": "b"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$lt": "b"}}})
 	actual, _ := bson.Marshal(Lt("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestLte(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$lte": "b"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$lte": "b"}}})
 	actual, _ := bson.Marshal(Lte("a", "b"))
 	assert.Equal(t, expected, actual)
 }
 
 func TestWithInterval(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{operator.Gte: "b", operator.Lte: "c"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{operator.Gte: "b", operator.Lte: "c"}}})
 	actual, _ := bson.Marshal(WithInterval("a", ClosedInterval("b", "c")))
 	assert.Equal(t, expected, actual)
 }
 
 func TestIn(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$in": []string{"b", "c"}}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$in": []string{"b", "c"}}}})
 	actual, _ := bson.Marshal(In[string]("a", []string{"b", "c"}))
 	assert.Equal(t, expected, actual)
 }
 
 func TestNin(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.M{"$nin": []string{"b", "c"}}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{"$nin": []string{"b", "c"}}}})
 	actual, _ := bson.Marshal(Nin[string]("a", []string{"b", "c"}))
 	assert.Equal(t, expected, actual)
 }
 
 func TestMixed(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
-		{"a", "b"},
-		{"p", bson.M{operator.Ne: "q"}},
-		{"r", bson.M{operator.Gt: 10, operator.Lt: 20}},
-		{"d", bson.M{operator.Gte: 1}},
-		{"c", bson.M{operator.In: []string{"666"}}},
+		{Key: "a", Value: "b"},
+		{Key: "p", Value: bson.M{operator.Ne: "q"}},
+		{Key: "r", Value: bson.M{operator.Gt: 10, operator.Lt: 20}},
+		{Key: "d", Value: bson.M{operator.Gte: 1}},
+		{Key: "c", Value: bson.M{operator.In: []string{"666"}}},
 	})
 	actual, _ := bson.Marshal(
 		Eq("a", "b").
