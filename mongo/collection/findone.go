@@ -104,6 +104,8 @@ func (f *FindOneExecutor[D, I]) Projection(projection *projections.Options) *Fin
 }
 
 // MaxAwaitTime sets the value for the MaxAwaitTime field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneExecutor[D, I]) MaxAwaitTime(d time.Duration) *FindOneExecutor[D, I] {
 	f.opts.SetMaxAwaitTime(d)
 	return f
