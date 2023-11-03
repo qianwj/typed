@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"github.com/qianwj/typed/mongo/model/filters/regex"
 	"github.com/qianwj/typed/mongo/operator"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
@@ -9,10 +10,10 @@ import (
 )
 
 func TestLike(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{"a", bson.D{{operator.Regex, primitive.Regex{
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{Key: operator.Regex, Value: primitive.Regex{
 		Pattern: "abc",
 		Options: "im",
 	}}}}})
-	actual, _ := bson.Marshal(Like("a", NewMatcher("abc").IgnoreCase().MultilineMatch()))
+	actual, _ := bson.Marshal(Like("a", regex.NewMatcher("abc").IgnoreCase().MultilineMatch()))
 	assert.Equal(t, expected, actual)
 }

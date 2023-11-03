@@ -62,7 +62,7 @@ func (u *Update) Pull(field string, value any) *Update {
 }
 
 func (u *Update) PullConditioned(condition *filters.Filter) *Update {
-	cond := condition.Raw()
+	cond := condition.Primitive()
 	for _, e := range cond {
 		u.pull[e.Key] = e.Value
 	}

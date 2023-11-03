@@ -4,6 +4,7 @@ import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/util"
 	rawbson "go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Filter struct {
@@ -37,8 +38,8 @@ func (f *Filter) ToMap() map[string]any {
 	return f.data.ToMap()
 }
 
-func (f *Filter) Raw() rawbson.D {
-	return f.data.Raw()
+func (f *Filter) Primitive() primitive.D {
+	return f.data.Primitive()
 }
 
 func (f *Filter) MarshalJSON() ([]byte, error) {

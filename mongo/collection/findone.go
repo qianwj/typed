@@ -7,7 +7,6 @@ import (
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
-	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -100,11 +99,13 @@ func (f *FindOneExecutor[D, I]) Sort(sort *sorts.Options) *FindOneExecutor[D, I]
 }
 
 func (f *FindOneExecutor[D, I]) Projection(projection *projections.Options) *FindOneExecutor[D, I] {
-	f.opts.SetProjection(rawbson.D{{"name", 1}})
+	f.opts.SetProjection(projection)
 	return f
 }
 
 // MaxAwaitTime sets the value for the MaxAwaitTime field.
+//
+// Deprecated: This option is not valid for a findOne operation, as no cursor is actually created.
 func (f *FindOneExecutor[D, I]) MaxAwaitTime(d time.Duration) *FindOneExecutor[D, I] {
 	f.opts.SetMaxAwaitTime(d)
 	return f

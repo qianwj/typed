@@ -12,16 +12,16 @@ import (
 
 func TestFindOneExecutor_Execute(t *testing.T) {
 	prepared := []*TestDoc{
-		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test2", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 20},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 30},
-		{Id: primitive.NewObjectID(), Name: "test4", Age: 40},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec3", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec3", Age: 20},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec3", Age: 30},
+		{Id: primitive.NewObjectID(), Name: "test_one_exec4", Age: 40},
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_one_exec1"))
 		actual, err := exec.Execute(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -30,7 +30,7 @@ func TestFindOneExecutor_Execute(t *testing.T) {
 		assert.Equal(t, prepared[0], actual)
 	})
 	t.Run("test multi", func(t *testing.T) {
-		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3").Eq("age", 30))
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_one_exec3").Eq("age", 30))
 		actual, err := exec.Execute(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -51,12 +51,12 @@ func TestFindOneExecutor_Execute(t *testing.T) {
 
 func TestFindOneExecutor_Collect(t *testing.T) {
 	prepared := []*TestDoc{
-		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_one_collect1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_one_collect2", Age: 10},
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
+		exec := newFindOneExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_one_collect1")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual testDocProj
 		err := exec.Collect(context.TODO(), &actual)
@@ -64,7 +64,7 @@ func TestFindOneExecutor_Collect(t *testing.T) {
 			t.Errorf("find one error: %+v", err)
 			t.FailNow()
 		}
-		expected := &testDocProj{Name: "test1"}
+		expected := &testDocProj{Name: "test_one_collect1"}
 		assert.Equal(t, expected, &actual)
 	})
 }

@@ -1,8 +1,8 @@
 package filters
 
 import (
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/operator"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 type interval int8
@@ -84,24 +84,24 @@ func RightHalfUnboundInterval(right any) *Interval {
 	}
 }
 
-func (i *Interval) query() bson.M {
+func (i *Interval) query() *bson.Map {
 	switch i.mode {
 	case open:
-		return bson.M{operator.Gt: i.left, operator.Lt: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Gt, Value: i.left}, bson.Entry{Key: operator.Lt, Value: i.right})
 	case leftHalfOpen:
-		return bson.M{operator.Gte: i.left, operator.Lt: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Gte, Value: i.left}, bson.Entry{Key: operator.Lt, Value: i.right})
 	case rightHalfOpen:
-		return bson.M{operator.Gt: i.left, operator.Lte: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Gt, Value: i.left}, bson.Entry{Key: operator.Lte, Value: i.right})
 	case closed:
-		return bson.M{operator.Gte: i.left, operator.Lte: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Gte, Value: i.left}, bson.Entry{Key: operator.Lte, Value: i.right})
 	case leftUnbound:
-		return bson.M{operator.Gt: i.left}
+		return bson.NewMap(bson.Entry{Key: operator.Gt, Value: i.left})
 	case leftHalfUnbound:
-		return bson.M{operator.Gt: i.left}
+		return bson.NewMap(bson.Entry{Key: operator.Gte, Value: i.left})
 	case rightUnbound:
-		return bson.M{operator.Lt: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Lt, Value: i.right})
 	case rightHalfUnbound:
-		return bson.M{operator.Lte: i.right}
+		return bson.NewMap(bson.Entry{Key: operator.Lte, Value: i.right})
 	}
-	return bson.M{}
+	return bson.NewMap()
 }

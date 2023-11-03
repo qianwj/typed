@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"github.com/qianwj/typed/mongo/model/filters/not"
 	"github.com/qianwj/typed/mongo/operator"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 )
@@ -9,8 +10,8 @@ func And(others ...*Filter) *Filter {
 	return New().And(others...)
 }
 
-func Not(key string, sub *Filter) *Filter {
-	return New().Not(key, sub)
+func Not(key string, exp *not.OperatorExpression) *Filter {
+	return New().Not(key, exp)
 }
 
 func Nor(others ...*Filter) *Filter {
@@ -26,8 +27,8 @@ func (f *Filter) And(others ...*Filter) *Filter {
 	return f
 }
 
-func (f *Filter) Not(key string, sub *Filter) *Filter {
-	f.data.Put(key, rawbson.M{operator.Not: sub.data.Raw()})
+func (f *Filter) Not(key string, exp *not.OperatorExpression) *Filter {
+	f.data.Put(key, rawbson.M{operator.Not: exp})
 	return f
 }
 

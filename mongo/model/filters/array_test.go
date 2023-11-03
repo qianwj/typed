@@ -9,7 +9,7 @@ import (
 
 func TestAll(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
-		{"a", bson.D{{operator.All, []int{12, 14, 13}}}},
+		{Key: "a", Value: bson.D{{Key: operator.All, Value: []int{12, 14, 13}}}},
 	})
 	actual, _ := bson.Marshal(All[int]("a", []int{12, 14, 13}))
 	assert.Equal(t, expected, actual)
@@ -17,9 +17,9 @@ func TestAll(t *testing.T) {
 
 func TestElemMatch(t *testing.T) {
 	expected, _ := bson.Marshal(bson.D{
-		{"a", bson.D{
-			{operator.ElemMatch, bson.D{
-				{"b", 1},
+		{Key: "a", Value: bson.D{
+			{Key: operator.ElemMatch, Value: bson.D{
+				{Key: "b", Value: 1},
 			}},
 		}},
 	})
@@ -28,10 +28,10 @@ func TestElemMatch(t *testing.T) {
 	)
 	assert.Equal(t, expected, actual)
 	expected, _ = bson.Marshal(bson.D{
-		{"a", bson.D{
-			{operator.ElemMatch, bson.D{
-				{operator.Gt, 1},
-				{operator.Lt, 2},
+		{Key: "a", Value: bson.D{
+			{Key: operator.ElemMatch, Value: bson.D{
+				{Key: operator.Gt, Value: 1},
+				{Key: operator.Lt, Value: 2},
 			}},
 		}},
 	})

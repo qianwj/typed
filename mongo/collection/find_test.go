@@ -12,16 +12,16 @@ import (
 
 func TestFindExecutor_ToArray(t *testing.T) {
 	prepared := []*TestDoc{
-		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test2", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 20},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 30},
-		{Id: primitive.NewObjectID(), Name: "test4", Age: 40},
+		{Id: primitive.NewObjectID(), Name: "test_to_array1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_to_array2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_to_array3", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_to_array3", Age: 20},
+		{Id: primitive.NewObjectID(), Name: "test_to_array3", Age: 30},
+		{Id: primitive.NewObjectID(), Name: "test_to_array4", Age: 40},
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_to_array1"))
 		actual, err := exec.ToArray(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -31,7 +31,7 @@ func TestFindExecutor_ToArray(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_to_array3"))
 		actual, err := exec.ToArray(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -44,16 +44,16 @@ func TestFindExecutor_ToArray(t *testing.T) {
 
 func TestFindExecutor_Collect(t *testing.T) {
 	prepared := []*TestDoc{
-		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test2", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 20},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 30},
-		{Id: primitive.NewObjectID(), Name: "test4", Age: 40},
+		{Id: primitive.NewObjectID(), Name: "test_collect1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_collect2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_collect3", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_collect3", Age: 20},
+		{Id: primitive.NewObjectID(), Name: "test_collect3", Age: 30},
+		{Id: primitive.NewObjectID(), Name: "test_collect4", Age: 40},
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1")).
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_collect1")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual []*testDocProj
 		err := exec.Collect(context.TODO(), &actual)
@@ -61,11 +61,11 @@ func TestFindExecutor_Collect(t *testing.T) {
 			t.Errorf("find error: %+v", err)
 			t.FailNow()
 		}
-		expected := []*testDocProj{{Name: "test1"}}
+		expected := []*testDocProj{{Name: "test_collect1"}}
 		assert.Equal(t, expected, actual)
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3")).
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_collect3")).
 			Projection(projections.Includes("name").ExcludeId())
 		var actual []*testDocProj
 		err := exec.Collect(context.TODO(), &actual)
@@ -73,23 +73,23 @@ func TestFindExecutor_Collect(t *testing.T) {
 			t.Errorf("find error: %+v", err)
 			t.FailNow()
 		}
-		expected := []*testDocProj{{Name: "test3"}, {Name: "test3"}, {Name: "test3"}}
+		expected := []*testDocProj{{Name: "test_collect3"}, {Name: "test_collect3"}, {Name: "test_collect3"}}
 		assert.Equal(t, expected, actual)
 	})
 }
 
 func TestFindExecutor_Cursor(t *testing.T) {
 	prepared := []*TestDoc{
-		{Id: primitive.NewObjectID(), Name: "test1", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test2", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 10},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 20},
-		{Id: primitive.NewObjectID(), Name: "test3", Age: 30},
-		{Id: primitive.NewObjectID(), Name: "test4", Age: 40},
+		{Id: primitive.NewObjectID(), Name: "test_cursor1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 20},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 30},
+		{Id: primitive.NewObjectID(), Name: "test_cursor4", Age: 40},
 	}
 	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
 	t.Run("test one", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test1"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_cursor1"))
 		cursor, err := exec.Cursor(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
@@ -108,7 +108,7 @@ func TestFindExecutor_Cursor(t *testing.T) {
 		}
 	})
 	t.Run("test more", func(t *testing.T) {
-		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test3"))
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_cursor3"))
 		cursor, err := exec.Cursor(context.TODO())
 		if err != nil {
 			t.Errorf("find error: %+v", err)
