@@ -35,21 +35,25 @@ func (l *LoggerBuilder) build() *options.LoggerOptions {
 	return l.opts
 }
 
-type slogSink struct{}
+type slogSink struct {
+	logger *slog.Logger
+}
 
-func SlogSink() options.LogSink {
-	return &slogSink{}
+func SlogSink(logger *slog.Logger) options.LogSink {
+	return &slogSink{
+		logger: logger,
+	}
 }
 
 func (s *slogSink) Info(level int, message string, keysAndValues ...interface{}) {
 	switch options.LogLevel(level) {
 	case options.LogLevelInfo:
-		slog.Info(message, keysAndValues...)
+		s.logger.Info(message, keysAndValues...)
 	case options.LogLevelDebug:
-		slog.Info(message, keysAndValues...)
+		s.logger.Info(message, keysAndValues...)
 	}
 }
 
 func (s *slogSink) Error(err error, message string, keysAndValues ...interface{}) {
-	slog.Error(message, append(keysAndValues, "error", err)...)
+	s.logger.Error(message, append(keysAndValues, "error", err)...)
 }
