@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"github.com/qianwj/typed/mongo/model/filters/regex"
 	"github.com/qianwj/typed/mongo/operator"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
@@ -13,6 +14,6 @@ func TestLike(t *testing.T) {
 		Pattern: "abc",
 		Options: "im",
 	}}}}})
-	actual, _ := bson.Marshal(Like("a", NewMatcher("abc").IgnoreCase().MultilineMatch()))
+	actual, _ := bson.Marshal(Like("a", regex.NewMatcher("abc").IgnoreCase().MultilineMatch()))
 	assert.Equal(t, expected, actual)
 }
