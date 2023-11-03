@@ -43,10 +43,8 @@ func FromD(d rawbson.D) *Map {
 
 func (m *Map) Put(key string, value any) *Map {
 	if index, exists := m.dict[key]; exists {
-		// 键已存在，更新值
 		m.entries[index].Value = value
 	} else {
-		// 键不存在，添加新的键值对
 		entry := Entry{Key: key, Value: value}
 		m.entries = append(m.entries, entry)
 		m.dict[key] = len(m.entries) - 1
@@ -54,18 +52,31 @@ func (m *Map) Put(key string, value any) *Map {
 	return m
 }
 
-func (m *Map) PutAsArray(key string, others ...*Map) {
+func (m *Map) Merge(other *Map) *Map {
+	for _, entry := range other.entries {
+		m.Put(entry.Key, entry.Value)
+	}
+	return m
+}
+
+func (m *Map) PutAsArray(key string, others ...*Map) *Map {
+	validOthers := util.Filter(others, func(it *Map) bool {
+		return !it.IsEmpty()
+	})
+	if len(validOthers) == 0 {
+		return m
+	}
 	val, exist := m.Get(key)
 	if !exist {
-		m.Put(key, others)
+		m.Put(key, validOthers)
 	} else {
 		switch val.(type) {
 		case rawbson.M:
-			val = append([]*Map{FromM(val.(rawbson.M))}, others...)
+			val = append([]*Map{FromM(val.(rawbson.M))}, validOthers...)
 		case rawbson.D:
-			val = append([]*Map{FromD(val.(rawbson.D))}, others...)
+			val = append([]*Map{FromD(val.(rawbson.D))}, validOthers...)
 		case rawbson.A:
-			arr := make([]any, 0)
+			arr := make([]any, len(val.(rawbson.A)))
 			for i, elem := range val.(rawbson.A) {
 				switch elem.(type) {
 				case rawbson.M:
@@ -76,13 +87,16 @@ func (m *Map) PutAsArray(key string, others ...*Map) {
 					arr[i] = elem
 				}
 			}
-			for _, other := range others {
+			for _, other := range validOthers {
 				arr = append(arr, other)
 			}
 			val = arr
+		case []*Map:
+			val = append(val.([]*Map), validOthers...)
 		}
 		m.Put(key, val)
 	}
+	return m
 }
 
 func (m *Map) PutAsHash(key, hashKey string, val any) *Map {
@@ -98,9 +112,17 @@ func (m *Map) PutAsHash(key, hashKey string, val any) *Map {
 
 func (m *Map) Get(key string) (any, bool) {
 	if index, exists := m.dict[key]; exists {
-		return m.entries[index].Value, true
+		val := m.entries[index].Value
+		if _, isNull := val.(primitive.Null); isNull {
+			return nil, true
+		}
+		return val, true
 	}
 	return nil, false
+}
+
+func (m *Map) IsEmpty() bool {
+	return len(m.entries) == 0
 }
 
 func (m *Map) Entries() []Entry {
@@ -171,8 +193,10 @@ func (m *Map) d2m(d rawbson.D) map[string]any {
 		switch e.Value.(type) {
 		case rawbson.A:
 			res[e.Key] = m.a2m(e.Value.(rawbson.A))
+		case rawbson.M:
+			res[e.Key] = FromM(e.Value.(rawbson.M)).ToMap()
 		case rawbson.D:
-			res[e.Key] = m.d2m(e.Value.(rawbson.D))
+			res[e.Key] = FromD(e.Value.(rawbson.D)).ToMap()
 		case primitive.Null:
 			res[e.Key] = nil
 		case primitive.Regex:

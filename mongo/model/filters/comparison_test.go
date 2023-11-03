@@ -44,7 +44,7 @@ func TestLte(t *testing.T) {
 }
 
 func TestWithInterval(t *testing.T) {
-	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.M{operator.Gte: "b", operator.Lte: "c"}}})
+	expected, _ := bson.Marshal(bson.D{{Key: "a", Value: bson.D{{operator.Gte, "b"}, {operator.Lte, "c"}}}})
 	actual, _ := bson.Marshal(WithInterval("a", ClosedInterval("b", "c")))
 	assert.Equal(t, expected, actual)
 }

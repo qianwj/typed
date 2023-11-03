@@ -13,9 +13,17 @@ func TestAnd(t *testing.T) {
 		{Key: operator.And, Value: bson.A{
 			bson.D{{Key: "a", Value: "b"}},
 			bson.D{{Key: "p", Value: "q"}},
+			bson.D{{Key: "a", Value: "c"}},
 		}},
 	})
-	actual, _ := bson.Marshal(And(Eq("a", "b"), Eq("p", "q")))
+	actual, _ := bson.Marshal(
+		And(
+			Eq("a", "b"),
+			Eq("p", "q"),
+		).And(
+			Eq("a", "c"),
+		),
+	)
 	assert.Equal(t, expected, actual)
 }
 
