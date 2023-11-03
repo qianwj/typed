@@ -1,6 +1,9 @@
 package bson
 
-import "go.mongodb.org/mongo-driver/bson"
+import (
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type UnorderedMap bson.M
 
@@ -16,4 +19,8 @@ func (u UnorderedMap) Put(key string, val any) UnorderedMap {
 func (u UnorderedMap) Get(key string) (any, bool) {
 	val, exist := u[key]
 	return val, exist
+}
+
+func (u UnorderedMap) Primitive() primitive.M {
+	return primitive.M(u)
 }

@@ -133,9 +133,9 @@ func (m *Map) Entries() []Entry {
 	return entries
 }
 
-func (m *Map) Raw() rawbson.D {
-	return util.Map(m.entries, func(e Entry) rawbson.E {
-		return rawbson.E(e)
+func (m *Map) Primitive() primitive.D {
+	return util.Map(m.entries, func(e Entry) primitive.E {
+		return e.Primitive()
 	})
 }
 
@@ -183,7 +183,7 @@ func (m *Map) UnmarshalBSON(bytes []byte) error {
 }
 
 func (m *Map) MarshalBSON() ([]byte, error) {
-	return rawbson.Marshal(m.Raw())
+	return rawbson.Marshal(m.Primitive())
 }
 
 func (m *Map) d2m(d rawbson.D) map[string]any {
@@ -218,7 +218,7 @@ func (m *Map) a2m(a rawbson.A) []any {
 		case rawbson.D:
 			arr[i] = m.d2m(d.(rawbson.D))
 		case *Map:
-			arr[i] = m.d2m(d.(*Map).Raw())
+			arr[i] = m.d2m(d.(*Map).Primitive())
 		default:
 			arr[i] = d
 		}
