@@ -149,10 +149,10 @@ func (b *Builder) LocalThreshold(d time.Duration) *Builder {
 	return b
 }
 
-// LoggerOptions specifies a LoggerOptions containing options for
+// Logger specifies a LoggerBuilder containing options for
 // configuring a logger.
-func (b *Builder) LoggerOptions(opts *options.LoggerOptions) *Builder {
-	b.opts.SetLoggerOptions(opts)
+func (b *Builder) Logger(builder *LoggerBuilder) *Builder {
+	b.opts.SetLoggerOptions(builder.build())
 	return b
 }
 
