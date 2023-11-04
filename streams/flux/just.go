@@ -3,7 +3,6 @@ package flux
 import (
 	"context"
 	"streams"
-	"time"
 )
 
 func Just(data ...any) streams.Flux {
@@ -11,7 +10,6 @@ func Just(data ...any) streams.Flux {
 	go func() {
 		for _, it := range data {
 			ch <- it
-			time.Sleep(time.Second * 1)
 		}
 		close(ch)
 	}()
