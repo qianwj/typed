@@ -7,7 +7,7 @@ import (
 
 type Entry bson.E
 
-func NewEntry(key string, val any) Entry {
+func E(key string, val any) Entry {
 	return Entry{Key: key, Value: val}
 }
 

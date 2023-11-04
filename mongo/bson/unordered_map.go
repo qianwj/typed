@@ -7,8 +7,12 @@ import (
 
 type UnorderedMap bson.M
 
-func NewUnorderdMap() UnorderedMap {
-	return UnorderedMap{}
+func M(e ...Entry) UnorderedMap {
+	m := UnorderedMap{}
+	for _, entry := range e {
+		m[entry.Key] = entry.Value
+	}
+	return m
 }
 
 func (u UnorderedMap) Put(key string, val any) UnorderedMap {
