@@ -14,6 +14,10 @@ type Map struct {
 	dict    map[string]int
 }
 
+func D(pairs ...Entry) *Map {
+	return NewMap(pairs...)
+}
+
 func NewMap(pairs ...Entry) *Map {
 	entries := pairs
 	if len(entries) == 0 {
