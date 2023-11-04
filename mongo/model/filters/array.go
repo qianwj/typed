@@ -33,7 +33,7 @@ func (f *Filter) Size(key string, size int64) *Filter {
 }
 
 func (f *Filter) ElemMatch(key string, sub *Filter) *Filter {
-	f.data.Put(key, bson.M{operator.ElemMatch: sub.data.Raw()})
+	f.data.Put(key, bson.M{operator.ElemMatch: sub.data})
 	return f
 }
 

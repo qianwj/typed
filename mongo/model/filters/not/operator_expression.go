@@ -14,7 +14,7 @@ type OperatorExpression struct {
 }
 
 func NewOperatorExpression() *OperatorExpression {
-	return &OperatorExpression{data: bson.NewUnorderdMap()}
+	return &OperatorExpression{data: bson.M()}
 }
 
 func Like(regexp *regex.Matcher) *OperatorExpression {
