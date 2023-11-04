@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 )
 
 type Flux interface {
@@ -107,7 +106,6 @@ func just(data ...any) Flux {
 	go func() {
 		for _, it := range data {
 			ch <- it
-			time.Sleep(time.Second * 1)
 		}
 		close(ch)
 	}()
