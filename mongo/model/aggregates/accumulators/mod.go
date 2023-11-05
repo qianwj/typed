@@ -75,6 +75,24 @@ func Cmp(expr1, expr2 any) bson.Entry {
 	return bson.E(operator.Cmp, bson.A(expr1, expr2))
 }
 
+// Convert converts a value to a specified type.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/convert/
+func Convert(c *Converter) bson.Entry {
+	return bson.E(operator.Convert, c)
+}
+
+// Count returns the number of documents in a group.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/count-accumulator/
+func Count() bson.Entry {
+	return bson.E(operator.Count, bson.Entry{})
+}
+
+// DateAdd increments a Date() object by a specified number of time units.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateAdd/
+func DateAdd(adder *DateAdder) bson.Entry {
+	return bson.E(operator.DateAdd, adder)
+}
+
 func Sum(expression any) bson.Entry {
 	return bson.E(operator.Sum, expression)
 }

@@ -28,3 +28,7 @@ func (u UnorderedMap) Get(key string) (any, bool) {
 func (u UnorderedMap) Primitive() primitive.M {
 	return primitive.M(u)
 }
+
+func (u UnorderedMap) Marshal() ([]byte, error) {
+	return bson.Marshal(u)
+}
