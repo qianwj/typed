@@ -29,6 +29,7 @@ const (
 	Add      = "$add"
 	Ceil     = "$ceil"
 	Divide   = "$divide"
+	Exp      = "$exp"
 	Floor    = "$floor"
 	Multiply = "$multiply"
 	Subtract = "$subtract"
@@ -98,6 +99,8 @@ const (
 const (
 	Convert    = "$convert"
 	IsNumber   = "$isNumber"
+	ToDecimal  = "$toDecimal"
+	ToDouble   = "$toDouble"
 	ToObjectID = "$toObjectId"
 )
 
@@ -119,15 +122,13 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-
-	Exp   = "$exp"
-	Ln    = "$ln"
-	Log   = "$log"
-	Log10 = "$log10"
-	Pow   = "$pow"
-	Round = "$round"
-	Sqrt  = "$sqrt"
-	Trunc = "$trunc"
+	Ln             = "$ln"
+	Log            = "$log"
+	Log10          = "$log10"
+	Pow            = "$pow"
+	Round          = "$round"
+	Sqrt           = "$sqrt"
+	Trunc          = "$trunc"
 
 	// Array Expression Operators
 	ArrayElemAt   = "$arrayElemAt"
@@ -215,11 +216,9 @@ const (
 
 	// Type Expression Operators
 
-	ToBool    = "$toBool"
-	ToDecimal = "$toDecimal"
-	ToDouble  = "$toDouble"
-	ToInt     = "$toInt"
-	ToLong    = "$toLong"
+	ToBool = "$toBool"
+	ToInt  = "$toInt"
+	ToLong = "$toLong"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"

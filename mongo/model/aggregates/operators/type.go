@@ -33,6 +33,35 @@ func Convert(c *Converter) bson.Entry {
 	return bson.E(operator.Convert, c)
 }
 
+// IsNumber checks if the specified expression resolves to one of the following numeric BSON types:
+//   - Integer
+//   - Decimal
+//   - Double
+//   - Long
+//
+// IsNumber returns:
+//   - true if the expression resolves to a number.
+//   - false if the expression resolves to any other BSON type, null, or a missing field.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isNumber/
+func IsNumber(expr any) bson.Entry {
+	return bson.E(operator.IsNumber, expr)
+}
+
+// ToDecimal converts a value to a decimal. If the value cannot be converted to a decimal, `$toDecimal` errors. If the
+// value is null or missing, `$toDecimal` returns null.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/toDecimal/
+func ToDecimal(expr any) bson.Entry {
+	return bson.E(operator.ToDecimal, expr)
+}
+
+// ToDouble converts a value to a double. If the value cannot be converted to an double, `$toDouble` errors. If the
+// value is null or missing, `$toDouble` returns null.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/toDouble/
+func ToDouble(expr any) bson.Entry {
+	return bson.E(operator.ToDouble, expr)
+}
+
 // ToObjectId converts a value to an ObjectId(). If the value cannot be converted to an ObjectId, `$toObjectId` errors.
 // If the value is null or missing, `$toObjectId` returns null.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/

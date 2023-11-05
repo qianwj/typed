@@ -32,3 +32,11 @@ import (
 func Concat(exprs ...any) bson.Entry {
 	return bson.E(operator.Concat, bson.A(exprs...))
 }
+
+// Split divides a string into an array of substrings based on a delimiter. `$split` removes the delimiter and returns
+// the resulting substrings as elements of an array. If the delimiter is not found in the string, $split returns the
+// original string as the only element of an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/split/
+func Split(expr any, delimiter string) bson.Entry {
+	return bson.E(operator.Split, bson.A(expr, delimiter))
+}

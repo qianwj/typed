@@ -52,6 +52,12 @@ func Divide(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Divide, expr1, expr2)
 }
 
+// Exp raises Euler's number (i.e. e ) to the specified exponent and returns the result.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/exp/
+func Exp(exponent any) bson.Entry {
+	return bson.E(operator.Exp, exponent)
+}
+
 // Floor returns the largest integer less than or equal to the specified number.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/floor/
 func Floor(expr any) bson.Entry {
