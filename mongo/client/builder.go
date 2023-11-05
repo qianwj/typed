@@ -3,9 +3,11 @@ package client
 import (
 	"context"
 	"crypto/tls"
+	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/event"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
@@ -15,13 +17,13 @@ import (
 )
 
 type Builder struct {
-	opts                *options.ClientOptions
+	opts                *rawopts.ClientOptions
 	defaultDatabaseName string
 	pingReadpref        *readpref.ReadPref
 }
 
 func NewBuilder() *Builder {
-	return &Builder{opts: options.Client()}
+	return &Builder{opts: rawopts.Client()}
 }
 
 func (b *Builder) ApplyUri(uri string) *Builder {
@@ -46,7 +48,7 @@ func (b *Builder) AppName(name string) *Builder {
 // documentation for more information about Credential fields. The default is an empty Credential, meaning no
 // authentication will be configured.
 func (b *Builder) Auth(auth options.Credential) *Builder {
-	b.opts.SetAuth(auth)
+	b.opts.SetAuth(rawopts.Credential(auth))
 	return b
 }
 
@@ -66,8 +68,8 @@ func (b *Builder) Auth(auth options.Credential) *Builder {
 //
 // This can also be set through the "compressors" URI option (e.g. "compressors=zstd,zlib,snappy"). The default is
 // an empty slice, meaning no compression will be enabled.
-func (b *Builder) Compressors(comps []string) *Builder {
-	b.opts.SetCompressors(comps)
+func (b *Builder) Compressors(comps []options.ClientCompressorType) *Builder {
+	b.opts.SetCompressors(util.Map(comps, options.ClientCompressorType.String))
 	return b
 }
 
@@ -83,7 +85,7 @@ func (b *Builder) ConnectTimeout(d time.Duration) *Builder {
 // Dialer specifies a custom ContextDialer to be used to create new connections to the server. The default is a
 // net.Dialer with the Timeout field set to ConnectTimeout. See https://golang.org/pkg/net/#Dialer for more information
 // about the net.Dialer type.
-func (b *Builder) Dialer(d options.ContextDialer) *Builder {
+func (b *Builder) Dialer(d rawopts.ContextDialer) *Builder {
 	b.opts.SetDialer(d)
 	return b
 }
@@ -236,7 +238,7 @@ func (b *Builder) ReadPreference(rp *readpref.ReadPref) *Builder {
 
 // BSONOptions configures optional BSON marshaling and unmarshaling behavior.
 func (b *Builder) BSONOptions(opts *options.BSONOptions) *Builder {
-	b.opts.SetBSONOptions(opts)
+	b.opts.SetBSONOptions((*rawopts.BSONOptions)(opts))
 	return b
 }
 
@@ -398,7 +400,7 @@ func (b *Builder) ZstdLevel(level int) *Builder {
 // AutoEncryptionOptions specifies an AutoEncryptionOptions instance to automatically encrypt and decrypt commands
 // and their results. See the options.AutoEncryptionOptions documentation for more information about the supported
 // options.
-func (b *Builder) AutoEncryptionOptions(opts *options.AutoEncryptionOptions) *Builder {
+func (b *Builder) AutoEncryptionOptions(opts *rawopts.AutoEncryptionOptions) *Builder {
 	b.opts.SetAutoEncryptionOptions(opts)
 	return b
 }
@@ -420,7 +422,7 @@ func (b *Builder) DisableOCSPEndpointCheck() *Builder {
 // ServerAPIOptions specifies a ServerAPIOptions instance used to configure the API version sent to the server
 // when running commands. See the options.ServerAPIOptions documentation for more information about the supported
 // options.
-func (b *Builder) ServerAPIOptions(opts *options.ServerAPIOptions) *Builder {
+func (b *Builder) ServerAPIOptions(opts *rawopts.ServerAPIOptions) *Builder {
 	b.opts.SetServerAPIOptions(opts)
 	return b
 }
