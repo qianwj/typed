@@ -49,10 +49,48 @@ func FirstN(input, n any) bson.Entry {
 	))
 }
 
-// ArrayElementFirstN returns a specified number of elements from the beginning of an array.
+// ArrayFirstN returns a specified number of elements from the beginning of an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/firstN-array-element/
-func ArrayElementFirstN(n, input any) bson.Entry {
+func ArrayFirstN(n, input any) bson.Entry {
 	return bson.E(operator.FirstN, bson.D(
+		bson.E("n", n),
+		bson.E("input", input),
+	))
+}
+
+// MaxN returns an aggregation of the maxmimum value n elements within a group. If the group contains fewer than n
+// elements, $maxN returns all elements in the group.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/maxN/
+func MaxN(input, n any) bson.Entry {
+	return bson.E(operator.MaxN, bson.D(
+		bson.E("input", input),
+		bson.E("n", n),
+	))
+}
+
+// ArrayMaxN returns the n largest values in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/maxN-array-element/
+func ArrayMaxN(n, input any) bson.Entry {
+	return bson.E(operator.MaxN, bson.D(
+		bson.E("n", n),
+		bson.E("input", input),
+	))
+}
+
+// MinN Returns an aggregation of the minimum value n elements within a group. If the group contains fewer than n
+// elements, `$minN` returns all elements in the group.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/minN/
+func MinN(input, n any) bson.Entry {
+	return bson.E(operator.MinN, bson.D(
+		bson.E("input", input),
+		bson.E("n", n),
+	))
+}
+
+// ArrayMinN returns the n smallest values in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/minN-array-element/
+func ArrayMinN(n, input any) bson.Entry {
+	return bson.E(operator.MinN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
 	))

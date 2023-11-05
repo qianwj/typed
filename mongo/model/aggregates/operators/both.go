@@ -94,6 +94,21 @@ func Lte(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Lte, expr1, expr2)
 }
 
+// Mod divides one number by another and returns the remainder.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
+func Mod(expr1, expr2 any) bson.Entry {
+	return computeBoth(operator.Mod, expr1, expr2)
+}
+
+// Ne Compares two values and returns:
+//   - true when the values are not equivalent.
+//   - false when the values are equivalent.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ne/
+func Ne(expr1, expr2 any) bson.Entry {
+	return computeBoth(operator.Ne, expr1, expr2)
+}
+
 // Subtract Subtracts two numbers to return the difference, or two dates to return the difference in milliseconds, or a
 // date and a number in milliseconds to return the resulting date.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/subtract/

@@ -170,6 +170,75 @@ func Function(code, lang string, args ...any) bson.Entry {
 	))
 }
 
+// Map applies an expression to each item in an array and returns an array with the applied results.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/map/
+func Map(input, in any, as string) bson.Entry {
+	return bson.E(operator.Map, bson.D(
+		bson.E("input", input),
+		bson.E("as", as),
+		bson.E("in", in),
+	))
+}
+
+// Max returns the maximum value. `$max` compares both value and type, using the specified BSON comparison order for
+// values of different types.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/max/
+func Max(expr any) bson.Entry {
+	return bson.E(operator.Max, expr)
+}
+
+// Median returns an approximation of the median, the 50th percentile, as a scalar value.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/median/
+func Median(input any, method string) bson.Entry {
+	return bson.E(operator.Median, bson.M(
+		bson.E("input", input),
+		bson.E("method", method),
+	))
+}
+
+// Min returns the minimum value. `$min` compares both value and type, using the specified BSON comparison order for
+// values of different types.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/min/
+func Min(expr any) bson.Entry {
+	return bson.E(operator.Min, expr)
+}
+
+// Multiply Multiplies numbers together and returns the result. Pass the arguments to `$multiply` in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/multiply/
+func Multiply(exprs ...any) bson.Entry {
+	return bson.E(operator.Multiply, bson.A(exprs...))
+}
+
+// Not Evaluates a boolean and returns the opposite boolean value; i.e. when passed an expression that evaluates to
+// true, `$not` returns false; when passed an expression that evaluates to false, `$not` returns true.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/not/
+func Not(expr any) bson.Entry {
+	return bson.E(operator.Not, expr)
+}
+
+// ObjectToArray Converts a document to an array. The return array contains an element for each field/value pair in the
+// original document. Each element in the return array is a document that contains two fields k and v:
+//   - The k field contains the field name in the original document.
+//   - The v field contains the value of the field in the original document.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/objectToArray/
+func ObjectToArray(expr any) bson.Entry {
+	return bson.E(operator.ObjectToArray, expr)
+}
+
+// Or Evaluates one or more expressions and returns true if any of the expressions are true. Otherwise, `$or` returns
+// false.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/or/
+func Or(exprs ...any) bson.Entry {
+	return bson.E(operator.Or, bson.A(exprs...))
+}
+
+// Push returns an array of all values that result from applying an expression to documents.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/push/
+func Push(expr any) bson.Entry {
+	return bson.E(operator.Push, expr)
+}
+
 // Hour returns the hour portion of a date as a number between 0 and 23.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
 func Hour(date time.Time, timezone ...string) bson.Entry {
