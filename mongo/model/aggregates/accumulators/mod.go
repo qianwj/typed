@@ -134,8 +134,15 @@ func Filter(source *FilterSource) bson.Entry {
 	return bson.E(operator.Filter, source)
 }
 
-func Sum(expression any) bson.Entry {
-	return bson.E(operator.Sum, expression)
+// First returns the result of an expression for the first document in a group of documents. Only meaningful when
+// documents are in a defined order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/first/
+func First(expr any) bson.Entry {
+	return bson.E(operator.First, expr)
+}
+
+func Sum(expr any) bson.Entry {
+	return bson.E(operator.Sum, expr)
 }
 
 func Subtract(expr1, expr2 any) bson.Entry {

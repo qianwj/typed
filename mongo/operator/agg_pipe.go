@@ -37,6 +37,7 @@ const (
 	Divide         = "$divide"
 	DocumentNumber = "$documentNumber"
 	Filter         = "$filter"
+	First          = "$first"
 
 	Exp      = "$exp"
 	Floor    = "$floor"
@@ -159,8 +160,7 @@ const (
 	IsNumber   = "$isNumber"
 
 	// Accumulators ($group)
-	First = "$first"
-	Last  = "$last"
+	Last = "$last"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"
