@@ -20,31 +20,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package bson
+package operators
 
-import (
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-)
+type AccumulatorSource struct {
+	Init           string `bson:"init"`               // <code>,
+	InitArgs       []any  `bson:"initArgs,omitempty"` // <array expression>,        // Optional
+	Accumulate     string `bson:"accumulate"`         // <code>,
+	AccumulateArgs []any  `bson:"accumulateArgs"`     // <array expression>,
+	Merge          string `bson:"merge"`              // <code>,
+	Finalize       string `bson:"finalize,omitempty"` // <code>,                    // Optional
+	Lang           string `bson:"lang"`               // <string>
+}
 
-type Array bson.A
-
-func A(elements ...any) Array {
-	a := make(Array, len(elements))
-	for i, element := range elements {
-		a[i] = element
+func NewAccumulatorSource(init, acc, merge, lang string) *AccumulatorSource {
+	return &AccumulatorSource{
+		Init:       init,
+		Accumulate: acc,
+		Merge:      merge,
+		Lang:       lang,
 	}
+}
+
+func (a *AccumulatorSource) AddInitArgs(args ...any) *AccumulatorSource {
+	a.InitArgs = append(a.InitArgs, args...)
 	return a
 }
 
-func (a Array) Append(elements ...any) Array {
-	return append(a, elements...)
+func (a *AccumulatorSource) AddAccumulateArgs(args ...any) *AccumulatorSource {
+	a.AccumulateArgs = append(a.AccumulateArgs, args...)
+	return a
 }
 
-func (a Array) Primitive() primitive.A {
-	return primitive.A(a)
-}
-
-func (a Array) Marshal() ([]byte, error) {
-	return bson.Marshal(a.Primitive())
+func (a *AccumulatorSource) SetFinalize(finalize string) *AccumulatorSource {
+	a.Finalize = finalize
+	return a
 }

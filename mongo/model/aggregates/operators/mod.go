@@ -24,6 +24,7 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 	"time"
 )
@@ -32,6 +33,15 @@ import (
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/abs/
 func Abs(numOrExpr any) bson.Entry {
 	return bson.E(operator.Abs, numOrExpr)
+}
+
+// Accumulator defines a custom accumulator operator. Accumulators are operators that maintain their state (e.g. totals,
+// maximums, minimums, and related data) as documents progress through the pipeline. Use the `$accumulator` operator to
+// execute your own JavaScript functions to implement behavior not supported by the MongoDB Query Language.
+// See also $function.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/accumulator/
+func Accumulator(acc *AccumulatorSource) bson.Entry {
+	return bson.E(operator.Accumulator, acc)
 }
 
 // Add adds numbers together or adds numbers and a date. If one of the arguments is a date, `$add` treats the other
@@ -60,10 +70,37 @@ func Avg(expression any) bson.Entry {
 	return bson.E(operator.Avg, expression)
 }
 
+// Bottom returns the bottom element within a group according to the specified sort order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/bottom/
+func Bottom(sortBy *sorts.Options, output any) bson.Entry {
+	return bson.E(operator.Bottom, bson.M(
+		bson.E("sortBy", sortBy),
+		bson.E("output", output),
+	))
+}
+
 // Ceil returns the smallest integer greater than or equal to the specified number.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ceil/
 func Ceil(numOrExpr any) bson.Entry {
 	return bson.E(operator.Ceil, numOrExpr)
+}
+
+// Concat concatenates strings and returns the concatenated string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/concat/
+func Concat(exprs ...any) bson.Entry {
+	return bson.E(operator.Concat, bson.A(exprs...))
+}
+
+// ConcatArrays concatenates arrays to return the concatenated array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/concatArrays/
+func ConcatArrays(exprs ...any) bson.Entry {
+	return bson.E(operator.ConcatArrays, bson.A(exprs...))
+}
+
+// Cond evaluates a boolean expression to return one of the two specified return expressions.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/
+func Cond(assuming, thenCase, elseCase any) bson.Entry {
+	return bson.E(operator.Cond, bson.A(assuming, thenCase, elseCase))
 }
 
 // Convert converts a value to a specified type.
@@ -121,6 +158,16 @@ func First(expr any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/floor/
 func Floor(expr any) bson.Entry {
 	return bson.E(operator.Floor, expr)
+}
+
+// Function defines a custom aggregation function or expression in JavaScript.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/function/
+func Function(code, lang string, args ...any) bson.Entry {
+	return bson.E(operator.Function, bson.M(
+		bson.E("code", code),
+		bson.E("lang", lang),
+		bson.E("args", bson.A(args...)),
+	))
 }
 
 // Hour returns the hour portion of a date as a number between 0 and 23.

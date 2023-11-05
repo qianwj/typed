@@ -26,10 +26,16 @@ package operator
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	Abs            = "$abs"
+	Accumulator    = "$accumulator"
 	Add            = "$add"
 	Avg            = "$avg"
+	Bottom         = "$bottom"
+	BottomN        = "$bottomN"
 	Ceil           = "$ceil"
 	Cmp            = "$cmp"
+	Concat         = "$concat"
+	ConcatArrays   = "$concatArrays"
+	Cond           = "$cond"
 	Convert        = "$convert"
 	DateAdd        = "$dateAdd"
 	DateDiff       = "$dateDiff"
@@ -40,6 +46,7 @@ const (
 	First          = "$first"
 	FirstN         = "$firstN"
 	Floor          = "$floor"
+	Function       = "$function"
 	Hour           = "$hour"
 	IfNull         = "$ifNull"
 	Last           = "$last"
@@ -59,7 +66,6 @@ const (
 	// Array Expression Operators
 	ArrayElemAt   = "$arrayElemAt"
 	ArrayToObject = "$arrayToObject"
-	ConcatArrays  = "$concatArrays"
 	IndexOfArray  = "$indexOfArray"
 	IsArray       = "$isArray"
 	Map           = "$map"
@@ -69,14 +75,7 @@ const (
 	ReverseArray  = "$reverseArray"
 	Zip           = "$zip"
 
-	// Conditional Expression Operators
-	Cond = "$cond"
-
 	Switch = "$switch"
-
-	// Custom Aggregation Expression Operators
-	Accumulator = "$accumulator"
-	Function    = "$function"
 
 	// Data Size Operators
 	BinarySize = "$binarySize"
@@ -117,7 +116,6 @@ const (
 	SetUnion        = "$setUnion"
 
 	// String Expression Operators
-	Concat       = "$concat"
 	IndexOfBytes = "$indexOfBytes"
 	IndexOfCP    = "$indexOfCP"
 	Ltrim        = "$ltrim"
