@@ -22,10 +22,12 @@
 
 package util
 
+import "reflect"
+
 func ToPtr[T any](t T) *T {
 	return &t
 }
 
 func IsNonNil[T any](t T) bool {
-	return !(t == nil)
+	return !reflect.ValueOf(t).IsNil()
 }
