@@ -20,30 +20,47 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package timeunit
+package accumulators
 
-type DateTime string
-
-const (
-	Year       DateTime = "year"
-	Quarter    DateTime = "quarter"
-	Week       DateTime = "week"
-	Month      DateTime = "month"
-	Day        DateTime = "day"
-	Hour       DateTime = "hour"
-	Minute     DateTime = "minute"
-	Second     DateTime = "second"
-	MillSecond DateTime = "millisecond"
+import (
+	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/util"
 )
 
-type Weekday string
+type FilterSource struct {
+	input bson.Array
+	cond  any
+	as    *string
+	limit any
+}
 
-const (
-	Monday    Weekday = "monday"
-	Tuesday   Weekday = "tuesday"
-	Wednesday Weekday = "wednesday"
-	Thursday  Weekday = "thursday"
-	Friday    Weekday = "friday"
-	Saturday  Weekday = "saturday"
-	Sunday    Weekday = "sunday"
-)
+func NewFilterSource(input bson.Array, cond any) *FilterSource {
+	return &FilterSource{
+		input: input,
+		cond:  cond,
+	}
+}
+
+func (f *FilterSource) As(as string) *FilterSource {
+	f.as = util.ToPtr(as)
+	return f
+}
+
+func (f *FilterSource) Limit(limitExpr any) *FilterSource {
+	f.limit = limitExpr
+	return f
+}
+
+func (f *FilterSource) MarshalBSON() ([]byte, error) {
+	m := bson.M(
+		bson.E("input", f.input),
+		bson.E("cond", f.cond),
+	)
+	if util.IsNonNil(f.as) {
+		m["as"] = f.as
+	}
+	if util.IsNonNil(f.limit) {
+		m["limit"] = f.limit
+	}
+	return m.Marshal()
+}

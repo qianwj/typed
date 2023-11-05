@@ -30,12 +30,12 @@ import (
 
 type DateAdder struct {
 	startDate any
-	unit      timeunit.Unit
+	unit      timeunit.DateTime
 	amount    any
 	timezone  *string
 }
 
-func NewDateAdder(startDate, amount any, unit timeunit.Unit) *DateAdder {
+func NewDateAdder(startDate, amount any, unit timeunit.DateTime) *DateAdder {
 	return &DateAdder{
 		startDate: startDate,
 		amount:    amount,
@@ -55,7 +55,80 @@ func (d *DateAdder) MarshalBSON() ([]byte, error) {
 		bson.E("amount", d.amount),
 	)
 	if util.IsNonNil(d.timezone) {
-		m.Put("timezone", d.timezone)
+		m["timezone"] = d.timezone
+	}
+	return m.Marshal()
+}
+
+type DateDiffer struct {
+	startDate   any
+	endDate     any
+	unit        timeunit.DateTime
+	startOfWeek *timeunit.Weekday
+	timezone    *string
+}
+
+func NewDateDiffer(startDate, endDate any, unit timeunit.DateTime) *DateDiffer {
+	return &DateDiffer{
+		startDate: startDate,
+		endDate:   endDate,
+		unit:      unit,
+	}
+}
+
+func (d *DateDiffer) StartOfWeek(weekday timeunit.Weekday) *DateDiffer {
+	d.startOfWeek = util.ToPtr(weekday)
+	return d
+}
+
+func (d *DateDiffer) Timezone(zone string) *DateDiffer {
+	d.timezone = util.ToPtr(zone)
+	return d
+}
+
+func (d *DateDiffer) MarshalBSON() ([]byte, error) {
+	m := bson.M(
+		bson.E("startDate", d.startDate),
+		bson.E("endDate", d.endDate),
+		bson.E("unit", d.unit),
+	)
+	if util.IsNonNil(d.timezone) {
+		m["timezone"] = d.timezone
+	}
+	if util.IsNonNil(d.startOfWeek) {
+		m["startOfWeek"] = d.startOfWeek
+	}
+	return m.Marshal()
+}
+
+type DateSubtracter struct {
+	startDate any
+	unit      timeunit.DateTime
+	amount    any
+	timezone  *string
+}
+
+func NewDateSubtracter(startDate, amount any, unit timeunit.DateTime) *DateSubtracter {
+	return &DateSubtracter{
+		startDate: startDate,
+		amount:    amount,
+		unit:      unit,
+	}
+}
+
+func (d *DateSubtracter) Timezone(zone string) *DateSubtracter {
+	d.timezone = util.ToPtr(zone)
+	return d
+}
+
+func (d *DateSubtracter) MarshalBSON() ([]byte, error) {
+	m := bson.M(
+		bson.E("startDate", d.startDate),
+		bson.E("unit", d.unit),
+		bson.E("amount", d.amount),
+	)
+	if util.IsNonNil(d.timezone) {
+		m["timezone"] = d.timezone
 	}
 	return m.Marshal()
 }

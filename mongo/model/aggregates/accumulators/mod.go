@@ -84,13 +84,54 @@ func Convert(c *Converter) bson.Entry {
 // Count returns the number of documents in a group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/count-accumulator/
 func Count() bson.Entry {
-	return bson.E(operator.Count, bson.Entry{})
+	return bson.E(operator.Count, bson.M())
 }
 
-// DateAdd increments a Date() object by a specified number of time units.
+// DateAdd increments a `Date()` object by a specified number of time units.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateAdd/
 func DateAdd(adder *DateAdder) bson.Entry {
 	return bson.E(operator.DateAdd, adder)
+}
+
+// DateDiff returns the difference between two dates.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateDiff/
+func DateDiff(differ *DateDiffer) bson.Entry {
+	return bson.E(operator.DateDiff, differ)
+}
+
+// DateSubtract Decrements a `Date()` object by a specified number of time units.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateSubtract/
+func DateSubtract(subtracter *DateSubtracter) bson.Entry {
+	return bson.E(operator.DateSubtract, subtracter)
+}
+
+// Divide divides one number by another and returns the result. Pass the arguments to `$divide` in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/divide/
+func Divide(expr1, expr2 any) bson.Entry {
+	return bson.E(operator.Divide, bson.A(expr1, expr2))
+}
+
+// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
+// partition.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
+func DocumentNumber() bson.Entry {
+	return bson.E(operator.DocumentNumber, bson.M())
+}
+
+// Eq Compares two values and returns:
+//   - true when the values are equivalent.
+//   - false when the values are not equivalent.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/eq/
+func Eq(expr1, expr2 any) bson.Entry {
+	return bson.E(operator.Eq, bson.A(expr1, expr2))
+}
+
+// Filter selects a subset of an array to return based on the specified condition. Returns an array with only those
+// elements that match the condition. The returned elements are in the original order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/filter/
+func Filter(source *FilterSource) bson.Entry {
+	return bson.E(operator.Filter, source)
 }
 
 func Sum(expression any) bson.Entry {
