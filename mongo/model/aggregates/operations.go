@@ -64,6 +64,11 @@ func (p *Pipeline) Set(fields *bson.Map) *Pipeline {
 	return p
 }
 
+func (p *Pipeline) ShardedDataDistribution() *Pipeline {
+	p.append(operator.ShardedDataDistribution, bson.M())
+	return p
+}
+
 func (p *Pipeline) Skip(skip int64) *Pipeline {
 	p.append(operator.Skip, skip)
 	return p
@@ -79,14 +84,20 @@ func (p *Pipeline) SortByCount(expression any) *Pipeline {
 	return p
 }
 
+func (p *Pipeline) UnionWith(coll string, pipeline *Pipeline) *Pipeline {
+	p.append(operator.UnionWith, bson.M(
+		bson.E("coll", coll),
+		bson.E("pipeline", pipeline.stages),
+	))
+	return p
+}
+
 func (p *Pipeline) Unset(fields ...string) *Pipeline {
 	p.append(operator.Unset, fields)
 	return p
 }
 
-//func (p *Pipeline) Facet(facets ...*model.Facet) *Pipeline {
-//	p.put(operator.Facet, bson.D(util.Map(facets, func(f *model.Facet) primitive.E {
-//		return f.Marshal()
-//	})))
-//	return p
-//}
+func (p *Pipeline) Unwind(opts *UnwindOptions) *Pipeline {
+	p.append(operator.Unwind, opts)
+	return p
+}

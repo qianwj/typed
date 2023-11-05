@@ -1,7 +1,8 @@
 package aggregates
 
 import (
-	"go.mongodb.org/mongo-driver/bson"
+	"github.com/qianwj/typed/mongo/bson"
+	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -17,13 +18,13 @@ func New() *Pipeline {
 }
 
 func (p *Pipeline) append(key string, value any) {
-	p.stages = append(p.stages, bson.D{
-		{Key: key, Value: value},
-	})
+	p.stages = append(p.stages, bson.D(
+		bson.E(key, value),
+	).Primitive())
 }
 
 func (p *Pipeline) MarshalBSON() ([]byte, error) {
-	return bson.Marshal(p.stages)
+	return rawbson.Marshal(p.stages)
 }
 
 func (p *Pipeline) Stages() []primitive.D {
