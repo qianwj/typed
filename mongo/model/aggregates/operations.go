@@ -30,7 +30,7 @@ func (p *Pipeline) GraphLookup(cond *lookup.GraphJoinCondition) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Group(id group.ID, fields ...group.Accumulator) *Pipeline {
+func (p *Pipeline) Group(id group.ID, fields ...bson.Entry) *Pipeline {
 	body := rawbson.M{"_id": id}
 	for _, acc := range fields {
 		body[acc.Key] = acc.Value

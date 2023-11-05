@@ -21,7 +21,7 @@ func GraphLookup(cond *lookup.GraphJoinCondition) *Pipeline {
 	return New().GraphLookup(cond)
 }
 
-func Group(id group.ID, fields ...group.Accumulator) *Pipeline {
+func Group(id group.ID, fields ...bson.Entry) *Pipeline {
 	return New().Group(id, fields...)
 }
 
