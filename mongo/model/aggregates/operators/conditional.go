@@ -27,13 +27,17 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
+// Cond evaluates a boolean expression to return one of the two specified return expressions.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/
+func Cond(assuming, thenCase, elseCase any) bson.Entry {
+	return bson.E(operator.Cond, bson.A(assuming, thenCase, elseCase))
 }
 
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
+// IfNull evaluates input expressions for null values and returns:
+//   - The first non-null input expression value found.
+//   - A replacement expression value if all input expressions evaluate to null.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ifNull/
+func IfNull(replacement any, inputs ...any) bson.Entry {
+	return bson.E(operator.IfNull, bson.A(inputs...).Append(replacement))
 }

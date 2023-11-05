@@ -27,13 +27,21 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
+// Accumulator defines a custom accumulator operator. Accumulators are operators that maintain their state (e.g. totals,
+// maximums, minimums, and related data) as documents progress through the pipeline. Use the `$accumulator` operator to
+// execute your own JavaScript functions to implement behavior not supported by the MongoDB Query Language.
+// See also $function.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/accumulator/
+func Accumulator(acc *AccumulatorSource) bson.Entry {
+	return bson.E(operator.Accumulator, acc)
 }
 
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
+// Function defines a custom aggregation function or expression in JavaScript.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/function/
+func Function(code, lang string, args ...any) bson.Entry {
+	return bson.E(operator.Function, bson.M(
+		bson.E("code", code),
+		bson.E("lang", lang),
+		bson.E("args", bson.A(args...)),
+	))
 }

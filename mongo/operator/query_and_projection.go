@@ -2,7 +2,6 @@ package operator
 
 const (
 	// Comparison
-	Eq  = "$eq"
 	Gt  = "$gt"
 	Gte = "$gte"
 	In  = "$in"

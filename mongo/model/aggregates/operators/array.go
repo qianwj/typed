@@ -24,19 +24,20 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// BottomN returns an aggregation of the bottom n elements within a group, according to the specified sort order. If
-// the group contains fewer than n elements, $bottomN returns all elements in the group.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/bottomN/
-func BottomN(sortBy *sorts.Options, output, n any) bson.Entry {
-	return bson.E(operator.BottomN, bson.M(
-		bson.E("sortBy", sortBy),
-		bson.E("output", output),
-		bson.E("n", n),
-	))
+// ConcatArrays concatenates arrays to return the concatenated array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/concatArrays/
+func ConcatArrays(exprs ...any) bson.Entry {
+	return bson.E(operator.ConcatArrays, bson.A(exprs...))
+}
+
+// Filter selects a subset of an array to return based on the specified condition. Returns an array with only those
+// elements that match the condition. The returned elements are in the original order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/filter/
+func Filter(source *FilterSource) bson.Entry {
+	return bson.E(operator.Filter, source)
 }
 
 // FirstN returns an aggregation of the first n elements within a group. The elements returned are meaningful only if
@@ -55,6 +56,41 @@ func ArrayFirstN(n, input any) bson.Entry {
 	return bson.E(operator.FirstN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
+	))
+}
+
+// In returns a boolean indicating whether a specified value is in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/
+func In(elemExpr, arrExpr any) bson.Entry {
+	return computeBoth(operator.In, elemExpr, arrExpr)
+}
+
+// LastN returns an aggregation of the last n elements within a group. The elements returned are meaningful only if in
+// a specified sort order. If the group contains fewer than n elements, `$lastN` returns all elements in the group.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lastN/
+func LastN(input, n any) bson.Entry {
+	return bson.E(operator.LastN, bson.D(
+		bson.E("input", input),
+		bson.E("n", n),
+	))
+}
+
+// ArrayLastN returns a specified number of elements from the end of an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lastN-array-element/
+func ArrayLastN(n, input any) bson.Entry {
+	return bson.E(operator.LastN, bson.D(
+		bson.E("n", n),
+		bson.E("input", input),
+	))
+}
+
+// Map applies an expression to each item in an array and returns an array with the applied results.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/map/
+func Map(input, in any, as string) bson.Entry {
+	return bson.E(operator.Map, bson.D(
+		bson.E("input", input),
+		bson.E("as", as),
+		bson.E("in", in),
 	))
 }
 
@@ -96,23 +132,22 @@ func ArrayMinN(n, input any) bson.Entry {
 	))
 }
 
-// LastN returns an aggregation of the last n elements within a group. The elements returned are meaningful only if in
-// a specified sort order. If the group contains fewer than n elements, `$lastN` returns all elements in the group.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lastN/
-func LastN(input, n any) bson.Entry {
-	return bson.E(operator.LastN, bson.D(
-		bson.E("input", input),
-		bson.E("n", n),
-	))
+// ObjectToArray Converts a document to an array. The return array contains an element for each field/value pair in the
+// original document. Each element in the return array is a document that contains two fields k and v:
+//   - The k field contains the field name in the original document.
+//   - The v field contains the value of the field in the original document.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/objectToArray/
+func ObjectToArray(expr any) bson.Entry {
+	return bson.E(operator.ObjectToArray, expr)
 }
 
-// TopN returns an aggregation of the top n elements within a group, according to the specified sort order. If the
-// group contains fewer than n elements, $topN returns all elements in the group.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/topN/
-func TopN(sortBy *sorts.Options, output, n any) bson.Entry {
-	return bson.E(operator.TopN, bson.M(
-		bson.E("sortBy", sortBy),
-		bson.E("output", output),
-		bson.E("n", n),
+// Reduce applies an expression to each element in an array and combines them into a single value.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reduce/
+func Reduce(input, initialVal, in any) bson.Entry {
+	return bson.E(operator.Reduce, bson.D(
+		bson.E("input", input),
+		bson.E("initialValue", initialVal),
+		bson.E("in", in),
 	))
 }

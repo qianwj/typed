@@ -37,12 +37,6 @@ func Cmp(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Cmp, expr1, expr2)
 }
 
-// Divide divides one number by another and returns the result. Pass the arguments to `$divide` in an array.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/divide/
-func Divide(expr1, expr2 any) bson.Entry {
-	return computeBoth(operator.Divide, expr1, expr2)
-}
-
 // Eq Compares two values and returns:
 //   - true when the values are equivalent.
 //   - false when the values are not equivalent.
@@ -70,12 +64,6 @@ func Gte(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Gte, expr1, expr2)
 }
 
-// In returns a boolean indicating whether a specified value is in an array.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/
-func In(elemExpr, arrExpr any) bson.Entry {
-	return computeBoth(operator.In, elemExpr, arrExpr)
-}
-
 // Lt Compares two values and returns:
 //   - true when the first value is less than the second value.
 //   - false when the first value is greater than or equivalent to the second value.
@@ -94,12 +82,6 @@ func Lte(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Lte, expr1, expr2)
 }
 
-// Mod divides one number by another and returns the remainder.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
-func Mod(expr1, expr2 any) bson.Entry {
-	return computeBoth(operator.Mod, expr1, expr2)
-}
-
 // Ne Compares two values and returns:
 //   - true when the values are not equivalent.
 //   - false when the values are equivalent.
@@ -107,15 +89,4 @@ func Mod(expr1, expr2 any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ne/
 func Ne(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Ne, expr1, expr2)
-}
-
-// Subtract Subtracts two numbers to return the difference, or two dates to return the difference in milliseconds, or a
-// date and a number in milliseconds to return the resulting date.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/subtract/
-func Subtract(expr1, expr2 any) bson.Entry {
-	return computeBoth(operator.Subtract, expr1, expr2)
-}
-
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
 }

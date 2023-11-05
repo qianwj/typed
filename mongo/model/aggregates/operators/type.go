@@ -27,13 +27,8 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
-}
-
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
+// Convert converts a value to a specified type.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/convert/
+func Convert(c *Converter) bson.Entry {
+	return bson.E(operator.Convert, c)
 }

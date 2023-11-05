@@ -27,13 +27,8 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
-}
-
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
+// Concat concatenates strings and returns the concatenated string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/concat/
+func Concat(exprs ...any) bson.Entry {
+	return bson.E(operator.Concat, bson.A(exprs...))
 }

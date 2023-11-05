@@ -25,8 +25,40 @@ package operators
 import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/aggregates/timeunit"
+	"github.com/qianwj/typed/mongo/operator"
 	"github.com/qianwj/typed/mongo/util"
+	"time"
 )
+
+// DateAdd increments a `Date()` object by a specified number of time units.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateAdd/
+func DateAdd(adder *DateAdder) bson.Entry {
+	return bson.E(operator.DateAdd, adder)
+}
+
+// DateDiff returns the difference between two dates.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateDiff/
+func DateDiff(differ *DateDiffer) bson.Entry {
+	return bson.E(operator.DateDiff, differ)
+}
+
+// DateSubtract Decrements a `Date()` object by a specified number of time units.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateSubtract/
+func DateSubtract(subtracter *DateSubtracter) bson.Entry {
+	return bson.E(operator.DateSubtract, subtracter)
+}
+
+// Hour returns the hour portion of a date as a number between 0 and 23.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
+func Hour(date time.Time, timezone ...string) bson.Entry {
+	if len(timezone) == 0 {
+		return bson.E(operator.Hour, date)
+	}
+	return bson.E(operator.Hour, bson.M(
+		bson.E("date", date),
+		bson.E("timezone", timezone[0]),
+	))
+}
 
 type DateAdder struct {
 	startDate any

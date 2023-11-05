@@ -22,46 +22,102 @@
 
 package operator
 
+// Arithmetic Expression Operators.
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#arithmetic-expression-operators
+const (
+	Abs      = "$abs"
+	Add      = "$add"
+	Ceil     = "$ceil"
+	Divide   = "$divide"
+	Floor    = "$floor"
+	Multiply = "$multiply"
+	Subtract = "$subtract"
+)
+
+// Array Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#array-expression-operators
+const (
+	ConcatArrays  = "$concatArrays"
+	Filter        = "$filter"
+	FirstN        = "$firstN"
+	LastN         = "$lastN"
+	Map           = "$map"
+	MaxN          = "$maxN"
+	MinN          = "$minN"
+	ObjectToArray = "$objectToArray"
+	Reduce        = "$reduce"
+)
+
+// Boolean Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#boolean-expression-operators
+// $and, $not, $or already defined in other files.
+
+// Comparison Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#comparison-expression-operators
+const (
+	Cmp = "$cmp"
+	Eq  = "$eq"
+)
+
+// Conditional Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#conditional-expression-operators
+const (
+	Cond   = "$cond"
+	IfNull = "$ifNull"
+)
+
+// Custom Aggregation Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#custom-aggregation-expression-operators
+const (
+	Accumulator = "$accumulator"
+	Function    = "$function"
+)
+
+// Date Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#date-expression-operators
+const (
+	DateAdd      = "$dateAdd"
+	DateDiff     = "$dateDiff"
+	DateSubtract = "$dateSubtract"
+	Hour         = "$hour"
+)
+
+// Object Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#object-expression-operators
+const ()
+
+// String Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#string-expression-operators
+const (
+	Concat = "$concat"
+	Split  = "$split"
+)
+
+// Type Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#type-expression-operators
+const (
+	Convert  = "$convert"
+	IsNumber = "$isNumber"
+)
+
+// Accumulators ($group, $bucket, $bucketAuto, $setWindowFields)
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#accumulators---group---bucket---bucketauto---setwindowfields-
+const (
+	Avg     = "$avg"
+	Bottom  = "$bottom"
+	BottomN = "$bottomN"
+	First   = "$first"
+	Last    = "$last"
+	Median  = "$median"
+	Sum     = "$sum"
+	Top     = "$top"
+	TopN    = "$topN"
+)
+
 // Aggregation Pipeline Operators
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
-	Abs            = "$abs"
-	Accumulator    = "$accumulator"
-	Add            = "$add"
-	Avg            = "$avg"
-	Bottom         = "$bottom"
-	BottomN        = "$bottomN"
-	Ceil           = "$ceil"
-	Cmp            = "$cmp"
-	Concat         = "$concat"
-	ConcatArrays   = "$concatArrays"
-	Cond           = "$cond"
-	Convert        = "$convert"
-	DateAdd        = "$dateAdd"
-	DateDiff       = "$dateDiff"
-	DateSubtract   = "$dateSubtract"
-	Divide         = "$divide"
 	DocumentNumber = "$documentNumber"
-	Filter         = "$filter"
-	First          = "$first"
-	FirstN         = "$firstN"
-	Floor          = "$floor"
-	Function       = "$function"
-	Hour           = "$hour"
-	IfNull         = "$ifNull"
-	Last           = "$last"
-	LastN          = "$lastN"
-	Map            = "$map"
-	MaxN           = "$maxN"
-	Median         = "$median"
-	MinN           = "$minN"
-	Multiply       = "$multiply"
-	ObjectToArray  = "$objectToArray"
-	Reduce         = "$reduce"
-	Subtract       = "$subtract"
-	Sum            = "$sum"
-	Top            = "$top"
-	TopN           = "$topN"
 
 	Exp   = "$exp"
 	Ln    = "$ln"
@@ -129,7 +185,6 @@ const (
 	RegexFindAll = "$regexFindAll"
 	RegexMatch   = "$regexMatch"
 	Rtrim        = "$rtrim"
-	Split        = "$split"
 	StrLenBytes  = "$strLenBytes"
 	StrLenCP     = "$strLenCP"
 	Strcasecmp   = "$strcasecmp"
@@ -165,7 +220,6 @@ const (
 	ToInt      = "$toInt"
 	ToLong     = "$toLong"
 	ToObjectID = "$toObjectId"
-	IsNumber   = "$isNumber"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"

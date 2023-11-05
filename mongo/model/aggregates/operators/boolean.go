@@ -27,13 +27,23 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
+// And Evaluates one or more expressions and returns true if all of the expressions are true or if run with no argument
+// expressions. Otherwise, `$and` returns false.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/and/
+func And(exprs ...any) bson.Entry {
+	return bson.E(operator.AddToSet, bson.A(exprs...))
 }
 
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
+// Not Evaluates a boolean and returns the opposite boolean value; i.e. when passed an expression that evaluates to
+// true, `$not` returns false; when passed an expression that evaluates to false, `$not` returns true.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/not/
+func Not(expr any) bson.Entry {
+	return bson.E(operator.Not, expr)
+}
+
+// Or Evaluates one or more expressions and returns true if any of the expressions are true. Otherwise, `$or` returns
+// false.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/or/
+func Or(exprs ...any) bson.Entry {
+	return bson.E(operator.Or, bson.A(exprs...))
 }
