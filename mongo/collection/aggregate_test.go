@@ -49,7 +49,9 @@ func TestAggregateExecutor_Collect(t *testing.T) {
 	pipe := aggregates.Lookup(
 		lookup.New("fruits", "fruit_orders").
 			Join("fruitId", "fruitId").
-			SetPipeline(aggregates.Set(bson.NewMap().Put("fruitId", operators.ToObjectId("$_id"))).Stages()),
+			SetPipeline(aggregates.Set(bson.D(
+				bson.E("fruitId", operators.ToObjectId("$_id")),
+			)).Stages()),
 	)
 	//pipe := aggregates.Match(filters.Eq("name", "gala"))
 	var result []primitive.M
