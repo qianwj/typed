@@ -20,11 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package accumulators
+package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/operator"
+	"time"
 )
 
 // Abs returns the absolute value of a number.
@@ -65,16 +66,6 @@ func Ceil(numOrExpr any) bson.Entry {
 	return bson.E(operator.Ceil, numOrExpr)
 }
 
-// Cmp Compares two values and returns:
-//   - -1 if the first value is less than the second.
-//   - 1 if the first value is greater than the second.
-//   - 0 if the two values are equivalent.
-//
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/cmp/
-func Cmp(expr1, expr2 any) bson.Entry {
-	return bson.E(operator.Cmp, bson.A(expr1, expr2))
-}
-
 // Convert converts a value to a specified type.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/convert/
 func Convert(c *Converter) bson.Entry {
@@ -105,26 +96,11 @@ func DateSubtract(subtracter *DateSubtracter) bson.Entry {
 	return bson.E(operator.DateSubtract, subtracter)
 }
 
-// Divide divides one number by another and returns the result. Pass the arguments to `$divide` in an array.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/divide/
-func Divide(expr1, expr2 any) bson.Entry {
-	return bson.E(operator.Divide, bson.A(expr1, expr2))
-}
-
 // DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
 // partition.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
 func DocumentNumber() bson.Entry {
 	return bson.E(operator.DocumentNumber, bson.M())
-}
-
-// Eq Compares two values and returns:
-//   - true when the values are equivalent.
-//   - false when the values are not equivalent.
-//
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/eq/
-func Eq(expr1, expr2 any) bson.Entry {
-	return bson.E(operator.Eq, bson.A(expr1, expr2))
 }
 
 // Filter selects a subset of an array to return based on the specified condition. Returns an array with only those
@@ -141,10 +117,40 @@ func First(expr any) bson.Entry {
 	return bson.E(operator.First, expr)
 }
 
-func Sum(expr any) bson.Entry {
-	return bson.E(operator.Sum, expr)
+// Floor returns the largest integer less than or equal to the specified number.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/floor/
+func Floor(expr any) bson.Entry {
+	return bson.E(operator.Floor, expr)
 }
 
-func Subtract(expr1, expr2 any) bson.Entry {
-	return bson.E(operator.Subtract, bson.A(expr1, expr2))
+// Hour returns the hour portion of a date as a number between 0 and 23.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
+func Hour(date time.Time, timezone ...string) bson.Entry {
+	if len(timezone) == 0 {
+		return bson.E(operator.Hour, date)
+	}
+	return bson.E(operator.Hour, bson.M(
+		bson.E("date", date),
+		bson.E("timezone", timezone[0]),
+	))
+}
+
+// IfNull evaluates input expressions for null values and returns:
+//   - The first non-null input expression value found.
+//   - A replacement expression value if all input expressions evaluate to null.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ifNull/
+func IfNull(replacement any, inputs ...any) bson.Entry {
+	return bson.E(operator.IfNull, bson.A(inputs...).Append(replacement))
+}
+
+// Last returns the result of an expression for the last document in a group of documents. Only meaningful when
+// documents are in a defined order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/last/
+func Last(expr any) bson.Entry {
+	return bson.E(operator.Last, expr)
+}
+
+func Sum(expr any) bson.Entry {
+	return bson.E(operator.Sum, expr)
 }

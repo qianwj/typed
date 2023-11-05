@@ -38,9 +38,14 @@ const (
 	DocumentNumber = "$documentNumber"
 	Filter         = "$filter"
 	First          = "$first"
+	FirstN         = "$firstN"
+	Floor          = "$floor"
+	Hour           = "$hour"
+	IfNull         = "$ifNull"
+	Last           = "$last"
+	LastN          = "$lastN"
 
 	Exp      = "$exp"
-	Floor    = "$floor"
 	Ln       = "$ln"
 	Log      = "$log"
 	Log10    = "$log10"
@@ -65,8 +70,8 @@ const (
 	Zip           = "$zip"
 
 	// Conditional Expression Operators
-	Cond   = "$cond"
-	IfNull = "$ifNull"
+	Cond = "$cond"
+
 	Switch = "$switch"
 
 	// Custom Aggregation Expression Operators
@@ -85,7 +90,6 @@ const (
 	DayOfMonth     = "$dayOfMonth"
 	DayOfWeek      = "$dayOfWeek"
 	DayOfYear      = "$dayOfYear"
-	Hour           = "$hour"
 	IsoDayOfWeek   = "$isoDayOfWeek"
 	IsoWeek        = "$isoWeek"
 	IsoWeekYear    = "$isoWeekYear"
@@ -158,9 +162,6 @@ const (
 	ToLong     = "$toLong"
 	ToObjectID = "$toObjectId"
 	IsNumber   = "$isNumber"
-
-	// Accumulators ($group)
-	Last = "$last"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"

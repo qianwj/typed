@@ -33,3 +33,7 @@ func A(elements ...any) Array {
 	}
 	return a
 }
+
+func (a Array) Append(elements ...any) Array {
+	return append(a, elements...)
+}
