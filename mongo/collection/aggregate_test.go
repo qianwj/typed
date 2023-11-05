@@ -5,7 +5,7 @@ import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/model/aggregates/lookup"
-	"github.com/qianwj/typed/mongo/operator"
+	"github.com/qianwj/typed/mongo/model/aggregates/operators"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"testing"
@@ -49,9 +49,7 @@ func TestAggregateExecutor_Collect(t *testing.T) {
 	pipe := aggregates.Lookup(
 		lookup.New("fruits", "fruit_orders").
 			Join("fruitId", "fruitId").
-			SetPipeline(aggregates.Set(bson.NewMap().Put("fruitId", primitive.M{
-				operator.ToObjectID: "$_id",
-			})).Stages()),
+			SetPipeline(aggregates.Set(bson.NewMap().Put("fruitId", operators.ToObjectId("$_id"))).Stages()),
 	)
 	//pipe := aggregates.Match(filters.Eq("name", "gala"))
 	var result []primitive.M

@@ -32,3 +32,10 @@ import (
 func Convert(c *Converter) bson.Entry {
 	return bson.E(operator.Convert, c)
 }
+
+// ToObjectId converts a value to an ObjectId(). If the value cannot be converted to an ObjectId, `$toObjectId` errors.
+// If the value is null or missing, `$toObjectId` returns null.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lookup/
+func ToObjectId(expr any) bson.Entry {
+	return bson.E(operator.ToObjectID, expr)
+}

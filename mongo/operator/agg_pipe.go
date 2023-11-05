@@ -96,8 +96,9 @@ const (
 // Type Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#type-expression-operators
 const (
-	Convert  = "$convert"
-	IsNumber = "$isNumber"
+	Convert    = "$convert"
+	IsNumber   = "$isNumber"
+	ToObjectID = "$toObjectId"
 )
 
 // Accumulators ($group, $bucket, $bucketAuto, $setWindowFields)
@@ -214,12 +215,11 @@ const (
 
 	// Type Expression Operators
 
-	ToBool     = "$toBool"
-	ToDecimal  = "$toDecimal"
-	ToDouble   = "$toDouble"
-	ToInt      = "$toInt"
-	ToLong     = "$toLong"
-	ToObjectID = "$toObjectId"
+	ToBool    = "$toBool"
+	ToDecimal = "$toDecimal"
+	ToDouble  = "$toDouble"
+	ToInt     = "$toInt"
+	ToLong    = "$toLong"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"
