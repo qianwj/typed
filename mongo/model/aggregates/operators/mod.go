@@ -170,6 +170,34 @@ func Function(code, lang string, args ...any) bson.Entry {
 	))
 }
 
+// Hour returns the hour portion of a date as a number between 0 and 23.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
+func Hour(date time.Time, timezone ...string) bson.Entry {
+	if len(timezone) == 0 {
+		return bson.E(operator.Hour, date)
+	}
+	return bson.E(operator.Hour, bson.M(
+		bson.E("date", date),
+		bson.E("timezone", timezone[0]),
+	))
+}
+
+// IfNull evaluates input expressions for null values and returns:
+//   - The first non-null input expression value found.
+//   - A replacement expression value if all input expressions evaluate to null.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ifNull/
+func IfNull(replacement any, inputs ...any) bson.Entry {
+	return bson.E(operator.IfNull, bson.A(inputs...).Append(replacement))
+}
+
+// Last returns the result of an expression for the last document in a group of documents. Only meaningful when
+// documents are in a defined order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/last/
+func Last(expr any) bson.Entry {
+	return bson.E(operator.Last, expr)
+}
+
 // Map applies an expression to each item in an array and returns an array with the applied results.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/map/
 func Map(input, in any, as string) bson.Entry {
@@ -239,34 +267,27 @@ func Push(expr any) bson.Entry {
 	return bson.E(operator.Push, expr)
 }
 
-// Hour returns the hour portion of a date as a number between 0 and 23.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
-func Hour(date time.Time, timezone ...string) bson.Entry {
-	if len(timezone) == 0 {
-		return bson.E(operator.Hour, date)
-	}
-	return bson.E(operator.Hour, bson.M(
-		bson.E("date", date),
-		bson.E("timezone", timezone[0]),
+// Reduce applies an expression to each element in an array and combines them into a single value.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reduce/
+func Reduce(input, initialVal, in any) bson.Entry {
+	return bson.E(operator.Reduce, bson.D(
+		bson.E("input", input),
+		bson.E("initialValue", initialVal),
+		bson.E("in", in),
 	))
 }
 
-// IfNull evaluates input expressions for null values and returns:
-//   - The first non-null input expression value found.
-//   - A replacement expression value if all input expressions evaluate to null.
-//
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ifNull/
-func IfNull(replacement any, inputs ...any) bson.Entry {
-	return bson.E(operator.IfNull, bson.A(inputs...).Append(replacement))
-}
-
-// Last returns the result of an expression for the last document in a group of documents. Only meaningful when
-// documents are in a defined order.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/last/
-func Last(expr any) bson.Entry {
-	return bson.E(operator.Last, expr)
-}
-
+// Sum calculates and returns the collective sum of numeric values. `$sum` ignores non-numeric values.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sum/
 func Sum(expr any) bson.Entry {
 	return bson.E(operator.Sum, expr)
+}
+
+// Top returns the top element within a group according to the specified sort order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/top/
+func Top(sortBy *sorts.Options, output any) bson.Entry {
+	return bson.E(operator.Top, bson.M(
+		bson.E("sortBy", sortBy),
+		bson.E("output", output),
+	))
 }

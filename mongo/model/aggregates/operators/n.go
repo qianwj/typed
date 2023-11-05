@@ -105,3 +105,14 @@ func LastN(input, n any) bson.Entry {
 		bson.E("n", n),
 	))
 }
+
+// TopN returns an aggregation of the top n elements within a group, according to the specified sort order. If the
+// group contains fewer than n elements, $topN returns all elements in the group.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/topN/
+func TopN(sortBy *sorts.Options, output, n any) bson.Entry {
+	return bson.E(operator.TopN, bson.M(
+		bson.E("sortBy", sortBy),
+		bson.E("output", output),
+		bson.E("n", n),
+	))
+}
