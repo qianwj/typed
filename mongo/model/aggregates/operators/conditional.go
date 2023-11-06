@@ -25,6 +25,7 @@ package operators
 import (
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/operator"
+	"github.com/qianwj/typed/mongo/util"
 )
 
 // Cond evaluates a boolean expression to return one of the two specified return expressions.
@@ -40,4 +41,49 @@ func Cond(assuming, thenCase, elseCase any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ifNull/
 func IfNull(replacement any, inputs ...any) bson.Entry {
 	return bson.E(operator.IfNull, bson.A(inputs...).Append(replacement))
+}
+
+// Switch evaluates a series of case expressions. When it finds an expression which evaluates to true, `$switch`
+// executes a specified expression and breaks out of the control flow.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/switch/
+func Switch(cond *SwitchCondition) bson.Entry {
+	return bson.E(operator.Switch, cond)
+}
+
+type SwitchCondition struct {
+	branches    []*Branch
+	defaultCase any
+}
+
+func NewSwitch(defaultCase any) *SwitchCondition {
+	return &SwitchCondition{
+		defaultCase: defaultCase,
+	}
+}
+
+func (s *SwitchCondition) AddBranch(switchCase, then any) *SwitchCondition {
+	s.branches = append(s.branches, &Branch{
+		switchCase: switchCase,
+		then:       then,
+	})
+	return s
+}
+
+func (s *SwitchCondition) MarshalBSON() ([]byte, error) {
+	return bson.M(
+		bson.E("branches", bson.A(util.ToAny(s.branches)...)),
+		bson.E("default", s.defaultCase),
+	).Marshal()
+}
+
+type Branch struct {
+	switchCase any
+	then       any
+}
+
+func (b *Branch) MarshalBSON() ([]byte, error) {
+	return bson.M(
+		bson.E("case", b.switchCase),
+		bson.E("then", b.then),
+	).Marshal()
 }

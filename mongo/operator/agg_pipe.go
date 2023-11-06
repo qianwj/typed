@@ -80,6 +80,7 @@ const (
 const (
 	Cond   = "$cond"
 	IfNull = "$ifNull"
+	Switch = "$switch"
 )
 
 // Custom Aggregation Expression Operators
@@ -142,8 +143,6 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-
-	Switch = "$switch"
 
 	// Data Size Operators
 	BinarySize = "$binarySize"
