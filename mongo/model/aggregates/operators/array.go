@@ -24,8 +24,25 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 )
+
+// ArrayElemAt returns the element at the specified array index.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/arrayElemAt/
+func ArrayElemAt[N bson.Number](expr any, idx N) bson.Entry {
+	return bson.E(operator.ArrayElemAt, bson.A(expr, idx))
+}
+
+// ArrayToObject converts an array into a single document; the array must be either:
+//   - An array of two-element arrays where the first element is the field name, and the second element is the field value:
+//   - An array of documents that contains two fields, k and v where: The k field contains the field name, The v field
+//     contains the value of the field.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/arrayToObject/
+func ArrayToObject(expr any) bson.Entry {
+	return bson.E(operator.ArrayToObject, expr)
+}
 
 // ConcatArrays concatenates arrays to return the concatenated array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/concatArrays/
@@ -63,6 +80,27 @@ func ArrayFirstN(n, input any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/
 func In(elemExpr, arrExpr any) bson.Entry {
 	return computeBoth(operator.In, elemExpr, arrExpr)
+}
+
+// IndexOfArray searches an array for an occurrence of a specified value and returns the array index of the first
+// occurrence. Array indexes start at zero.
+// examples :
+// ```IndexOfArray(bson.A("1", "2", "3", "4"), "1") // search all```
+// ```IndexOfArray(bson.A("1", "2", "3", "4"), "1", 1) // search from ["2", "3"]```
+// ```IndexOfArray(bson.A("1", "2", "3", "4"), "1", 1, 3) // search from ["2", "3", "4"]```
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/indexOfArray/
+func IndexOfArray[I bson.Int](expr, searchExpr any, ranges ...I) bson.Entry {
+	val := bson.A(expr, searchExpr)
+	for _, n := range ranges {
+		val = val.Append(n)
+	}
+	return bson.E(operator.IndexOfArray, val)
+}
+
+// IsArray determines if the operand is an array. Returns a boolean.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isArray/
+func IsArray(expr any) bson.Entry {
+	return bson.E(operator.IsArray, expr)
 }
 
 // LastN returns an aggregation of the last n elements within a group. The elements returned are meaningful only if in
@@ -142,6 +180,18 @@ func ObjectToArray(expr any) bson.Entry {
 	return bson.E(operator.ObjectToArray, expr)
 }
 
+// Range returns an array whose elements are a generated sequence of numbers. `$range` generates the sequence from the
+// specified starting number by successively incrementing the starting number by the specified step value up to but not
+// including the end point.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/range/
+func Range[I bson.Int](start, end I, nonZeroStep ...I) bson.Entry {
+	val := bson.A(start, end)
+	if len(nonZeroStep) > 0 {
+		val = val.Append(nonZeroStep[0])
+	}
+	return bson.E(operator.Range, val)
+}
+
 // Reduce applies an expression to each element in an array and combines them into a single value.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reduce/
 func Reduce(input, initialVal, in any) bson.Entry {
@@ -149,5 +199,46 @@ func Reduce(input, initialVal, in any) bson.Entry {
 		bson.E("input", input),
 		bson.E("initialValue", initialVal),
 		bson.E("in", in),
+	))
+}
+
+// ReverseArray accepts an array expression as an argument and returns an array with the elements in reverse order.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reverseArray/
+func ReverseArray(expr any) bson.Entry {
+	return bson.E(operator.ReverseArray, expr)
+}
+
+// Size counts and returns the total number of items in an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/
+func Size(expr any) bson.Entry {
+	return bson.E(operator.Size, expr)
+}
+
+// Slice returns a subset of an array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/slice/
+func Slice(expr, n any, position ...any) bson.Entry {
+	if len(position) > 0 {
+		return bson.E(operator.Slice, bson.A(expr, position[0], n))
+	}
+	return bson.E(operator.Slice, bson.A(expr, n))
+}
+
+// SortArray sorts an array based on its elements. The sort order is user specified.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sortArray/
+func SortArray(input any, sortBy *sorts.Options) bson.Entry {
+	return bson.E(operator.SortArray, bson.M(
+		bson.E("input", input),
+		bson.E("sortBy", sortBy),
+	))
+}
+
+// Zip transposes an array of input arrays so that the first element of the output array would be an array containing,
+// the first element of the first input array, the first element of the second input array, etc.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/zip/
+func Zip(inputs []any, useLongestLength bool, defaults any) bson.Entry {
+	return bson.E(operator.Zip, bson.M(
+		bson.E("inputs", bson.A(inputs...)),
+		bson.E("useLongestLength", useLongestLength),
+		bson.E("defaults", defaults),
 	))
 }

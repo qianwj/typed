@@ -38,15 +38,22 @@ const (
 // Array Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#array-expression-operators
 const (
+	ArrayElemAt   = "$arrayElemAt"
+	ArrayToObject = "$arrayToObject"
 	ConcatArrays  = "$concatArrays"
 	Filter        = "$filter"
 	FirstN        = "$firstN"
+	IndexOfArray  = "$indexOfArray"
+	IsArray       = "$isArray"
 	LastN         = "$lastN"
 	Map           = "$map"
 	MaxN          = "$maxN"
 	MinN          = "$minN"
 	ObjectToArray = "$objectToArray"
+	Range         = "$range"
 	Reduce        = "$reduce"
+	ReverseArray  = "$reverseArray"
+	SortArray     = "$sortArray"
 )
 
 // Boolean Expression Operators
@@ -99,9 +106,13 @@ const (
 const (
 	Convert    = "$convert"
 	IsNumber   = "$isNumber"
+	ToBool     = "$toBool"
 	ToDecimal  = "$toDecimal"
 	ToDouble   = "$toDouble"
+	ToInt      = "$toInt"
+	ToLong     = "$toLong"
 	ToObjectID = "$toObjectId"
+	ToString   = "$toString"
 )
 
 // Accumulators ($group, $bucket, $bucketAuto, $setWindowFields)
@@ -131,13 +142,7 @@ const (
 	Trunc          = "$trunc"
 
 	// Array Expression Operators
-	ArrayElemAt   = "$arrayElemAt"
-	ArrayToObject = "$arrayToObject"
-	IndexOfArray  = "$indexOfArray"
-	IsArray       = "$isArray"
-	Range         = "$range"
-	ReverseArray  = "$reverseArray"
-	Zip           = "$zip"
+	Zip = "$zip"
 
 	Switch = "$switch"
 
@@ -194,7 +199,6 @@ const (
 	SubstrBytes  = "$substrBytes"
 	SubstrCP     = "$substrCP"
 	ToLower      = "$toLower"
-	ToString     = "$toString"
 	Trim         = "$trim"
 	ToUpper      = "$toUpper"
 	ReplaceOne   = "$replaceOne"
@@ -215,10 +219,6 @@ const (
 	RadiansToDegrees = "$radiansToDegrees"
 
 	// Type Expression Operators
-
-	ToBool = "$toBool"
-	ToInt  = "$toInt"
-	ToLong = "$toLong"
 
 	StdDevPop  = "$stdDevPop"
 	StdDevSamp = "$stdDevSamp"
