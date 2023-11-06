@@ -31,7 +31,10 @@ const (
 	Divide   = "$divide"
 	Exp      = "$exp"
 	Floor    = "$floor"
+	Ln       = "$ln"
 	Multiply = "$multiply"
+	Pow      = "$pow"
+	Round    = "$round"
 	Subtract = "$subtract"
 )
 
@@ -54,6 +57,7 @@ const (
 	Reduce        = "$reduce"
 	ReverseArray  = "$reverseArray"
 	SortArray     = "$sortArray"
+	Zip           = "$zip"
 )
 
 // Boolean Expression Operators
@@ -107,6 +111,7 @@ const (
 	Convert    = "$convert"
 	IsNumber   = "$isNumber"
 	ToBool     = "$toBool"
+	ToDate     = "$toDate"
 	ToDecimal  = "$toDecimal"
 	ToDouble   = "$toDouble"
 	ToInt      = "$toInt"
@@ -133,16 +138,10 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-	Ln             = "$ln"
 	Log            = "$log"
 	Log10          = "$log10"
-	Pow            = "$pow"
-	Round          = "$round"
 	Sqrt           = "$sqrt"
 	Trunc          = "$trunc"
-
-	// Array Expression Operators
-	Zip = "$zip"
 
 	Switch = "$switch"
 
@@ -165,7 +164,6 @@ const (
 	Minute         = "$minute"
 	Month          = "$month"
 	Second         = "$second"
-	ToDate         = "$toDate"
 	Week           = "$week"
 	Year           = "$year"
 

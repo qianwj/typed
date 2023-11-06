@@ -64,6 +64,12 @@ func Floor(expr any) bson.Entry {
 	return bson.E(operator.Floor, expr)
 }
 
+// Ln calculates the natural logarithm ln (i.e log e) of a number and returns the result as a double.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ln/
+func Ln(expr any) bson.Entry {
+	return bson.E(operator.Ln, expr)
+}
+
 // Mod divides one number by another and returns the remainder.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
 func Mod(expr1, expr2 any) bson.Entry {
@@ -74,6 +80,18 @@ func Mod(expr1, expr2 any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/multiply/
 func Multiply(exprs ...any) bson.Entry {
 	return bson.E(operator.Multiply, bson.A(exprs...))
+}
+
+// Pow raises a number to the specified exponent and returns the result.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/pow/
+func Pow(number, exponent any) bson.Entry {
+	return bson.E(operator.Pow, bson.A(number, exponent))
+}
+
+// Round rounds a number to a whole integer or to a specified decimal place.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/round/
+func Round(number any, place ...any) bson.Entry {
+	return bson.E(operator.Round, bson.A(number).Append(place...))
 }
 
 // Subtract Subtracts two numbers to return the difference, or two dates to return the difference in milliseconds, or a
