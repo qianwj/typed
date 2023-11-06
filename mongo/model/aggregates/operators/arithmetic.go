@@ -70,6 +70,18 @@ func Ln(expr any) bson.Entry {
 	return bson.E(operator.Ln, expr)
 }
 
+// Log calculates the log of a number in the specified base and returns the result as a double.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/log/
+func Log(number, base any) bson.Entry {
+	return bson.E(operator.Log, bson.A(number, base))
+}
+
+// Lg calculates the log base 10 of a number and returns the result as a double.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/log10/
+func Lg(number any) bson.Entry {
+	return bson.E(operator.Log10, number)
+}
+
 // Mod divides one number by another and returns the remainder.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
 func Mod(expr1, expr2 any) bson.Entry {
@@ -94,9 +106,21 @@ func Round(number any, place ...any) bson.Entry {
 	return bson.E(operator.Round, bson.A(number).Append(place...))
 }
 
+// Sqrt calculates the square root of a positive number and returns the result as a double.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sqrt/
+func Sqrt(numberExpr any) bson.Entry {
+	return bson.E(operator.Sqrt, numberExpr)
+}
+
 // Subtract Subtracts two numbers to return the difference, or two dates to return the difference in milliseconds, or a
 // date and a number in milliseconds to return the resulting date.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/subtract/
 func Subtract(expr1, expr2 any) bson.Entry {
 	return computeBoth(operator.Subtract, expr1, expr2)
+}
+
+// Trunc truncates a number to a whole integer or to a specified decimal place.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/trunc/
+func Trunc(number any, place ...any) bson.Entry {
+	return bson.E(operator.Trunc, bson.A(number).Append(place...))
 }

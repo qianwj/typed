@@ -32,10 +32,14 @@ const (
 	Exp      = "$exp"
 	Floor    = "$floor"
 	Ln       = "$ln"
+	Log      = "$log"
+	Log10    = "$log10"
 	Multiply = "$multiply"
 	Pow      = "$pow"
 	Round    = "$round"
+	Sqrt     = "$sqrt"
 	Subtract = "$subtract"
+	Trunc    = "$trunc"
 )
 
 // Array Expression Operators
@@ -138,10 +142,6 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-	Log            = "$log"
-	Log10          = "$log10"
-	Sqrt           = "$sqrt"
-	Trunc          = "$trunc"
 
 	Switch = "$switch"
 
