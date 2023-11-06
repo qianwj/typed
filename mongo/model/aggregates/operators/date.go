@@ -24,10 +24,7 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/aggregates/timeunit"
 	"github.com/qianwj/typed/mongo/operator"
-	"github.com/qianwj/typed/mongo/util"
-	"time"
 )
 
 // DateAdd increments a `Date()` object by a specified number of time units.
@@ -73,193 +70,88 @@ func DateToString(toString *ToStringOptions) bson.Entry {
 	return bson.E(operator.DateToString, toString)
 }
 
+// DateTrunc truncates a date.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateTrunc/
+func DateTrunc(trunc *TruncOptions) bson.Entry {
+	return bson.E(operator.DateTrunc, trunc)
+}
+
+// DayOfMonth returns the day of the month for a date as a number between 1 and 31.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dayOfMonth/
+func DayOfMonth(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.DayOfMonth, date, timezone...)
+}
+
+// DayOfWeek returns the day of the week for a date as a number between 1 (Sunday) and 7 (Saturday).
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dayOfWeek/
+func DayOfWeek(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.DayOfWeek, date, timezone...)
+}
+
+// DayOfYear returns the day of the year for a date as a number between 1 and 366.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dayOfYear/
+func DayOfYear(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.DayOfYear, date, timezone...)
+}
+
 // Hour returns the hour portion of a date as a number between 0 and 23.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
-func Hour(date time.Time, timezone ...any) bson.Entry {
-	if len(timezone) == 0 {
-		return bson.E(operator.Hour, date)
-	}
-	return bson.E(operator.Hour, bson.M(
-		bson.E("date", date),
-		bson.E("timezone", timezone[0]),
-	))
+func Hour(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Hour, date, timezone...)
 }
 
-type DateAdder struct {
-	data     bson.UnorderedMap
-	timezone *string
+// ISODayOfWeek returns the weekday number in ISO 8601 format, ranging from 1 (for Monday) to 7 (for Sunday).
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isoDayOfWeek/
+func ISODayOfWeek(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.ISODayOfWeek, date, timezone...)
 }
 
-func NewDateAdder(startDate, amount any, unit timeunit.DateTime) *DateAdder {
-	return &DateAdder{
-		data: bson.M(
-			bson.E("startDate", startDate),
-			bson.E("unit", unit),
-			bson.E("amount", amount),
-		),
-	}
+// ISOWeek returns the week number in ISO 8601 format, ranging from 1 to 53. Week numbers start at 1 with the week
+// (Monday through Sunday) that contains the year's first Thursday.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isoWeek/
+func ISOWeek(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.ISOWeek, date, timezone...)
 }
 
-func (d *DateAdder) Timezone(zone any) *DateAdder {
-	d.data["timezone"] = zone
-	return d
+// ISOWeekYear returns the year number in ISO 8601 format. The year starts with the Monday of week 1 and ends with the
+// Sunday of the last week.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isoWeekYear/
+func ISOWeekYear(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.ISOWeekYear, date, timezone...)
 }
 
-func (d *DateAdder) MarshalBSON() ([]byte, error) {
-	return d.data.Marshal()
+// Millisecond returns the millisecond portion of a date as an integer between 0 and 999.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/millisecond/
+func Millisecond(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Millisecond, date, timezone...)
 }
 
-type DateDiffer struct {
-	data bson.UnorderedMap
+// Minute returns the minute portion of a date as a number between 0 and 59.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/millisecond/
+func Minute(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Minute, date, timezone...)
 }
 
-func NewDateDiffer(startDate, endDate any, unit timeunit.DateTime) *DateDiffer {
-	return &DateDiffer{
-		data: bson.M(
-			bson.E("startDate", startDate),
-			bson.E("endDate", endDate),
-			bson.E("unit", unit),
-		),
-	}
+// Month returns the month of a date as a number between 1 and 12.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/month/
+func Month(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Month, date, timezone...)
 }
 
-func (d *DateDiffer) StartOfWeek(weekday timeunit.Weekday) *DateDiffer {
-	d.data["startOfWeek"] = weekday
-	return d
+// Second returns the second portion of a date as a number between 0 and 59, but can be 60 to account for leap seconds.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/second/
+func Second(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Second, date, timezone...)
 }
 
-func (d *DateDiffer) Timezone(zone any) *DateDiffer {
-	d.data["timezone"] = zone
-	return d
+// Week returns the week of the year for a date as a number between 0 and 53.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/week/
+func Week(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Week, date, timezone...)
 }
 
-func (d *DateDiffer) MarshalBSON() ([]byte, error) {
-	return d.data.Marshal()
-}
-
-type DateSubtracter struct {
-	startDate any
-	unit      timeunit.DateTime
-	amount    any
-	timezone  *string
-}
-
-func NewDateSubtracter(startDate, amount any, unit timeunit.DateTime) *DateSubtracter {
-	return &DateSubtracter{
-		startDate: startDate,
-		amount:    amount,
-		unit:      unit,
-	}
-}
-
-func (d *DateSubtracter) Timezone(zone string) *DateSubtracter {
-	d.timezone = util.ToPtr(zone)
-	return d
-}
-
-func (d *DateSubtracter) MarshalBSON() ([]byte, error) {
-	m := bson.M(
-		bson.E("startDate", d.startDate),
-		bson.E("unit", d.unit),
-		bson.E("amount", d.amount),
-	)
-	if util.IsNonNil(d.timezone) {
-		m["timezone"] = d.timezone
-	}
-	return m.Marshal()
-}
-
-type FromPartsOptions struct {
-	Year         any `bson:"year,omitempty"`
-	ISOWeekYear  any `bson:"isoWeekYear,omitempty"`
-	Month        any `bson:"month,omitempty"`
-	ISOWeek      any `bson:"isoWeek,omitempty"`
-	Day          any `bson:"day,omitempty"`
-	ISODayOfWeek any `bson:"isoDayOfWeek,omitempty"`
-	Hour         any `bson:"hour,omitempty"`
-	Minute       any `bson:"minute,omitempty"`
-	Second       any `bson:"second,omitempty"`
-	Millisecond  any `bson:"millisecond,omitempty"`
-	Timezone     any `bson:"timezone,omitempty"`
-}
-
-type FromStringOptions struct {
-	data bson.UnorderedMap
-}
-
-func NewFromString(dateStrExpr any) *FromStringOptions {
-	return &FromStringOptions{
-		data: bson.M(bson.E("dateString", dateStrExpr)),
-	}
-}
-
-func (d *FromStringOptions) Format(format any) *FromStringOptions {
-	d.data["format"] = format
-	return d
-}
-
-func (d *FromStringOptions) Timezone(timezone any) *FromStringOptions {
-	d.data["timezone"] = timezone
-	return d
-}
-
-func (d *FromStringOptions) OnError(onErr any) *FromStringOptions {
-	d.data["onError"] = onErr
-	return d
-}
-
-func (d *FromStringOptions) OnNull(onNull any) *FromStringOptions {
-	d.data["onNull"] = onNull
-	return d
-}
-
-func (d *FromStringOptions) MarshalBSON() ([]byte, error) {
-	return d.data.Marshal()
-}
-
-type ToPartsOptions struct {
-	data bson.UnorderedMap
-}
-
-func NewToParts(date any) *ToPartsOptions {
-	return &ToPartsOptions{data: bson.M(bson.E("date", date))}
-}
-
-func (t *ToPartsOptions) Timezone(zone any) *ToPartsOptions {
-	t.data["timezone"] = zone
-	return t
-}
-
-func (t *ToPartsOptions) ISO8601(iso8601 bool) *ToPartsOptions {
-	t.data["iso8601"] = iso8601
-	return t
-}
-
-func (t *ToPartsOptions) MarshalBSON() ([]byte, error) {
-	return t.data.Marshal()
-}
-
-type ToStringOptions struct {
-	data bson.UnorderedMap
-}
-
-func NewToString(dateExpr any) *ToStringOptions {
-	return &ToStringOptions{
-		data: bson.M(bson.E("date", dateExpr)),
-	}
-}
-
-func (d *ToStringOptions) Format(format any) *ToStringOptions {
-	d.data["format"] = format
-	return d
-}
-
-func (d *ToStringOptions) Timezone(timezone any) *ToStringOptions {
-	d.data["timezone"] = timezone
-	return d
-}
-
-func (d *ToStringOptions) OnNull(onNull any) *ToStringOptions {
-	d.data["onNull"] = onNull
-	return d
+// Year returns the year portion of a date.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/year/
+func Year(date any, timezone ...any) bson.Entry {
+	return computeDateWithZone(operator.Year, date, timezone...)
 }

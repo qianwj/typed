@@ -107,12 +107,43 @@ const (
 	DateSubtract   = "$dateSubtract"
 	DateToParts    = "$dateToParts"
 	DateToString   = "$dateToString"
+	DateTrunc      = "$dateTrunc"
+	DayOfMonth     = "$dayOfMonth"
+	DayOfWeek      = "$dayOfWeek"
+	DayOfYear      = "$dayOfYear"
 	Hour           = "$hour"
+	ISODayOfWeek   = "$isoDayOfWeek"
+	ISOWeek        = "$isoWeek"
+	ISOWeekYear    = "$isoWeekYear"
+	Millisecond    = "$millisecond"
+	Minute         = "$minute"
+	Month          = "$month"
+	Second         = "$second"
+	Week           = "$week"
+	Year           = "$year"
+)
+
+// Literal Expression Operator
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#literal-expression-operator
+const (
+	Literal = "$literal"
+)
+
+// Miscellaneous Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#miscellaneous-operators
+const (
+	GetField         = "$getField"
+	Rand             = "$rand"
+	SampleRate       = "$sampleRate"
+	ToHashedIndexKey = "$toHashedIndexKey"
 )
 
 // Object Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#object-expression-operators
-const ()
+const (
+	MergeObjects = "$mergeObjects"
+	SetField     = "$setField"
+)
 
 // String Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#string-expression-operators
@@ -154,26 +185,6 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-
-	// Date Expression Operators
-	DayOfMonth   = "$dayOfMonth"
-	DayOfWeek    = "$dayOfWeek"
-	DayOfYear    = "$dayOfYear"
-	IsoDayOfWeek = "$isoDayOfWeek"
-	IsoWeek      = "$isoWeek"
-	IsoWeekYear  = "$isoWeekYear"
-	Millisecond  = "$millisecond"
-	Minute       = "$minute"
-	Month        = "$month"
-	Second       = "$second"
-	Week         = "$week"
-	Year         = "$year"
-
-	// Literal Expression Operator
-	Literal = "$literal"
-
-	// Object Expression Operators
-	MergeObjects = "$mergeObjects"
 
 	// Set Expression Operators
 	AllElementsTrue = "$allElementsTrue"

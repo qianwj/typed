@@ -27,23 +27,8 @@ import (
 	"github.com/qianwj/typed/mongo/operator"
 )
 
-// DocumentNumber returns the position of a document (known as the document number) in the $setWindowFields stage
-// partition.
-// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/documentNumber/
-func DocumentNumber() bson.Entry {
-	return bson.E(operator.DocumentNumber, bson.M())
-}
-
-func computeBoth(op string, expr1, expr2 any) bson.Entry {
-	return bson.E(op, bson.A(expr1, expr2))
-}
-
-func computeDateWithZone(op string, date any, timezone ...any) bson.Entry {
-	if len(timezone) == 0 {
-		return bson.E(op, date)
-	}
-	return bson.E(op, bson.M(
-		bson.E("date", date),
-		bson.E("timezone", timezone[0]),
-	))
+// Literal returns a value without parsing. Use for values that the aggregation pipeline may interpret as an expression.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/literal/
+func Literal(expr any) bson.Entry {
+	return bson.E(operator.Literal, expr)
 }
