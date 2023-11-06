@@ -42,15 +42,40 @@ func DateDiff(differ *DateDiffer) bson.Entry {
 	return bson.E(operator.DateDiff, differ)
 }
 
+// DateFromParts constructs and returns a Date object given the date's constituent properties.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateFromParts/
+func DateFromParts(parts *FromPartsOptions) bson.Entry {
+	return bson.E(operator.DateFromParts, parts)
+}
+
+// DateFromString converts a date/time string to a date object.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateFromString/
+func DateFromString(dateStr *FromStringOptions) bson.Entry {
+	return bson.E(operator.DateFromString, dateStr)
+}
+
 // DateSubtract Decrements a `Date()` object by a specified number of time units.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateSubtract/
 func DateSubtract(subtracter *DateSubtracter) bson.Entry {
 	return bson.E(operator.DateSubtract, subtracter)
 }
 
+// DateToParts returns a document that contains the constituent parts of a given BSON Date value as individual
+// properties. The properties returned are year, month, day, hour, minute, second and millisecond.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateToParts/
+func DateToParts(parts *ToPartsOptions) bson.Entry {
+	return bson.E(operator.DateToParts, parts)
+}
+
+// DateToString converts a date object to a string according to a user-specified format.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/dateToString/
+func DateToString(toString *ToStringOptions) bson.Entry {
+	return bson.E(operator.DateToString, toString)
+}
+
 // Hour returns the hour portion of a date as a number between 0 and 23.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/hour/
-func Hour(date time.Time, timezone ...string) bson.Entry {
+func Hour(date time.Time, timezone ...any) bson.Entry {
 	if len(timezone) == 0 {
 		return bson.E(operator.Hour, date)
 	}
@@ -61,76 +86,55 @@ func Hour(date time.Time, timezone ...string) bson.Entry {
 }
 
 type DateAdder struct {
-	startDate any
-	unit      timeunit.DateTime
-	amount    any
-	timezone  *string
+	data     bson.UnorderedMap
+	timezone *string
 }
 
 func NewDateAdder(startDate, amount any, unit timeunit.DateTime) *DateAdder {
 	return &DateAdder{
-		startDate: startDate,
-		amount:    amount,
-		unit:      unit,
+		data: bson.M(
+			bson.E("startDate", startDate),
+			bson.E("unit", unit),
+			bson.E("amount", amount),
+		),
 	}
 }
 
-func (d *DateAdder) Timezone(zone string) *DateAdder {
-	d.timezone = util.ToPtr(zone)
+func (d *DateAdder) Timezone(zone any) *DateAdder {
+	d.data["timezone"] = zone
 	return d
 }
 
 func (d *DateAdder) MarshalBSON() ([]byte, error) {
-	m := bson.M(
-		bson.E("startDate", d.startDate),
-		bson.E("unit", d.unit),
-		bson.E("amount", d.amount),
-	)
-	if util.IsNonNil(d.timezone) {
-		m["timezone"] = d.timezone
-	}
-	return m.Marshal()
+	return d.data.Marshal()
 }
 
 type DateDiffer struct {
-	startDate   any
-	endDate     any
-	unit        timeunit.DateTime
-	startOfWeek *timeunit.Weekday
-	timezone    *string
+	data bson.UnorderedMap
 }
 
 func NewDateDiffer(startDate, endDate any, unit timeunit.DateTime) *DateDiffer {
 	return &DateDiffer{
-		startDate: startDate,
-		endDate:   endDate,
-		unit:      unit,
+		data: bson.M(
+			bson.E("startDate", startDate),
+			bson.E("endDate", endDate),
+			bson.E("unit", unit),
+		),
 	}
 }
 
 func (d *DateDiffer) StartOfWeek(weekday timeunit.Weekday) *DateDiffer {
-	d.startOfWeek = util.ToPtr(weekday)
+	d.data["startOfWeek"] = weekday
 	return d
 }
 
-func (d *DateDiffer) Timezone(zone string) *DateDiffer {
-	d.timezone = util.ToPtr(zone)
+func (d *DateDiffer) Timezone(zone any) *DateDiffer {
+	d.data["timezone"] = zone
 	return d
 }
 
 func (d *DateDiffer) MarshalBSON() ([]byte, error) {
-	m := bson.M(
-		bson.E("startDate", d.startDate),
-		bson.E("endDate", d.endDate),
-		bson.E("unit", d.unit),
-	)
-	if util.IsNonNil(d.timezone) {
-		m["timezone"] = d.timezone
-	}
-	if util.IsNonNil(d.startOfWeek) {
-		m["startOfWeek"] = d.startOfWeek
-	}
-	return m.Marshal()
+	return d.data.Marshal()
 }
 
 type DateSubtracter struct {
@@ -163,4 +167,99 @@ func (d *DateSubtracter) MarshalBSON() ([]byte, error) {
 		m["timezone"] = d.timezone
 	}
 	return m.Marshal()
+}
+
+type FromPartsOptions struct {
+	Year         any `bson:"year,omitempty"`
+	ISOWeekYear  any `bson:"isoWeekYear,omitempty"`
+	Month        any `bson:"month,omitempty"`
+	ISOWeek      any `bson:"isoWeek,omitempty"`
+	Day          any `bson:"day,omitempty"`
+	ISODayOfWeek any `bson:"isoDayOfWeek,omitempty"`
+	Hour         any `bson:"hour,omitempty"`
+	Minute       any `bson:"minute,omitempty"`
+	Second       any `bson:"second,omitempty"`
+	Millisecond  any `bson:"millisecond,omitempty"`
+	Timezone     any `bson:"timezone,omitempty"`
+}
+
+type FromStringOptions struct {
+	data bson.UnorderedMap
+}
+
+func NewFromString(dateStrExpr any) *FromStringOptions {
+	return &FromStringOptions{
+		data: bson.M(bson.E("dateString", dateStrExpr)),
+	}
+}
+
+func (d *FromStringOptions) Format(format any) *FromStringOptions {
+	d.data["format"] = format
+	return d
+}
+
+func (d *FromStringOptions) Timezone(timezone any) *FromStringOptions {
+	d.data["timezone"] = timezone
+	return d
+}
+
+func (d *FromStringOptions) OnError(onErr any) *FromStringOptions {
+	d.data["onError"] = onErr
+	return d
+}
+
+func (d *FromStringOptions) OnNull(onNull any) *FromStringOptions {
+	d.data["onNull"] = onNull
+	return d
+}
+
+func (d *FromStringOptions) MarshalBSON() ([]byte, error) {
+	return d.data.Marshal()
+}
+
+type ToPartsOptions struct {
+	data bson.UnorderedMap
+}
+
+func NewToParts(date any) *ToPartsOptions {
+	return &ToPartsOptions{data: bson.M(bson.E("date", date))}
+}
+
+func (t *ToPartsOptions) Timezone(zone any) *ToPartsOptions {
+	t.data["timezone"] = zone
+	return t
+}
+
+func (t *ToPartsOptions) ISO8601(iso8601 bool) *ToPartsOptions {
+	t.data["iso8601"] = iso8601
+	return t
+}
+
+func (t *ToPartsOptions) MarshalBSON() ([]byte, error) {
+	return t.data.Marshal()
+}
+
+type ToStringOptions struct {
+	data bson.UnorderedMap
+}
+
+func NewToString(dateExpr any) *ToStringOptions {
+	return &ToStringOptions{
+		data: bson.M(bson.E("date", dateExpr)),
+	}
+}
+
+func (d *ToStringOptions) Format(format any) *ToStringOptions {
+	d.data["format"] = format
+	return d
+}
+
+func (d *ToStringOptions) Timezone(timezone any) *ToStringOptions {
+	d.data["timezone"] = timezone
+	return d
+}
+
+func (d *ToStringOptions) OnNull(onNull any) *ToStringOptions {
+	d.data["onNull"] = onNull
+	return d
 }

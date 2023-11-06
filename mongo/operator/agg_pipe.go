@@ -90,13 +90,24 @@ const (
 	Function    = "$function"
 )
 
+// Data Size Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#data-size-expression-operators
+const (
+	BinarySize = "$binarySize"
+	BsonSize   = "$bsonSize"
+)
+
 // Date Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#date-expression-operators
 const (
-	DateAdd      = "$dateAdd"
-	DateDiff     = "$dateDiff"
-	DateSubtract = "$dateSubtract"
-	Hour         = "$hour"
+	DateAdd        = "$dateAdd"
+	DateDiff       = "$dateDiff"
+	DateFromParts  = "$dateFromParts"
+	DateFromString = "$dateFromString"
+	DateSubtract   = "$dateSubtract"
+	DateToParts    = "$dateToParts"
+	DateToString   = "$dateToString"
+	Hour           = "$hour"
 )
 
 // Object Expression Operators
@@ -144,27 +155,19 @@ const (
 const (
 	DocumentNumber = "$documentNumber"
 
-	// Data Size Operators
-	BinarySize = "$binarySize"
-	BsonSize   = "$bsonSize"
-
 	// Date Expression Operators
-	DateFromParts  = "$dateFromParts"
-	DateFromString = "$dateFromString"
-	DateToParts    = "$dateToParts"
-	DateToString   = "$dateToString"
-	DayOfMonth     = "$dayOfMonth"
-	DayOfWeek      = "$dayOfWeek"
-	DayOfYear      = "$dayOfYear"
-	IsoDayOfWeek   = "$isoDayOfWeek"
-	IsoWeek        = "$isoWeek"
-	IsoWeekYear    = "$isoWeekYear"
-	Millisecond    = "$millisecond"
-	Minute         = "$minute"
-	Month          = "$month"
-	Second         = "$second"
-	Week           = "$week"
-	Year           = "$year"
+	DayOfMonth   = "$dayOfMonth"
+	DayOfWeek    = "$dayOfWeek"
+	DayOfYear    = "$dayOfYear"
+	IsoDayOfWeek = "$isoDayOfWeek"
+	IsoWeek      = "$isoWeek"
+	IsoWeekYear  = "$isoWeekYear"
+	Millisecond  = "$millisecond"
+	Minute       = "$minute"
+	Month        = "$month"
+	Second       = "$second"
+	Week         = "$week"
+	Year         = "$year"
 
 	// Literal Expression Operator
 	Literal = "$literal"
