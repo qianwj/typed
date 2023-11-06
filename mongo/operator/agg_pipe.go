@@ -145,6 +145,18 @@ const (
 	SetField     = "$setField"
 )
 
+// Set Expression Operators
+// See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#set-expression-operators
+const (
+	AllElementsTrue = "$allElementsTrue"
+	AnyElementTrue  = "$anyElementTrue"
+	SetDifference   = "$setDifference"
+	SetEquals       = "$setEquals"
+	SetIntersection = "$setIntersection"
+	SetIsSubset     = "$setIsSubset"
+	SetUnion        = "$setUnion"
+)
+
 // String Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#string-expression-operators
 const (
@@ -185,15 +197,6 @@ const (
 // refer: https://docs.mongodb.com/manual/reference/operator/aggregation/
 const (
 	DocumentNumber = "$documentNumber"
-
-	// Set Expression Operators
-	AllElementsTrue = "$allElementsTrue"
-	AnyElementTrue  = "$anyElementTrue"
-	SetDifference   = "$setDifference"
-	SetEquals       = "$setEquals"
-	SetIntersection = "$setIntersection"
-	SetIsSubset     = "$setIsSubset"
-	SetUnion        = "$setUnion"
 
 	// String Expression Operators
 	IndexOfBytes = "$indexOfBytes"
