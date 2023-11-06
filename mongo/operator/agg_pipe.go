@@ -160,8 +160,16 @@ const (
 // String Expression Operators
 // See https://www.mongodb.com/docs/manual/reference/aggregation-quick-reference/#string-expression-operators
 const (
-	Concat = "$concat"
-	Split  = "$split"
+	Concat       = "$concat"
+	IndexOfBytes = "$indexOfBytes"
+	IndexOfCP    = "$indexOfCP"
+	Ltrim        = "$ltrim"
+	RegexFind    = "$regexFind"
+	Rtrim        = "$rtrim"
+	Split        = "$split"
+	Trim         = "$trim"
+	ToLower      = "$toLower"
+	ToUpper      = "$toUpper"
 )
 
 // Type Expression Operators
@@ -199,22 +207,14 @@ const (
 	DocumentNumber = "$documentNumber"
 
 	// String Expression Operators
-	IndexOfBytes = "$indexOfBytes"
-	IndexOfCP    = "$indexOfCP"
-	Ltrim        = "$ltrim"
-	RegexFind    = "$regexFind"
 	RegexFindAll = "$regexFindAll"
 	RegexMatch   = "$regexMatch"
-	Rtrim        = "$rtrim"
 	StrLenBytes  = "$strLenBytes"
 	StrLenCP     = "$strLenCP"
 	Strcasecmp   = "$strcasecmp"
 	Substr       = "$substr"
 	SubstrBytes  = "$substrBytes"
 	SubstrCP     = "$substrCP"
-	ToLower      = "$toLower"
-	Trim         = "$trim"
-	ToUpper      = "$toUpper"
 	ReplaceOne   = "$replaceOne"
 	ReplaceAll   = "$replaceAll"
 

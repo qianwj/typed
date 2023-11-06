@@ -6,11 +6,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type Options string
+
 const (
 	// IgnoreCase
 	// Case insensitivity to match upper and lower cases. For an example, see
 	// Perform Case-Insensitive Regular Expression Match.
-	IgnoreCase = "i"
+	IgnoreCase Options = "i"
 
 	// MultilineMatch
 	// For patterns that include anchors (i.e. ^ for the start, $ for the end),
@@ -19,7 +21,7 @@ const (
 	// For an example, see Multiline Match for Lines Starting with Specified Pattern.
 	// If the pattern contains no anchors or if the string value has no newline
 	// characters (e.g. \n), the m option has no effect.
-	MultilineMatch = "m"
+	MultilineMatch Options = "m"
 
 	// Extended
 	// "Extended" capability to ignore all white space characters in the $regex
@@ -29,22 +31,26 @@ const (
 	// in complicated patterns. This only applies to data characters; white space
 	// characters may never appear within special character sequences in a pattern.
 	// The x option does not affect the handling of the VT character (i.e. code 11).
-	Extended = "x"
+	Extended Options = "x"
 
 	// AllowDotChar
 	// Allows the dot character (i.e. .) to match all characters including newline characters.
 	// For an example, see Use the . Dot Character to Match New Line.
-	AllowDotChar = "s"
+	AllowDotChar Options = "s"
 )
+
+func (o Options) String() string {
+	return string(o)
+}
 
 type Matcher struct {
 	pattern string
-	options map[string]bool
+	options map[Options]bool
 }
 
 func NewMatcher(pattern string) *Matcher {
 	return &Matcher{
-		options: make(map[string]bool),
+		options: make(map[Options]bool),
 		pattern: pattern,
 	}
 }
@@ -73,7 +79,7 @@ func (m *Matcher) Compile() primitive.Regex {
 	options := ""
 	for k, add := range m.options {
 		if add {
-			options += k
+			options += string(k)
 		}
 	}
 	return primitive.Regex{Pattern: m.pattern, Options: options}
@@ -93,9 +99,9 @@ func (m *Matcher) UnmarshalBSON(bytes []byte) error {
 		return err
 	}
 	m.pattern = reg.Pattern
-	opts := make(map[string]bool)
+	opts := make(map[Options]bool)
 	for _, r := range []rune(reg.Options) {
-		opts[string(r)] = true
+		opts[Options(r)] = true
 	}
 	m.options = opts
 	return nil

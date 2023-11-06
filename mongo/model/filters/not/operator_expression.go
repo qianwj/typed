@@ -2,7 +2,7 @@ package not
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/filters/regex"
+	"github.com/qianwj/typed/mongo/model/regex"
 	"github.com/qianwj/typed/mongo/operator"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 )

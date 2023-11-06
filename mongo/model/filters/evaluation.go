@@ -1,8 +1,8 @@
 package filters
 
 import (
-	"github.com/qianwj/typed/mongo/model/filters/regex"
 	"github.com/qianwj/typed/mongo/model/filters/text"
+	"github.com/qianwj/typed/mongo/model/regex"
 	"github.com/qianwj/typed/mongo/operator"
 	"go.mongodb.org/mongo-driver/bson"
 )

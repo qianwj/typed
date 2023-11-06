@@ -24,7 +24,10 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/regex"
 	"github.com/qianwj/typed/mongo/operator"
+	"github.com/qianwj/typed/mongo/util"
+	"strings"
 )
 
 // Concat concatenates strings and returns the concatenated string.
@@ -33,10 +36,78 @@ func Concat(exprs ...any) bson.Entry {
 	return bson.E(operator.Concat, bson.A(exprs...))
 }
 
+// IndexOfBytes searches a string for an occurrence of a substring and returns the UTF-8 byte index (zero-based) of the
+// first occurrence. If the substring is not found, returns -1.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/indexOfBytes/
+func IndexOfBytes(str, substr any, ranges ...any) bson.Entry {
+	return bson.E(operator.IndexOfBytes, bson.A(str, substr).Append(ranges...))
+}
+
+// IndexOfCP searches a string for an occurrence of a substring and returns the UTF-8 code point index (zero-based) of
+// the first occurrence. If the substring is not found, returns -1.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/indexOfCP/
+func IndexOfCP(str, substr any, ranges ...any) bson.Entry {
+	return bson.E(operator.IndexOfCP, bson.A(str, substr).Append(ranges...))
+}
+
+// Ltrim removes whitespace characters, including null, or the specified characters from the beginning of a string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ltrim/
+func Ltrim(input, chars any) bson.Entry {
+	return bson.E(operator.Ltrim, bson.M(
+		bson.E("inputs", input),
+		bson.E("chars", chars),
+	))
+}
+
+// RegexFind provides regular expression (regex) pattern matching capability in aggregation expressions. If a match is
+// found, returns a document that contains information on the first match. If a match is not found, returns null.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/regexFind/
+func RegexFind(input, regexExp any, opts ...regex.Options) bson.Entry {
+	val := bson.M(
+		bson.E("input", input),
+		bson.E("regex", regexExp),
+	)
+	if len(opts) > 0 {
+		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+	}
+	return bson.E(operator.RegexFind, val)
+}
+
+// Rtrim removes whitespace characters, including null, or the specified characters from the end of a string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/rtrim/
+func Rtrim(input, chars any) bson.Entry {
+	return bson.E(operator.Rtrim, bson.M(
+		bson.E("inputs", input),
+		bson.E("chars", chars),
+	))
+}
+
 // Split divides a string into an array of substrings based on a delimiter. `$split` removes the delimiter and returns
 // the resulting substrings as elements of an array. If the delimiter is not found in the string, $split returns the
 // original string as the only element of an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/split/
 func Split(expr any, delimiter string) bson.Entry {
 	return bson.E(operator.Split, bson.A(expr, delimiter))
+}
+
+// ToLower converts a string to lowercase, returning the result.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/toLower/
+func ToLower(expr any) bson.Entry {
+	return bson.E(operator.ToLower, expr)
+}
+
+// ToUpper converts a string to uppercase, returning the result.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/toUpper/
+func ToUpper(expr any) bson.Entry {
+	return bson.E(operator.ToUpper, expr)
+}
+
+// Trim removes whitespace characters, including null, or the specified characters from the beginning and end of a
+// string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/trim/
+func Trim(input, chars any) bson.Entry {
+	return bson.E(operator.Trim, bson.M(
+		bson.E("inputs", input),
+		bson.E("chars", chars),
+	))
 }
