@@ -73,6 +73,59 @@ func RegexFind(input, regexExp any, opts ...regex.Options) bson.Entry {
 	return bson.E(operator.RegexFind, val)
 }
 
+// RegexFindAll provides regular expression (regex) pattern matching capability in aggregation expressions. The
+// operator returns an array of documents that contains information on each match. If a match is not found, returns an
+// empty array.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/regexFindAll/
+func RegexFindAll(input, regexExp any, opts ...regex.Options) bson.Entry {
+	val := bson.M(
+		bson.E("input", input),
+		bson.E("regex", regexExp),
+	)
+	if len(opts) > 0 {
+		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+	}
+	return bson.E(operator.RegexFindAll, val)
+}
+
+// RegexMatch performs a regular expression (regex) pattern matching and returns:
+//   - true if a match exists.
+//   - false if a match doesn't exist.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/regexMatch/
+func RegexMatch(input, regexExp any, opts ...regex.Options) bson.Entry {
+	val := bson.M(
+		bson.E("input", input),
+		bson.E("regex", regexExp),
+	)
+	if len(opts) > 0 {
+		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+	}
+	return bson.E(operator.RegexMatch, val)
+}
+
+// ReplaceOne replaces the first instance of a search string in an input string with a replacement string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceOne/
+func ReplaceOne(input, find, replacement any) bson.Entry {
+	val := bson.M(
+		bson.E("input", input),
+		bson.E("find", find),
+		bson.E("replacement", replacement),
+	)
+	return bson.E(operator.ReplaceOne, val)
+}
+
+// ReplaceAll replaces all instances of a search string in an input string with a replacement string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/replaceAll/
+func ReplaceAll(input, find, replacement any) bson.Entry {
+	val := bson.M(
+		bson.E("input", input),
+		bson.E("find", find),
+		bson.E("replacement", replacement),
+	)
+	return bson.E(operator.ReplaceAll, val)
+}
+
 // Rtrim removes whitespace characters, including null, or the specified characters from the end of a string.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/rtrim/
 func Rtrim(input, chars any) bson.Entry {
@@ -88,6 +141,28 @@ func Rtrim(input, chars any) bson.Entry {
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/split/
 func Split(expr any, delimiter string) bson.Entry {
 	return bson.E(operator.Split, bson.A(expr, delimiter))
+}
+
+// StrLenBytes returns the number of UTF-8 encoded bytes in the specified string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenBytes/
+func StrLenBytes(expr any) bson.Entry {
+	return bson.E(operator.StrLenBytes, expr)
+}
+
+// StrLenCP returns the number of UTF-8 `code points` in the specified string.
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/strLenCP/
+func StrLenCP(expr any) bson.Entry {
+	return bson.E(operator.StrLenCP, expr)
+}
+
+// Strcasecmp performs case-insensitive comparison of two strings. Returns
+//   - 1 if first string is "greater than" the second string.
+//   - 0 if the two strings are equal.
+//   - -1 if the first string is "less than" the second string.
+//
+// See https://www.mongodb.com/docs/manual/reference/operator/aggregation/strcasecmp/
+func Strcasecmp(expr1, expr2 any) bson.Entry {
+	return computeBoth(operator.Strcasecmp, expr1, expr2)
 }
 
 // ToLower converts a string to lowercase, returning the result.

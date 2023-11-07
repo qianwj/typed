@@ -165,6 +165,13 @@ const (
 	IndexOfCP    = "$indexOfCP"
 	Ltrim        = "$ltrim"
 	RegexFind    = "$regexFind"
+	RegexFindAll = "$regexFindAll"
+	RegexMatch   = "$regexMatch"
+	ReplaceOne   = "$replaceOne"
+	ReplaceAll   = "$replaceAll"
+	StrLenBytes  = "$strLenBytes"
+	StrLenCP     = "$strLenCP"
+	Strcasecmp   = "$strcasecmp"
 	Rtrim        = "$rtrim"
 	Split        = "$split"
 	Trim         = "$trim"
@@ -207,16 +214,10 @@ const (
 	DocumentNumber = "$documentNumber"
 
 	// String Expression Operators
-	RegexFindAll = "$regexFindAll"
-	RegexMatch   = "$regexMatch"
-	StrLenBytes  = "$strLenBytes"
-	StrLenCP     = "$strLenCP"
-	Strcasecmp   = "$strcasecmp"
-	Substr       = "$substr"
-	SubstrBytes  = "$substrBytes"
-	SubstrCP     = "$substrCP"
-	ReplaceOne   = "$replaceOne"
-	ReplaceAll   = "$replaceAll"
+
+	Substr      = "$substr"
+	SubstrBytes = "$substrBytes"
+	SubstrCP    = "$substrCP"
 
 	// Trigonometry Expression Operators
 	Sin              = "$sin"
