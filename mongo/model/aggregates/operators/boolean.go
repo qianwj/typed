@@ -24,6 +24,7 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/operator"
 )
 
@@ -37,7 +38,7 @@ func And(exprs ...any) bson.Entry {
 // Not Evaluates a boolean and returns the opposite boolean value; i.e. when passed an expression that evaluates to
 // true, `$not` returns false; when passed an expression that evaluates to false, `$not` returns true.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/not/
-func Not(expr any) bson.Entry {
+func Not[B expressions.Boolean](expr B) bson.Entry {
 	return bson.E(operator.Not, expr)
 }
 

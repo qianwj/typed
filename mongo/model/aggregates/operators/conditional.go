@@ -24,13 +24,14 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/operator"
 	"github.com/qianwj/typed/mongo/util"
 )
 
 // Cond evaluates a boolean expression to return one of the two specified return expressions.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/cond/
-func Cond(assuming, thenCase, elseCase any) bson.Entry {
+func Cond[B expressions.Boolean](assuming B, thenCase, elseCase any) bson.Entry {
 	return bson.E(operator.Cond, bson.A(assuming, thenCase, elseCase))
 }
 

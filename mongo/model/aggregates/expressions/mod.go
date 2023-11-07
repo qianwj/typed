@@ -30,12 +30,20 @@ type Expression interface {
 	~string | bson.Entry | bson.UnorderedMap | *bson.Map
 }
 
+type Boolean interface {
+	~bool | Expression
+}
+
 type Number interface {
 	bson.Number | Expression
 }
 
 type Integer interface {
 	bson.Int | Expression
+}
+
+type BinData interface {
+	[]byte | Expression
 }
 
 type Array interface {

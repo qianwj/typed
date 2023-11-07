@@ -24,12 +24,13 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/operator"
 )
 
 // BinarySize returns the size of a given string or binary data value's content in bytes.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/binarySize/
-func BinarySize(expr any) bson.Entry {
+func BinarySize[B expressions.BinData](expr B) bson.Entry {
 	return bson.E(operator.BinarySize, expr)
 }
 
