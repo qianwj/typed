@@ -24,13 +24,14 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 )
 
 // ArrayElemAt returns the element at the specified array index.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/arrayElemAt/
-func ArrayElemAt[N bson.Number](expr any, idx N) bson.Entry {
+func ArrayElemAt[A expressions.Array, I expressions.Integer](expr A, idx I) bson.Entry {
 	return bson.E(operator.ArrayElemAt, bson.A(expr, idx))
 }
 
@@ -40,7 +41,7 @@ func ArrayElemAt[N bson.Number](expr any, idx N) bson.Entry {
 //     contains the value of the field.
 //
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/arrayToObject/
-func ArrayToObject(expr any) bson.Entry {
+func ArrayToObject[A expressions.Array](expr A) bson.Entry {
 	return bson.E(operator.ArrayToObject, expr)
 }
 
@@ -60,7 +61,7 @@ func Filter(source *FilterSource) bson.Entry {
 // FirstN returns an aggregation of the first n elements within a group. The elements returned are meaningful only if
 // in a specified sort order. If the group contains fewer than n elements, `$firstN` returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/firstN/
-func FirstN(input, n any) bson.Entry {
+func FirstN[A expressions.Array, I expressions.Integer](input A, n I) bson.Entry {
 	return bson.E(operator.FirstN, bson.D(
 		bson.E("input", input),
 		bson.E("n", n),
@@ -69,7 +70,7 @@ func FirstN(input, n any) bson.Entry {
 
 // ArrayFirstN returns a specified number of elements from the beginning of an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/firstN-array-element/
-func ArrayFirstN(n, input any) bson.Entry {
+func ArrayFirstN[A expressions.Array, I expressions.Integer](n I, input A) bson.Entry {
 	return bson.E(operator.FirstN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
@@ -78,8 +79,8 @@ func ArrayFirstN(n, input any) bson.Entry {
 
 // In returns a boolean indicating whether a specified value is in an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/in/
-func In(elemExpr, arrExpr any) bson.Entry {
-	return computeBoth(operator.In, elemExpr, arrExpr)
+func In[E expressions.Expression, A expressions.Array](elem E, arr A) bson.Entry {
+	return computeBoth(operator.In, elem, arr)
 }
 
 // IndexOfArray searches an array for an occurrence of a specified value and returns the array index of the first
@@ -89,8 +90,8 @@ func In(elemExpr, arrExpr any) bson.Entry {
 // ```IndexOfArray(bson.A("1", "2", "3", "4"), "1", 1) // search from ["2", "3"]```
 // ```IndexOfArray(bson.A("1", "2", "3", "4"), "1", 1, 3) // search from ["2", "3", "4"]```
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/indexOfArray/
-func IndexOfArray[I bson.Int](expr, searchExpr any, ranges ...I) bson.Entry {
-	val := bson.A(expr, searchExpr)
+func IndexOfArray[A expressions.Array, E expressions.Expression, I bson.Int](expr A, search E, ranges ...I) bson.Entry {
+	val := bson.A(expr, search)
 	for _, n := range ranges {
 		val = val.Append(n)
 	}
@@ -99,14 +100,14 @@ func IndexOfArray[I bson.Int](expr, searchExpr any, ranges ...I) bson.Entry {
 
 // IsArray determines if the operand is an array. Returns a boolean.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/isArray/
-func IsArray(expr any) bson.Entry {
+func IsArray[A expressions.Array](expr A) bson.Entry {
 	return bson.E(operator.IsArray, expr)
 }
 
 // LastN returns an aggregation of the last n elements within a group. The elements returned are meaningful only if in
 // a specified sort order. If the group contains fewer than n elements, `$lastN` returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lastN/
-func LastN(input, n any) bson.Entry {
+func LastN[A expressions.Array, I expressions.Integer](input A, n I) bson.Entry {
 	return bson.E(operator.LastN, bson.D(
 		bson.E("input", input),
 		bson.E("n", n),
@@ -115,7 +116,7 @@ func LastN(input, n any) bson.Entry {
 
 // ArrayLastN returns a specified number of elements from the end of an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/lastN-array-element/
-func ArrayLastN(n, input any) bson.Entry {
+func ArrayLastN[A expressions.Array, I expressions.Integer](n I, input A) bson.Entry {
 	return bson.E(operator.LastN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
@@ -124,7 +125,7 @@ func ArrayLastN(n, input any) bson.Entry {
 
 // Map applies an expression to each item in an array and returns an array with the applied results.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/map/
-func Map(input, in any, as string) bson.Entry {
+func Map[A expressions.Array, E expressions.Expression](input A, in E, as string) bson.Entry {
 	return bson.E(operator.Map, bson.D(
 		bson.E("input", input),
 		bson.E("as", as),
@@ -135,7 +136,7 @@ func Map(input, in any, as string) bson.Entry {
 // MaxN returns an aggregation of the maxmimum value n elements within a group. If the group contains fewer than n
 // elements, $maxN returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/maxN/
-func MaxN(input, n any) bson.Entry {
+func MaxN[A expressions.Array, I expressions.Integer](input A, n I) bson.Entry {
 	return bson.E(operator.MaxN, bson.D(
 		bson.E("input", input),
 		bson.E("n", n),
@@ -144,7 +145,7 @@ func MaxN(input, n any) bson.Entry {
 
 // ArrayMaxN returns the n largest values in an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/maxN-array-element/
-func ArrayMaxN(n, input any) bson.Entry {
+func ArrayMaxN[A expressions.Array, I expressions.Integer](n I, input A) bson.Entry {
 	return bson.E(operator.MaxN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
@@ -154,7 +155,7 @@ func ArrayMaxN(n, input any) bson.Entry {
 // MinN Returns an aggregation of the minimum value n elements within a group. If the group contains fewer than n
 // elements, `$minN` returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/minN/
-func MinN(input, n any) bson.Entry {
+func MinN[A expressions.Array, I expressions.Integer](input A, n I) bson.Entry {
 	return bson.E(operator.MinN, bson.D(
 		bson.E("input", input),
 		bson.E("n", n),
@@ -163,7 +164,7 @@ func MinN(input, n any) bson.Entry {
 
 // ArrayMinN returns the n smallest values in an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/minN-array-element/
-func ArrayMinN(n, input any) bson.Entry {
+func ArrayMinN[A expressions.Array, I expressions.Integer](n I, input A) bson.Entry {
 	return bson.E(operator.MinN, bson.D(
 		bson.E("n", n),
 		bson.E("input", input),
@@ -176,7 +177,7 @@ func ArrayMinN(n, input any) bson.Entry {
 //   - The v field contains the value of the field in the original document.
 //
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/objectToArray/
-func ObjectToArray(expr any) bson.Entry {
+func ObjectToArray[E expressions.Expression](expr E) bson.Entry {
 	return bson.E(operator.ObjectToArray, expr)
 }
 
@@ -184,7 +185,7 @@ func ObjectToArray(expr any) bson.Entry {
 // specified starting number by successively incrementing the starting number by the specified step value up to but not
 // including the end point.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/range/
-func Range[I bson.Int](start, end I, nonZeroStep ...I) bson.Entry {
+func Range[I expressions.Integer](start, end I, nonZeroStep ...I) bson.Entry {
 	val := bson.A(start, end)
 	if len(nonZeroStep) > 0 {
 		val = val.Append(nonZeroStep[0])
@@ -194,7 +195,7 @@ func Range[I bson.Int](start, end I, nonZeroStep ...I) bson.Entry {
 
 // Reduce applies an expression to each element in an array and combines them into a single value.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reduce/
-func Reduce(input, initialVal, in any) bson.Entry {
+func Reduce[A expressions.Array, E expressions.Expression](input A, initialVal E, in E) bson.Entry {
 	return bson.E(operator.Reduce, bson.D(
 		bson.E("input", input),
 		bson.E("initialValue", initialVal),
@@ -204,19 +205,19 @@ func Reduce(input, initialVal, in any) bson.Entry {
 
 // ReverseArray accepts an array expression as an argument and returns an array with the elements in reverse order.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/reverseArray/
-func ReverseArray(expr any) bson.Entry {
+func ReverseArray[A expressions.Array](expr A) bson.Entry {
 	return bson.E(operator.ReverseArray, expr)
 }
 
 // Size counts and returns the total number of items in an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/size/
-func Size(expr any) bson.Entry {
+func Size[A expressions.Array](expr A) bson.Entry {
 	return bson.E(operator.Size, expr)
 }
 
 // Slice returns a subset of an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/slice/
-func Slice(expr, n any, position ...any) bson.Entry {
+func Slice[A expressions.Array, I expressions.Integer](expr A, n I, position ...I) bson.Entry {
 	if len(position) > 0 {
 		return bson.E(operator.Slice, bson.A(expr, position[0], n))
 	}
@@ -225,7 +226,7 @@ func Slice(expr, n any, position ...any) bson.Entry {
 
 // SortArray sorts an array based on its elements. The sort order is user specified.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sortArray/
-func SortArray(input any, sortBy *sorts.Options) bson.Entry {
+func SortArray[A expressions.Array](input A, sortBy *sorts.Options) bson.Entry {
 	return bson.E(operator.SortArray, bson.M(
 		bson.E("input", input),
 		bson.E("sortBy", sortBy),
@@ -235,7 +236,7 @@ func SortArray(input any, sortBy *sorts.Options) bson.Entry {
 // Zip transposes an array of input arrays so that the first element of the output array would be an array containing,
 // the first element of the first input array, the first element of the second input array, etc.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/zip/
-func Zip(inputs []any, useLongestLength bool, defaults any) bson.Entry {
+func Zip[A expressions.Array](inputs []any, useLongestLength bool, defaults A) bson.Entry {
 	return bson.E(operator.Zip, bson.M(
 		bson.E("inputs", bson.A(inputs...)),
 		bson.E("useLongestLength", useLongestLength),
