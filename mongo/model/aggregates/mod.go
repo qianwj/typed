@@ -31,10 +31,6 @@ import (
 	"github.com/qianwj/typed/mongo/model/sorts"
 )
 
-const (
-	Now = "$$NOW"
-)
-
 func Count(field string) *Pipeline {
 	return New().Count(field)
 }

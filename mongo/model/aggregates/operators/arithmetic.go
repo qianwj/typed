@@ -24,13 +24,14 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/operator"
 )
 
 // Abs returns the absolute value of a number.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/abs/
-func Abs(numOrExpr any) bson.Entry {
-	return bson.E(operator.Abs, numOrExpr)
+func Abs[E expressions.Number](expr E) bson.Entry {
+	return bson.E(operator.Abs, expr)
 }
 
 // Add adds numbers together or adds numbers and a date. If one of the arguments is a date, `$add` treats the other
@@ -42,49 +43,49 @@ func Add(exprs ...any) bson.Entry {
 
 // Ceil returns the smallest integer greater than or equal to the specified number.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ceil/
-func Ceil(numOrExpr any) bson.Entry {
-	return bson.E(operator.Ceil, numOrExpr)
+func Ceil[E expressions.Number](expr E) bson.Entry {
+	return bson.E(operator.Ceil, expr)
 }
 
 // Divide divides one number by another and returns the result. Pass the arguments to `$divide` in an array.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/divide/
-func Divide(expr1, expr2 any) bson.Entry {
+func Divide[T, R expressions.Number](expr1 T, expr2 R) bson.Entry {
 	return computeBoth(operator.Divide, expr1, expr2)
 }
 
 // Exp raises Euler's number (i.e. e ) to the specified exponent and returns the result.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/exp/
-func Exp(exponent any) bson.Entry {
+func Exp[E expressions.Number](exponent E) bson.Entry {
 	return bson.E(operator.Exp, exponent)
 }
 
 // Floor returns the largest integer less than or equal to the specified number.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/floor/
-func Floor(expr any) bson.Entry {
+func Floor[E expressions.Number](expr E) bson.Entry {
 	return bson.E(operator.Floor, expr)
 }
 
 // Ln calculates the natural logarithm ln (i.e log e) of a number and returns the result as a double.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/ln/
-func Ln(expr any) bson.Entry {
+func Ln[E expressions.Number](expr E) bson.Entry {
 	return bson.E(operator.Ln, expr)
 }
 
 // Log calculates the log of a number in the specified base and returns the result as a double.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/log/
-func Log(number, base any) bson.Entry {
+func Log[T, R expressions.Number](number T, base R) bson.Entry {
 	return bson.E(operator.Log, bson.A(number, base))
 }
 
 // Lg calculates the log base 10 of a number and returns the result as a double.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/log10/
-func Lg(number any) bson.Entry {
-	return bson.E(operator.Log10, number)
+func Lg[E expressions.Number](expr E) bson.Entry {
+	return bson.E(operator.Log10, expr)
 }
 
 // Mod divides one number by another and returns the remainder.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/mod/
-func Mod(expr1, expr2 any) bson.Entry {
+func Mod[T, R expressions.Number](expr1 T, expr2 R) bson.Entry {
 	return computeBoth(operator.Mod, expr1, expr2)
 }
 
@@ -96,7 +97,7 @@ func Multiply(exprs ...any) bson.Entry {
 
 // Pow raises a number to the specified exponent and returns the result.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/pow/
-func Pow(number, exponent any) bson.Entry {
+func Pow[T, R expressions.Number](number T, exponent R) bson.Entry {
 	return bson.E(operator.Pow, bson.A(number, exponent))
 }
 
@@ -108,14 +109,14 @@ func Round(number any, place ...any) bson.Entry {
 
 // Sqrt calculates the square root of a positive number and returns the result as a double.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sqrt/
-func Sqrt(numberExpr any) bson.Entry {
-	return bson.E(operator.Sqrt, numberExpr)
+func Sqrt[E expressions.Number](expr E) bson.Entry {
+	return bson.E(operator.Sqrt, expr)
 }
 
 // Subtract Subtracts two numbers to return the difference, or two dates to return the difference in milliseconds, or a
 // date and a number in milliseconds to return the resulting date.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/subtract/
-func Subtract(expr1, expr2 any) bson.Entry {
+func Subtract[T, R expressions.Number](expr1 T, expr2 R) bson.Entry {
 	return computeBoth(operator.Subtract, expr1, expr2)
 }
 
