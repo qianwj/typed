@@ -24,6 +24,7 @@ package operators
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model/aggregates/expressions"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
 )
@@ -36,13 +37,13 @@ func AddToSet(expression any) bson.Entry {
 
 // Avg returns the average value of the numeric values. `$avg` ignores non-numeric values.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/avg/
-func Avg(expression any) bson.Entry {
-	return bson.E(operator.Avg, expression)
+func Avg(exprs ...any) bson.Entry {
+	return accMulti(operator.Avg, exprs...)
 }
 
 // Bottom returns the bottom element within a group according to the specified sort order.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/bottom/
-func Bottom(sortBy *sorts.Options, output any) bson.Entry {
+func Bottom(sortBy *sorts.Options, output []string) bson.Entry {
 	return bson.E(operator.Bottom, bson.M(
 		bson.E("sortBy", sortBy),
 		bson.E("output", output),
@@ -52,7 +53,7 @@ func Bottom(sortBy *sorts.Options, output any) bson.Entry {
 // BottomN returns an aggregation of the bottom n elements within a group, according to the specified sort order. If
 // the group contains fewer than n elements, $bottomN returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/bottomN/
-func BottomN(sortBy *sorts.Options, output, n any) bson.Entry {
+func BottomN[I expressions.Integer](sortBy *sorts.Options, output []string, n I) bson.Entry {
 	return bson.E(operator.BottomN, bson.M(
 		bson.E("sortBy", sortBy),
 		bson.E("output", output),
@@ -69,38 +70,41 @@ func Count() bson.Entry {
 // First returns the result of an expression for the first document in a group of documents. Only meaningful when
 // documents are in a defined order.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/first/
-func First(expr any) bson.Entry {
+func First[E expressions.Expression](expr E) bson.Entry {
 	return bson.E(operator.First, expr)
 }
 
 // Last returns the result of an expression for the last document in a group of documents. Only meaningful when
 // documents are in a defined order.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/last/
-func Last(expr any) bson.Entry {
+func Last[E expressions.Expression](expr E) bson.Entry {
 	return bson.E(operator.Last, expr)
 }
 
 // Max returns the maximum value. `$max` compares both value and type, using the specified BSON comparison order for
 // values of different types.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/max/
-func Max(expr any) bson.Entry {
-	return bson.E(operator.Max, expr)
+func Max(exprs ...any) bson.Entry {
+	return accMulti(operator.Max, exprs...)
 }
 
 // Median returns an approximation of the median, the 50th percentile, as a scalar value.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/median/
-func Median(input any, method string) bson.Entry {
-	return bson.E(operator.Median, bson.M(
-		bson.E("input", input),
-		bson.E("method", method),
-	))
+func Median(method string, inputs ...any) bson.Entry {
+	val := bson.M(bson.E("method", method))
+	if len(inputs) == 1 {
+		val["input"] = inputs[0]
+	} else {
+		val["input"] = bson.A(inputs...)
+	}
+	return bson.E(operator.Median, val)
 }
 
 // Min returns the minimum value. `$min` compares both value and type, using the specified BSON comparison order for
 // values of different types.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/min/
-func Min(expr any) bson.Entry {
-	return bson.E(operator.Min, expr)
+func Min(exprs ...any) bson.Entry {
+	return accMulti(operator.Min, exprs...)
 }
 
 // Push returns an array of all values that result from applying an expression to documents.
@@ -111,8 +115,8 @@ func Push(expr any) bson.Entry {
 
 // Sum calculates and returns the collective sum of numeric values. `$sum` ignores non-numeric values.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sum/
-func Sum(expr any) bson.Entry {
-	return bson.E(operator.Sum, expr)
+func Sum(exprs ...any) bson.Entry {
+	return accMulti(operator.Sum, exprs...)
 }
 
 // Top returns the top element within a group according to the specified sort order.
