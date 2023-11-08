@@ -22,7 +22,7 @@
 
 package operators
 
-type AccumulatorSource struct {
+type AccumulatorOptions struct {
 	Init           string `bson:"init"`               // <code>,
 	InitArgs       []any  `bson:"initArgs,omitempty"` // <array expression>,        // Optional
 	Accumulate     string `bson:"accumulate"`         // <code>,
@@ -32,8 +32,8 @@ type AccumulatorSource struct {
 	Lang           string `bson:"lang"`               // <string>
 }
 
-func NewAccumulatorSource(init, acc, merge, lang string) *AccumulatorSource {
-	return &AccumulatorSource{
+func NewAccumulatorOptions(init, acc, merge, lang string) *AccumulatorOptions {
+	return &AccumulatorOptions{
 		Init:       init,
 		Accumulate: acc,
 		Merge:      merge,
@@ -41,17 +41,17 @@ func NewAccumulatorSource(init, acc, merge, lang string) *AccumulatorSource {
 	}
 }
 
-func (a *AccumulatorSource) AddInitArgs(args ...any) *AccumulatorSource {
+func (a *AccumulatorOptions) AddInitArgs(args ...any) *AccumulatorOptions {
 	a.InitArgs = append(a.InitArgs, args...)
 	return a
 }
 
-func (a *AccumulatorSource) AddAccumulateArgs(args ...any) *AccumulatorSource {
+func (a *AccumulatorOptions) AddAccumulateArgs(args ...any) *AccumulatorOptions {
 	a.AccumulateArgs = append(a.AccumulateArgs, args...)
 	return a
 }
 
-func (a *AccumulatorSource) SetFinalize(finalize string) *AccumulatorSource {
+func (a *AccumulatorOptions) SetFinalize(finalize string) *AccumulatorOptions {
 	a.Finalize = finalize
 	return a
 }

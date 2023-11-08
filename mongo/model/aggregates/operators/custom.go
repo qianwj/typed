@@ -32,7 +32,7 @@ import (
 // execute your own JavaScript functions to implement behavior not supported by the MongoDB Query Language.
 // See also $function.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/accumulator/
-func Accumulator(acc *AccumulatorSource) bson.Entry {
+func Accumulator(acc *AccumulatorOptions) bson.Entry {
 	return bson.E(operator.Accumulator, acc)
 }
 
