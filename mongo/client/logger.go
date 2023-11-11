@@ -51,7 +51,7 @@ func (s *slogSink) Info(level int, message string, keysAndValues ...interface{})
 	case rawoptions.LogLevelInfo:
 		s.logger.Info(message, keysAndValues...)
 	case rawoptions.LogLevelDebug:
-		s.logger.Info(message, keysAndValues...)
+		s.logger.Debug(message, keysAndValues...)
 	}
 }
 
