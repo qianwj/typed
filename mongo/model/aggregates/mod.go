@@ -24,7 +24,6 @@ package aggregates
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/aggregates/group"
 	"github.com/qianwj/typed/mongo/model/aggregates/lookup"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
@@ -39,7 +38,7 @@ func GraphLookup(cond *lookup.GraphJoinCondition) *Pipeline {
 	return New().GraphLookup(cond)
 }
 
-func Group(id group.ID, fields ...bson.Entry) *Pipeline {
+func Group(id any, fields ...bson.Entry) *Pipeline {
 	return New().Group(id, fields...)
 }
 

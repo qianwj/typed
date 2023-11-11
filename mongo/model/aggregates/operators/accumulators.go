@@ -37,8 +37,8 @@ func AddToSet(expression any) bson.Entry {
 
 // Avg returns the average value of the numeric values. `$avg` ignores non-numeric values.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/avg/
-func Avg(exprs ...any) bson.Entry {
-	return accMulti(operator.Avg, exprs...)
+func Avg(field string, exprs ...any) bson.Entry {
+	return accMulti(field, operator.Avg, exprs...)
 }
 
 // Bottom returns the bottom element within a group according to the specified sort order.
@@ -84,8 +84,8 @@ func Last[E expressions.Expression](expr E) bson.Entry {
 // Max returns the maximum value. `$max` compares both value and type, using the specified BSON comparison order for
 // values of different types.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/max/
-func Max(exprs ...any) bson.Entry {
-	return accMulti(operator.Max, exprs...)
+func Max(field string, exprs ...any) bson.Entry {
+	return accMulti(field, operator.Max, exprs...)
 }
 
 // Median returns an approximation of the median, the 50th percentile, as a scalar value.
@@ -103,8 +103,8 @@ func Median(method string, inputs ...any) bson.Entry {
 // Min returns the minimum value. `$min` compares both value and type, using the specified BSON comparison order for
 // values of different types.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/min/
-func Min(exprs ...any) bson.Entry {
-	return accMulti(operator.Min, exprs...)
+func Min(field string, exprs ...any) bson.Entry {
+	return accMulti(field, operator.Min, exprs...)
 }
 
 // Push returns an array of all values that result from applying an expression to documents.
@@ -115,8 +115,8 @@ func Push(expr any) bson.Entry {
 
 // Sum calculates and returns the collective sum of numeric values. `$sum` ignores non-numeric values.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/sum/
-func Sum(exprs ...any) bson.Entry {
-	return accMulti(operator.Sum, exprs...)
+func Sum(field string, exprs ...any) bson.Entry {
+	return accMulti(field, operator.Sum, exprs...)
 }
 
 // Top returns the top element within a group according to the specified sort order.
