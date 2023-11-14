@@ -36,9 +36,13 @@ func DocumentNumber() bson.Entry {
 
 func accMulti(field, op string, exprs ...any) bson.Entry {
 	if len(exprs) == 1 {
-		return bson.E(field, bson.E(op, exprs[0]))
+		return bson.E(field, bson.UnorderedMap{
+			op: exprs[0],
+		})
 	}
-	return bson.E(field, bson.E(op, bson.A(exprs...)))
+	return bson.E(field, bson.UnorderedMap{
+		op: bson.A(exprs...),
+	})
 }
 
 func computeBoth(op string, expr1, expr2 any) bson.Entry {

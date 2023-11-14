@@ -4,9 +4,9 @@ import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/aggregates"
-	"github.com/qianwj/typed/mongo/model/aggregates/lookup"
 	"github.com/qianwj/typed/mongo/model/aggregates/operators"
 	"github.com/qianwj/typed/mongo/util"
+	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"testing"
 )
@@ -39,26 +39,16 @@ func TestAggregateExecutor_Collect(t *testing.T) {
 	fruitColl := testDB.Collection("fruits")
 	_, _ = fruitColl.InsertMany(ctx, util.ToAny(fruits))
 
-	orders := []*order{
-		{FruitId: fruits[0].Id.Hex(), User: "elvis", Count: 10},
-		{FruitId: fruits[1].Id.Hex(), User: "qianwj", Count: 12},
-	}
-	orderColl := testDB.Collection("orders")
-	_, _ = orderColl.InsertMany(ctx, util.ToAny(orders))
-
-	pipe := aggregates.Lookup(
-		lookup.New("fruits", "fruit_orders").
-			Join("fruitId", "fruitId").
-			SetPipeline(aggregates.Set(bson.D(
-				bson.E("fruitId", operators.ToObjectId("$_id")),
-			)).Stages()),
-	)
-	//pipe := aggregates.Match(filters.Eq("name", "gala"))
-	var result []primitive.M
-	err := newAggregateExecutor[*fruit, primitive.ObjectID](fruitColl, fruitColl, pipe).Collect(ctx, &result)
-	if err != nil {
-		t.Errorf("agg error: %+v", err)
-		t.FailNow()
-	}
-	t.Logf("result: %+v", result)
+	t.Run("testCountDocuments", func(t *testing.T) {
+		pipe := aggregates.Group(1, operators.Sum("n", 1))
+		t.Logf("pipe: %+v", pipe.Stages())
+		var result []primitive.M
+		err := newAggregateExecutor[*fruit, primitive.ObjectID](fruitColl, fruitColl, pipe).Collect(ctx, &result)
+		if err != nil {
+			t.Errorf("agg error: %+v", err)
+			t.FailNow()
+		}
+		t.Logf("result: %+v", result)
+		assert.Equal(t, int32(3), result[0]["n"])
+	})
 }
