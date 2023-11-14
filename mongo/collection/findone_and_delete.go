@@ -3,6 +3,7 @@ package collection
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
@@ -12,13 +13,13 @@ import (
 	"time"
 )
 
-type FindOneAndDeleteExecutor[D bson.Doc[I], I bson.ID] struct {
+type FindOneAndDeleteExecutor[D model.Doc[I], I model.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
 	opts   *rawopts.FindOneAndDeleteOptions
 }
 
-func newFindOneAndDeleteExecutor[D bson.Doc[I], I bson.ID](
+func newFindOneAndDeleteExecutor[D model.Doc[I], I model.ID](
 	primary *mongo.Collection,
 	filter *filters.Filter,
 ) *FindOneAndDeleteExecutor[D, I] {

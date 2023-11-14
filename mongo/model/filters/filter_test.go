@@ -38,7 +38,7 @@ func TestCast(t *testing.T) {
 func TestFilter_And(t *testing.T) {
 	oid := primitive.NewObjectID()
 	expected := map[string]any{
-		operator.And: []*bson.Map{
+		operator.And: []*bson.OrderedMap{
 			bson.FromM(rawbson.M{
 				"a": "b",
 				"b": 1,

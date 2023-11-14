@@ -68,7 +68,7 @@ func RegexFind(input, regexExp any, opts ...regex.Options) bson.Entry {
 		bson.E("regex", regexExp),
 	)
 	if len(opts) > 0 {
-		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+		val["options"] = strings.Join(util.OrderedMap(opts, regex.Options.String), "")
 	}
 	return bson.E(operator.RegexFind, val)
 }
@@ -83,7 +83,7 @@ func RegexFindAll(input, regexExp any, opts ...regex.Options) bson.Entry {
 		bson.E("regex", regexExp),
 	)
 	if len(opts) > 0 {
-		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+		val["options"] = strings.Join(util.OrderedMap(opts, regex.Options.String), "")
 	}
 	return bson.E(operator.RegexFindAll, val)
 }
@@ -99,7 +99,7 @@ func RegexMatch(input, regexExp any, opts ...regex.Options) bson.Entry {
 		bson.E("regex", regexExp),
 	)
 	if len(opts) > 0 {
-		val["options"] = strings.Join(util.Map(opts, regex.Options.String), "")
+		val["options"] = strings.Join(util.OrderedMap(opts, regex.Options.String), "")
 	}
 	return bson.E(operator.RegexMatch, val)
 }

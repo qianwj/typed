@@ -53,7 +53,7 @@ const (
 	IndexOfArray  = "$indexOfArray"
 	IsArray       = "$isArray"
 	LastN         = "$lastN"
-	Map           = "$map"
+	OrderedMap    = "$map"
 	MaxN          = "$maxN"
 	MinN          = "$minN"
 	ObjectToArray = "$objectToArray"

@@ -80,7 +80,7 @@ func (p *Pipeline) Project(projection *projections.Options) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Set(fields *bson.Map) *Pipeline {
+func (p *Pipeline) Set(fields *bson.OrderedMap) *Pipeline {
 	p.append(operator.Set, fields)
 	return p
 }

@@ -27,7 +27,7 @@ import (
 )
 
 type Expression interface {
-	~string | bson.Entry | bson.UnorderedMap | *bson.Map
+	~string | bson.Entry | bson.UnorderedMap | *bson.OrderedMap
 }
 
 type Boolean interface {

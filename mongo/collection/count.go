@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/options"
 	raw "go.mongodb.org/mongo-driver/mongo"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-type CountExecutor[D bson.Doc[I], I bson.ID] struct {
+type CountExecutor[D model.Doc[I], I model.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
 	filter          *filters.Filter
@@ -19,7 +19,7 @@ type CountExecutor[D bson.Doc[I], I bson.ID] struct {
 	estimateOpts    *rawopts.EstimatedDocumentCountOptions
 }
 
-func newCountExecutor[D bson.Doc[I], I bson.ID](
+func newCountExecutor[D model.Doc[I], I model.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
 	filter *filters.Filter,
 ) *CountExecutor[D, I] {

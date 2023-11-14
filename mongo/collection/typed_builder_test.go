@@ -1,7 +1,7 @@
 package collection
 
 import (
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -10,9 +10,9 @@ import (
 )
 
 type mockDoc struct {
-	bson.Doc[primitive.ObjectID] `bson:"-"`
-	ID                           primitive.ObjectID `bson:"_id"`
-	Name                         string             `bson:"name"`
+	model.Doc[primitive.ObjectID] `bson:"-"`
+	ID                            primitive.ObjectID `bson:"_id"`
+	Name                          string             `bson:"name"`
 }
 
 func (m *mockDoc) GetId() primitive.ObjectID {

@@ -30,7 +30,7 @@ import (
 )
 
 type Person struct {
-	bson.Doc[primitive.ObjectID] `bson:"-"`
+	model.Doc[primitive.ObjectID] `bson:"-"`
 	Id                           primitive.ObjectID `bson:"_id,omitempty"`
 	Name                         string             `bson:"name,omitempty"`
 	Age                          int                `bson:"age,omitempty"`

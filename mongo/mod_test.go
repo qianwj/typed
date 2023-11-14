@@ -2,9 +2,9 @@ package mongo
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/client"
 	"github.com/qianwj/typed/mongo/collection"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -12,7 +12,7 @@ import (
 )
 
 type testDoc struct {
-	bson.Doc[primitive.ObjectID]
+	model.Doc[primitive.ObjectID]
 	Id   primitive.ObjectID `bson:"_id"`
 	Name string             `bson:"name"`
 }

@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/model/aggregates/operators"
 	"github.com/qianwj/typed/mongo/util"
@@ -12,7 +12,7 @@ import (
 )
 
 type fruit struct {
-	bson.Doc[primitive.ObjectID]
+	model.Doc[primitive.ObjectID]
 	Id   primitive.ObjectID `bson:"_id,omitempty"`
 	Type string             `bson:"type"`
 	Name string             `bson:"name"`

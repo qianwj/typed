@@ -8,7 +8,7 @@ import (
 )
 
 type Filter struct {
-	data *bson.Map
+	data *bson.OrderedMap
 }
 
 func From(m rawbson.M) *Filter {
@@ -65,7 +65,7 @@ func (f *Filter) UnmarshalBSON(bytes []byte) error {
 }
 
 func (f *Filter) putAsArray(key string, others ...*Filter) *Filter {
-	f.data.PutAsArray(key, util.Map(others, func(it *Filter) *bson.Map {
+	f.data.PutAsArray(key, util.OrderedMap(others, func(it *Filter) *bson.OrderedMap {
 		return it.data
 	})...)
 	return f

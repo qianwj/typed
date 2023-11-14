@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/options"
@@ -11,7 +11,7 @@ import (
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type UpdateExecutor[D bson.Doc[I], I bson.ID] struct {
+type UpdateExecutor[D model.Doc[I], I model.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
 	update *updates.Update
@@ -20,7 +20,7 @@ type UpdateExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts   *rawopts.UpdateOptions
 }
 
-func newUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateOneExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -29,7 +29,7 @@ func newUpdateOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, f
 	}
 }
 
-func newUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateManyExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -39,7 +39,7 @@ func newUpdateManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, 
 	}
 }
 
-func newUpdateByIdExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, id I, update *updates.Update) *UpdateExecutor[D, I] {
+func newUpdateByIdExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, id I, update *updates.Update) *UpdateExecutor[D, I] {
 	return &UpdateExecutor[D, I]{
 		coll:   primary,
 		docId:  &id,

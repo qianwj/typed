@@ -30,7 +30,7 @@ func ExcludeId() *Options {
 }
 
 func (p *Options) Includes(fields ...string) *Options {
-	p.fields = append(p.fields, util.Map(fields, func(f string) bson.E {
+	p.fields = append(p.fields, util.OrderedMap(fields, func(f string) bson.E {
 		return bson.E{Key: f, Value: Include}
 	})...)
 	return p

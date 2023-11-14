@@ -69,7 +69,7 @@ func (b *Builder) Auth(auth options.Credential) *Builder {
 // This can also be set through the "compressors" URI option (e.g. "compressors=zstd,zlib,snappy"). The default is
 // an empty slice, meaning no compression will be enabled.
 func (b *Builder) Compressors(comps []options.ClientCompressorType) *Builder {
-	b.opts.SetCompressors(util.Map(comps, options.ClientCompressorType.String))
+	b.opts.SetCompressors(util.OrderedMap(comps, options.ClientCompressorType.String))
 	return b
 }
 

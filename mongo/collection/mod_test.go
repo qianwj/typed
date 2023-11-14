@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
@@ -23,11 +23,11 @@ var (
 )
 
 type TestDoc struct {
-	bson.Doc[primitive.ObjectID] `bson:"-"`
-	Id                           primitive.ObjectID `bson:"_id"`
-	Name                         string             `bson:"name"`
-	Age                          int                `bson:"age"`
-	CreateTime                   time.Time          `bson:"createTime"`
+	model.Doc[primitive.ObjectID] `bson:"-"`
+	Id                            primitive.ObjectID `bson:"_id"`
+	Name                          string             `bson:"name"`
+	Age                           int                `bson:"age"`
+	CreateTime                    time.Time          `bson:"createTime"`
 }
 
 func (t *TestDoc) GetId() primitive.ObjectID {

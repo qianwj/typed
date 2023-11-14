@@ -84,7 +84,7 @@ func RightHalfUnboundInterval(right any) *Interval {
 	}
 }
 
-func (i *Interval) query() *bson.Map {
+func (i *Interval) query() *bson.OrderedMap {
 	switch i.mode {
 	case open:
 		return bson.NewMap(bson.Entry{Key: operator.Gt, Value: i.left}, bson.Entry{Key: operator.Lt, Value: i.right})

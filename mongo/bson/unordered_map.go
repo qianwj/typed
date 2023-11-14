@@ -15,16 +15,6 @@ func M(e ...Entry) UnorderedMap {
 	return m
 }
 
-func (u UnorderedMap) Put(key string, val any) UnorderedMap {
-	u[key] = val
-	return u
-}
-
-func (u UnorderedMap) Get(key string) (any, bool) {
-	val, exist := u[key]
-	return val, exist
-}
-
 func (u UnorderedMap) Primitive() primitive.M {
 	return primitive.M(u)
 }

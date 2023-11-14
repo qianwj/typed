@@ -123,10 +123,10 @@ func ArrayLastN[A expressions.Array, I expressions.Integer](n I, input A) bson.E
 	))
 }
 
-// Map applies an expression to each item in an array and returns an array with the applied results.
+// OrderedMap applies an expression to each item in an array and returns an array with the applied results.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/map/
-func Map[A expressions.Array, E expressions.Expression](input A, in E, as string) bson.Entry {
-	return bson.E(operator.Map, bson.D(
+func OrderedMap[A expressions.Array, E expressions.Expression](input A, in E, as string) bson.Entry {
+	return bson.E(operator.OrderedMap, bson.D(
 		bson.E("input", input),
 		bson.E("as", as),
 		bson.E("in", in),

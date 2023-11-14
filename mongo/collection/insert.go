@@ -2,19 +2,19 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type InsertOneExecutor[D bson.Doc[I], I bson.ID] struct {
+type InsertOneExecutor[D model.Doc[I], I model.ID] struct {
 	coll *mongo.Collection
 	data D
 	opts *rawopts.InsertOneOptions
 }
 
-func newInsertOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, doc D) *InsertOneExecutor[D, I] {
+func newInsertOneExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, doc D) *InsertOneExecutor[D, I] {
 	return &InsertOneExecutor[D, I]{
 		coll: primary,
 		data: doc,
@@ -43,13 +43,13 @@ func (i *InsertOneExecutor[D, I]) Execute(ctx context.Context) (I, error) {
 	return res.InsertedID.(I), nil
 }
 
-type InsertManyExecutor[D bson.Doc[I], I bson.ID] struct {
+type InsertManyExecutor[D model.Doc[I], I model.ID] struct {
 	coll *mongo.Collection
 	data []any
 	opts *rawopts.InsertManyOptions
 }
 
-func newInsertManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, docs ...D) *InsertManyExecutor[D, I] {
+func newInsertManyExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, docs ...D) *InsertManyExecutor[D, I] {
 	return &InsertManyExecutor[D, I]{
 		coll: primary,
 		data: util.ToAny(docs),
@@ -85,7 +85,7 @@ func (i *InsertManyExecutor[D, I]) Execute(ctx context.Context) ([]I, error) {
 		return make([]I, 0), nil
 	}
 	res, err := i.coll.InsertMany(ctx, i.data, i.opts)
-	return util.Map(res.InsertedIDs, func(i any) I {
+	return util.OrderedMap(res.InsertedIDs, func(i any) I {
 		return i.(I)
 	}), err
 }

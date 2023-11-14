@@ -1,18 +1,18 @@
 package updates
 
 import (
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type UpdateResult[I bson.ID] struct {
+type UpdateResult[I model.ID] struct {
 	MatchedCount  int64 // The number of documents matched by the filter.
 	ModifiedCount int64 // The number of documents modified by the operation.
 	UpsertedCount int64 // The number of documents upserted by the operation.
 	UpsertedID    I     // The _id field of the upserted document, or nil if no upsert was done.
 }
 
-func FromUpdateResult[I bson.ID](r *mongo.UpdateResult) *UpdateResult[I] {
+func FromUpdateResult[I model.ID](r *mongo.UpdateResult) *UpdateResult[I] {
 	if r == nil {
 		return nil
 	}
@@ -25,7 +25,7 @@ func FromUpdateResult[I bson.ID](r *mongo.UpdateResult) *UpdateResult[I] {
 }
 
 // BulkWriteResult is the result type returned by a BulkWrite operation.
-type BulkWriteResult[I bson.ID] struct {
+type BulkWriteResult[I model.ID] struct {
 	// The number of documents inserted.
 	InsertedCount int64
 
@@ -45,7 +45,7 @@ type BulkWriteResult[I bson.ID] struct {
 	UpsertedIDs map[int64]I
 }
 
-func FromBulkWriteResult[I bson.ID](r *mongo.BulkWriteResult) *BulkWriteResult[I] {
+func FromBulkWriteResult[I model.ID](r *mongo.BulkWriteResult) *BulkWriteResult[I] {
 	if r == nil {
 		return nil
 	}

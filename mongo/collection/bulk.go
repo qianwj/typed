@@ -2,20 +2,20 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/updates"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type TypedBulkWriteExecutor[D bson.Doc[I], I bson.ID] struct {
+type TypedBulkWriteExecutor[D model.Doc[I], I model.ID] struct {
 	coll   *mongo.Collection
 	models []mongo.WriteModel
 	opts   *rawopts.BulkWriteOptions
 }
 
-func newBulkWriteExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection) *TypedBulkWriteExecutor[D, I] {
+func newBulkWriteExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection) *TypedBulkWriteExecutor[D, I] {
 	return &TypedBulkWriteExecutor[D, I]{
 		coll: primary,
 		opts: rawopts.BulkWrite(),

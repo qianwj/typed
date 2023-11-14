@@ -3,6 +3,7 @@ package collection
 import (
 	"context"
 	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
@@ -13,14 +14,14 @@ import (
 	"time"
 )
 
-type FindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID] struct {
+type FindOneAndUpdateExecutor[D model.Doc[I], I model.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
 	update *updates.Update
 	opts   *rawopts.FindOneAndUpdateOptions
 }
 
-func newFindOneAndUpdateExecutor[D bson.Doc[I], I bson.ID](
+func newFindOneAndUpdateExecutor[D model.Doc[I], I model.ID](
 	primary *mongo.Collection,
 	filter *filters.Filter,
 	update *updates.Update,

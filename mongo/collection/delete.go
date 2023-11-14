@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
@@ -10,14 +10,14 @@ import (
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type DeleteExecutor[D bson.Doc[I], I bson.ID] struct {
+type DeleteExecutor[D model.Doc[I], I model.ID] struct {
 	coll   *mongo.Collection
 	filter *filters.Filter
 	multi  bool
 	opts   *rawopts.DeleteOptions
 }
 
-func newDeleteOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
+func newDeleteOneExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
 	return &DeleteExecutor[D, I]{
 		coll:   primary,
 		filter: filter,
@@ -25,7 +25,7 @@ func newDeleteOneExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, f
 	}
 }
 
-func newDeleteManyExecutor[D bson.Doc[I], I bson.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
+func newDeleteManyExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection, filter *filters.Filter) *DeleteExecutor[D, I] {
 	return &DeleteExecutor[D, I]{
 		coll:   primary,
 		filter: filter,

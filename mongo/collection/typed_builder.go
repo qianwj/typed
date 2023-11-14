@@ -1,7 +1,7 @@
 package collection
 
 import (
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -10,13 +10,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 )
 
-type TypedBuilder[D bson.Doc[I], I bson.ID] struct {
+type TypedBuilder[D model.Doc[I], I model.ID] struct {
 	db   *mongo.Database
 	name string
 	opts *options.CollectionOptions
 }
 
-func NewTypedBuilder[D bson.Doc[I], I bson.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
+func NewTypedBuilder[D model.Doc[I], I model.ID](db *mongo.Database, name string) *TypedBuilder[D, I] {
 	return &TypedBuilder[D, I]{
 		db:   db,
 		name: name,

@@ -8,7 +8,7 @@ func ToAny[T any](arr []T) []any {
 	return res
 }
 
-func Map[T, U any](arr []T, convert func(T) U) []U {
+func OrderedMap[T, U any](arr []T, convert func(T) U) []U {
 	res := make([]U, len(arr))
 	for i, t := range arr {
 		res[i] = convert(t)

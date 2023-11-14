@@ -7,19 +7,19 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// Map based on `bson.E` is an ordered map, unlike `bson.M` which is unordered.
-// Additionally, Map can be converted to and from `bson.D` and `bson.M` as well.
-type Map struct {
+// OrderedMap based on `bson.E` is an ordered map, unlike `bson.M` which is unordered.
+// Additionally, OrderedMap can be converted to and from `bson.D` and `bson.M` as well.
+type OrderedMap struct {
 	entries []Entry
 	dict    map[string]int
 }
 
-func D(pairs ...Entry) *Map {
+func D(pairs ...Entry) *OrderedMap {
 	return NewMap(pairs...)
 }
 
-func NewMap(pairs ...Entry) *Map {
-	m := &Map{
+func NewMap(pairs ...Entry) *OrderedMap {
+	m := &OrderedMap{
 		entries: make([]Entry, 0),
 		dict:    make(map[string]int),
 	}
@@ -29,7 +29,7 @@ func NewMap(pairs ...Entry) *Map {
 	return m
 }
 
-func FromM(m rawbson.M) *Map {
+func FromM(m rawbson.M) *OrderedMap {
 	f := NewMap()
 	for k, v := range m {
 		f.Put(k, v)
@@ -37,7 +37,7 @@ func FromM(m rawbson.M) *Map {
 	return f
 }
 
-func FromD(d rawbson.D) *Map {
+func FromD(d rawbson.D) *OrderedMap {
 	f := NewMap()
 	for _, e := range d {
 		f.Put(e.Key, e.Value)
@@ -45,7 +45,7 @@ func FromD(d rawbson.D) *Map {
 	return f
 }
 
-func (m *Map) Put(key string, value any) *Map {
+func (m *OrderedMap) Put(key string, value any) *OrderedMap {
 	if index, exists := m.dict[key]; exists {
 		m.entries[index].Value = value
 	} else {
@@ -56,15 +56,15 @@ func (m *Map) Put(key string, value any) *Map {
 	return m
 }
 
-func (m *Map) Merge(other *Map) *Map {
+func (m *OrderedMap) Merge(other *OrderedMap) *OrderedMap {
 	for _, entry := range other.entries {
 		m.Put(entry.Key, entry.Value)
 	}
 	return m
 }
 
-func (m *Map) PutAsArray(key string, others ...*Map) *Map {
-	validOthers := util.Filter(others, func(it *Map) bool {
+func (m *OrderedMap) PutAsArray(key string, others ...*OrderedMap) *OrderedMap {
+	validOthers := util.Filter(others, func(it *OrderedMap) bool {
 		return !it.IsEmpty()
 	})
 	if len(validOthers) == 0 {
@@ -76,9 +76,9 @@ func (m *Map) PutAsArray(key string, others ...*Map) *Map {
 	} else {
 		switch val.(type) {
 		case rawbson.M:
-			val = append([]*Map{FromM(val.(rawbson.M))}, validOthers...)
+			val = append([]*OrderedMap{FromM(val.(rawbson.M))}, validOthers...)
 		case rawbson.D:
-			val = append([]*Map{FromD(val.(rawbson.D))}, validOthers...)
+			val = append([]*OrderedMap{FromD(val.(rawbson.D))}, validOthers...)
 		case rawbson.A:
 			arr := make([]any, len(val.(rawbson.A)))
 			for i, elem := range val.(rawbson.A) {
@@ -95,26 +95,26 @@ func (m *Map) PutAsArray(key string, others ...*Map) *Map {
 				arr = append(arr, other)
 			}
 			val = arr
-		case []*Map:
-			val = append(val.([]*Map), validOthers...)
+		case []*OrderedMap:
+			val = append(val.([]*OrderedMap), validOthers...)
 		}
 		m.Put(key, val)
 	}
 	return m
 }
 
-func (m *Map) PutAsHash(key, hashKey string, val any) *Map {
+func (m *OrderedMap) PutAsHash(key, hashKey string, val any) *OrderedMap {
 	prev, exist := m.Get(key)
 	if !exist {
 		m.Put(key, NewMap(Entry{Key: hashKey, Value: val}))
 	} else {
-		prev.(*Map).Put(hashKey, val)
+		prev.(*OrderedMap).Put(hashKey, val)
 		m.Put(key, prev)
 	}
 	return m
 }
 
-func (m *Map) Get(key string) (any, bool) {
+func (m *OrderedMap) Get(key string) (any, bool) {
 	if index, exists := m.dict[key]; exists {
 		val := m.entries[index].Value
 		if _, isNull := val.(primitive.Null); isNull {
@@ -125,11 +125,11 @@ func (m *Map) Get(key string) (any, bool) {
 	return nil, false
 }
 
-func (m *Map) IsEmpty() bool {
+func (m *OrderedMap) IsEmpty() bool {
 	return len(m.entries) == 0
 }
 
-func (m *Map) Entries() []Entry {
+func (m *OrderedMap) Entries() []Entry {
 	entries := make([]Entry, len(m.entries))
 	for i, entry := range m.entries {
 		entries[i] = entry
@@ -137,13 +137,13 @@ func (m *Map) Entries() []Entry {
 	return entries
 }
 
-func (m *Map) Primitive() primitive.D {
-	return util.Map(m.entries, func(e Entry) primitive.E {
+func (m *OrderedMap) Primitive() primitive.D {
+	return util.OrderedMap(m.entries, func(e Entry) primitive.E {
 		return e.Primitive()
 	})
 }
 
-func (m *Map) ToMap() map[string]any {
+func (m *OrderedMap) ToMap() map[string]any {
 	dst := make(map[string]any)
 	for _, entry := range m.entries {
 		switch entry.Value.(type) {
@@ -160,7 +160,7 @@ func (m *Map) ToMap() map[string]any {
 	return dst
 }
 
-func (m *Map) UnmarshalJSON(bytes []byte) error {
+func (m *OrderedMap) UnmarshalJSON(bytes []byte) error {
 	var bMap rawbson.M
 	if err := json.Unmarshal(bytes, &bMap); err != nil {
 		return err
@@ -171,11 +171,11 @@ func (m *Map) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func (m *Map) MarshalJSON() ([]byte, error) {
+func (m *OrderedMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.ToMap())
 }
 
-func (m *Map) UnmarshalBSON(bytes []byte) error {
+func (m *OrderedMap) UnmarshalBSON(bytes []byte) error {
 	var doc rawbson.D
 	if err := rawbson.Unmarshal(bytes, &doc); err != nil {
 		return err
@@ -186,11 +186,11 @@ func (m *Map) UnmarshalBSON(bytes []byte) error {
 	return nil
 }
 
-func (m *Map) MarshalBSON() ([]byte, error) {
+func (m *OrderedMap) MarshalBSON() ([]byte, error) {
 	return rawbson.Marshal(m.Primitive())
 }
 
-func (m *Map) d2m(d rawbson.D) map[string]any {
+func (m *OrderedMap) d2m(d rawbson.D) map[string]any {
 	res := make(map[string]any)
 	for _, e := range d {
 		res[e.Key] = e
@@ -206,8 +206,8 @@ func (m *Map) d2m(d rawbson.D) map[string]any {
 		case primitive.Regex:
 			regex := e.Value.(primitive.Regex)
 			res[e.Key] = "/" + regex.Pattern + "/" + regex.Options
-		case *Map:
-			res[e.Key] = e.Value.(*Map).ToMap()
+		case *OrderedMap:
+			res[e.Key] = e.Value.(*OrderedMap).ToMap()
 		default:
 			res[e.Key] = e.Value
 		}
@@ -215,14 +215,14 @@ func (m *Map) d2m(d rawbson.D) map[string]any {
 	return res
 }
 
-func (m *Map) a2m(a rawbson.A) []any {
+func (m *OrderedMap) a2m(a rawbson.A) []any {
 	arr := make([]any, len(a))
 	for i, d := range a {
 		switch d.(type) {
 		case rawbson.D:
 			arr[i] = m.d2m(d.(rawbson.D))
-		case *Map:
-			arr[i] = m.d2m(d.(*Map).Primitive())
+		case *OrderedMap:
+			arr[i] = m.d2m(d.(*OrderedMap).Primitive())
 		default:
 			arr[i] = d
 		}

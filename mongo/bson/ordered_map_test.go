@@ -14,7 +14,7 @@ func TestMap_PutAsArray(t *testing.T) {
 
 	testCases := []struct {
 		Expected bson.D
-		Actual   *Map
+		Actual   *OrderedMap
 	}{
 		{Expected: bson.D{}, Actual: NewMap().PutAsArray("aa", NewMap())},
 		{
@@ -75,7 +75,7 @@ func TestMap_Entries(t *testing.T) {
 
 func TestMap_ToMap(t *testing.T) {
 	testCases := []struct {
-		Expected *Map
+		Expected *OrderedMap
 		Actual   map[string]any
 	}{
 		{Expected: NewMap(), Actual: make(map[string]any)},
@@ -142,7 +142,7 @@ func TestMap_MarshalJSON(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("map: %+v", string(bytes))
-	var reversed Map
+	var reversed OrderedMap
 	err = json.Unmarshal(bytes, &reversed)
 	if err != nil {
 		t.Error(err)
@@ -177,7 +177,7 @@ func TestMap_UnmarshalBSON(t *testing.T) {
 		E("666", int32(1)),
 	)
 	bytes, _ := expected.MarshalBSON()
-	var actual Map
+	var actual OrderedMap
 	if err := bson.Unmarshal(bytes, &actual); err != nil {
 		t.Error(err)
 		t.FailNow()

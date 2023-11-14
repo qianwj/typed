@@ -2,7 +2,7 @@ package collection
 
 import (
 	"context"
-	"github.com/qianwj/typed/mongo/bson"
+	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type FindExecutor[D bson.Doc[I], I bson.ID] struct {
+type FindExecutor[D model.Doc[I], I model.ID] struct {
 	readprefPrimary *raw.Collection
 	readprefDefault *raw.Collection
 	filter          *filters.Filter
@@ -21,7 +21,7 @@ type FindExecutor[D bson.Doc[I], I bson.ID] struct {
 	opts            *rawopts.FindOptions
 }
 
-func newFindExecutor[D bson.Doc[I], I bson.ID](
+func newFindExecutor[D model.Doc[I], I model.ID](
 	readprefPrimary, readprefDefault *raw.Collection,
 	filter *filters.Filter,
 ) *FindExecutor[D, I] {
@@ -223,7 +223,7 @@ func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], e
 	return &FindIterator[D, I]{cursor: cursor}, nil
 }
 
-type FindIterator[D bson.Doc[I], I bson.ID] struct {
+type FindIterator[D model.Doc[I], I model.ID] struct {
 	cursor *raw.Cursor
 }
 

@@ -67,7 +67,7 @@ func Project(projection *projections.Options) *Pipeline {
 	return New().Project(projection)
 }
 
-func Set(fields *bson.Map) *Pipeline {
+func Set(fields *bson.OrderedMap) *Pipeline {
 	return New().Set(fields)
 }
 
