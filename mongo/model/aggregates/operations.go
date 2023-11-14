@@ -2,13 +2,11 @@ package aggregates
 
 import (
 	"github.com/qianwj/typed/mongo/bson"
-	"github.com/qianwj/typed/mongo/model/aggregates/group"
 	"github.com/qianwj/typed/mongo/model/aggregates/lookup"
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/operator"
-	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -30,12 +28,12 @@ func (p *Pipeline) GraphLookup(cond *lookup.GraphJoinCondition) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) Group(id group.ID, fields ...bson.Entry) *Pipeline {
-	body := rawbson.M{"_id": id}
+func (p *Pipeline) Group(id any, fields ...bson.Entry) *Pipeline {
+	body := bson.D(bson.E("_id", id))
 	for _, acc := range fields {
-		body[acc.Key] = acc.Value
+		body.Put(acc.Key, acc.Value)
 	}
-	p.append(operator.Group, body)
+	p.append(operator.Group, body.Primitive())
 	return p
 }
 
