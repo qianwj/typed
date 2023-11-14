@@ -1,24 +1,25 @@
-// MIT License
-//
-// Copyright (c) 2022 qianwj
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
+/** MIT License
+ *
+ * Copyright (c) 2022-2024 qianwj
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 package operators
 
@@ -121,7 +122,7 @@ func Sum(field string, exprs ...any) bson.Entry {
 
 // Top returns the top element within a group according to the specified sort order.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/top/
-func Top(sortBy *sorts.Options, output any) bson.Entry {
+func Top(sortBy *sorts.Options, output []string) bson.Entry {
 	return bson.E(operator.Top, bson.M(
 		bson.E("sortBy", sortBy),
 		bson.E("output", output),
@@ -131,7 +132,7 @@ func Top(sortBy *sorts.Options, output any) bson.Entry {
 // TopN returns an aggregation of the top n elements within a group, according to the specified sort order. If the
 // group contains fewer than n elements, $topN returns all elements in the group.
 // See https://www.mongodb.com/docs/manual/reference/operator/aggregation/topN/
-func TopN(sortBy *sorts.Options, output, n any) bson.Entry {
+func TopN[I expressions.Integer](sortBy *sorts.Options, output []string, n I) bson.Entry {
 	return bson.E(operator.TopN, bson.M(
 		bson.E("sortBy", sortBy),
 		bson.E("output", output),
