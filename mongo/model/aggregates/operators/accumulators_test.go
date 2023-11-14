@@ -7,7 +7,7 @@ import (
 )
 
 func TestSum(t *testing.T) {
-	expected, _ := bson.Marshal(bson.E{Key: "sum", Value: bson.E{Key: "$sum", Value: 1}})
+	expected, _ := bson.Marshal(bson.E{Key: "sum", Value: bson.M{"$sum": 1}})
 	actual, err := bson.Marshal(Sum("sum", 1))
 	if err != nil {
 		t.Error(err)
