@@ -19,14 +19,14 @@ func D(pairs ...Entry) *Map {
 }
 
 func NewMap(pairs ...Entry) *Map {
-	entries := pairs
-	if len(entries) == 0 {
-		entries = make([]Entry, 0)
-	}
-	return &Map{
-		entries: entries,
+	m := &Map{
+		entries: make([]Entry, 0),
 		dict:    make(map[string]int),
 	}
+	for _, pair := range pairs {
+		m.Put(pair.Key, pair.Value)
+	}
+	return m
 }
 
 func FromM(m rawbson.M) *Map {
@@ -177,7 +177,7 @@ func (m *Map) MarshalJSON() ([]byte, error) {
 
 func (m *Map) UnmarshalBSON(bytes []byte) error {
 	var doc rawbson.D
-	if err := rawbson.Unmarshal(bytes, doc); err != nil {
+	if err := rawbson.Unmarshal(bytes, &doc); err != nil {
 		return err
 	}
 	newMap := FromD(doc)

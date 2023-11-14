@@ -170,3 +170,17 @@ func TestMap_MarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestMap_UnmarshalBSON(t *testing.T) {
+	expected := D(
+		E("a", "b"),
+		E("666", int32(1)),
+	)
+	bytes, _ := expected.MarshalBSON()
+	var actual Map
+	if err := bson.Unmarshal(bytes, &actual); err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+	assert.Equal(t, expected, &actual)
+}
