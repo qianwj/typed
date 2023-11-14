@@ -8,7 +8,6 @@ import (
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/model/updates"
 	"github.com/qianwj/typed/mongo/options"
-	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"time"
@@ -103,7 +102,7 @@ func (f *FindOneAndUpdateExecutor[D, I]) Hint(index string) *FindOneAndUpdateExe
 }
 
 // Let sets the value for the Let field.
-func (f *FindOneAndUpdateExecutor[D, I]) Let(l rawbson.M) *FindOneAndUpdateExecutor[D, I] {
+func (f *FindOneAndUpdateExecutor[D, I]) Let(l bson.UnorderedMap) *FindOneAndUpdateExecutor[D, I] {
 	f.opts.SetLet(l)
 	return f
 }

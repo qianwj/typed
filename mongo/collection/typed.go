@@ -54,6 +54,14 @@ func (c *TypedCollection[D, I]) FindOneAndUpdate(filter *filters.Filter, update 
 	return newFindOneAndUpdateExecutor[D, I](c.primary, filter, update)
 }
 
+func (c *TypedCollection[D, I]) FindOneAndReplace(filter *filters.Filter, replacement any) *FindOneAndReplaceExecutor[D, I] {
+	return newFindOneAndReplaceExecutor[D, I](c.primary, filter, replacement)
+}
+
+func (c *TypedCollection[D, I]) FindOneAndDelete(filter *filters.Filter) *FindOneAndDeleteExecutor[D, I] {
+	return newFindOneAndDeleteExecutor[D, I](c.primary, filter)
+}
+
 func (c *TypedCollection[D, I]) UpdateOne(filter *filters.Filter, update *updates.Update) *UpdateExecutor[D, I] {
 	return newUpdateOneExecutor[D, I](c.primary, filter, update)
 }
