@@ -23,6 +23,7 @@
 package collection
 
 import (
+	"github.com/qianwj/typed/mongo/model/filters"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -36,4 +37,8 @@ func newCollection(coll *mongo.Collection) *Collection {
 
 func (c *Collection) Insert(docs ...any) *InsertExecutor {
 	return newInsertExecutor(c.coll, docs...)
+}
+
+func (c *Collection) Delete(filter *filters.Filter) *DeleteExecutor {
+	return newDeleteExecutor(c.coll, filter)
 }

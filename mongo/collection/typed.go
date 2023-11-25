@@ -74,12 +74,8 @@ func (c *TypedCollection[D, I]) UpdateById(id I, update *updates.Update) *Update
 	return newUpdateByIdExecutor[D, I](c.primary, id, update)
 }
 
-func (c *TypedCollection[D, I]) DeleteOne(filter *filters.Filter) *DeleteExecutor[D, I] {
-	return newDeleteOneExecutor[D, I](c.primary, filter)
-}
-
-func (c *TypedCollection[D, I]) DeleteMany(filter *filters.Filter) *DeleteExecutor[D, I] {
-	return newDeleteManyExecutor[D, I](c.primary, filter)
+func (c *TypedCollection[D, I]) Delete(filter *filters.Filter) *DeleteExecutor {
+	return newDeleteExecutor(c.primary, filter)
 }
 
 func (c *TypedCollection[D, I]) BulkWrite() *TypedBulkWriteExecutor[D, I] {

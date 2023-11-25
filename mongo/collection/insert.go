@@ -25,9 +25,9 @@ package collection
 import (
 	"context"
 	"errors"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/util"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -53,7 +53,7 @@ func (i *InsertOneExecutor[D, I]) BypassDocumentValidation() *InsertOneExecutor[
 }
 
 // Comment sets the value for the Comment field.
-func (i *InsertOneExecutor[D, I]) Comment(comment bson.M) *InsertOneExecutor[D, I] {
+func (i *InsertOneExecutor[D, I]) Comment(comment bson.UnorderedMap) *InsertOneExecutor[D, I] {
 	i.opts.SetComment(comment)
 	return i
 }
@@ -88,7 +88,7 @@ func (i *InsertManyExecutor[D, I]) BypassDocumentValidation() *InsertManyExecuto
 }
 
 // Comment sets the value for the Comment field.
-func (i *InsertManyExecutor[D, I]) Comment(comment bson.M) *InsertManyExecutor[D, I] {
+func (i *InsertManyExecutor[D, I]) Comment(comment bson.UnorderedMap) *InsertManyExecutor[D, I] {
 	i.opts.SetComment(comment)
 	return i
 }
@@ -117,7 +117,7 @@ func (i *InsertManyExecutor[D, I]) Execute(ctx context.Context) ([]I, error) {
 type InsertExecutor struct {
 	coll                     *mongo.Collection
 	bypassDocumentValidation *bool
-	comment                  *bson.M
+	comment                  *bson.UnorderedMap
 	ordered                  *bool
 	docs                     []any
 }
@@ -136,7 +136,7 @@ func (i *InsertExecutor) BypassDocumentValidation() *InsertExecutor {
 }
 
 // Comment sets the value for the Comment field.
-func (i *InsertExecutor) Comment(comment bson.M) *InsertExecutor {
+func (i *InsertExecutor) Comment(comment bson.UnorderedMap) *InsertExecutor {
 	i.comment = util.ToPtr(comment)
 	return i
 }
