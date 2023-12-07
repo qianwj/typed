@@ -39,7 +39,7 @@ func (c *CountExecutor[D, I]) Primary() *CountExecutor[D, I] {
 
 // Collation sets the value for the Collation field.
 func (c *CountExecutor[D, I]) Collation(collation *options.Collation) *CountExecutor[D, I] {
-	c.opts.SetCollation((*rawopts.Collation)(collation))
+	c.opts.SetCollation(collation.Raw())
 	return c
 }
 

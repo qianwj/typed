@@ -16,5 +16,4 @@ const (
 
 type (
 	CursorType options.CursorType
-	Collation  options.Collation
 )
