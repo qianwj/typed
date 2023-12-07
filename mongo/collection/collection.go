@@ -43,6 +43,6 @@ func (c *Collection) Delete(filter *filters.Filter) *DeleteExecutor {
 	return newDeleteExecutor(c.coll, filter)
 }
 
-func (c *Collection) Replace(replacement any) *ReplaceExecutor[any] {
-	return newReplaceExecutor[any](c.coll, replacement)
+func (c *Collection) ReplaceOne(replacement any) *ReplaceOneExecutor[any] {
+	return newReplaceOneExecutor[any](c.coll, replacement)
 }

@@ -96,8 +96,8 @@ func (c *TypedCollection[D, I]) UpdateById(id I, update *updates.Update) *Update
 	return newUpdateByIdExecutor[D, I](c.primary, id, update)
 }
 
-func (c *TypedCollection[D, I]) Replace(replacement any) *ReplaceExecutor[I] {
-	return newReplaceExecutor[I](c.primary, replacement)
+func (c *TypedCollection[D, I]) ReplaceOne(replacement any) *ReplaceOneExecutor[I] {
+	return newReplaceOneExecutor[I](c.primary, replacement)
 }
 
 func (c *TypedCollection[D, I]) Delete(filter *filters.Filter) *DeleteExecutor {

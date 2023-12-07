@@ -31,14 +31,14 @@ import (
 	rawoptions "go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type ReplaceExecutor[I any] struct {
+type ReplaceOneExecutor[I any] struct {
 	coll *mongo.Collection
 	rep  any
 	opts *rawoptions.ReplaceOptions
 }
 
-func newReplaceExecutor[I any](coll *mongo.Collection, rep any) *ReplaceExecutor[I] {
-	return &ReplaceExecutor[I]{
+func newReplaceOneExecutor[I any](coll *mongo.Collection, rep any) *ReplaceOneExecutor[I] {
+	return &ReplaceOneExecutor[I]{
 		coll: coll,
 		rep:  rep,
 		opts: rawoptions.Replace(),
@@ -46,42 +46,42 @@ func newReplaceExecutor[I any](coll *mongo.Collection, rep any) *ReplaceExecutor
 }
 
 // BypassDocumentValidation sets the value for the BypassDocumentValidation field.
-func (r *ReplaceExecutor[I]) BypassDocumentValidation() *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) BypassDocumentValidation() *ReplaceOneExecutor[I] {
 	r.opts.SetBypassDocumentValidation(true)
 	return r
 }
 
 // Collation sets the value for the Collation field.
-func (r *ReplaceExecutor[I]) Collation(c *options.Collation) *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) Collation(c *options.Collation) *ReplaceOneExecutor[I] {
 	r.opts.SetCollation(c.Raw())
 	return r
 }
 
 // Comment sets the value for the Comment field.
-func (r *ReplaceExecutor[I]) Comment(comment bson.UnorderedMap) *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) Comment(comment bson.UnorderedMap) *ReplaceOneExecutor[I] {
 	r.opts.SetComment(comment)
 	return r
 }
 
 // Hint sets the value for the Hint field.
-func (r *ReplaceExecutor[I]) Hint(index string) *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) Hint(index string) *ReplaceOneExecutor[I] {
 	r.opts.SetHint(index)
 	return r
 }
 
 // Upsert sets the value for the Upsert field.
-func (r *ReplaceExecutor[I]) Upsert() *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) Upsert() *ReplaceOneExecutor[I] {
 	r.opts.SetUpsert(true)
 	return r
 }
 
 // Let sets the value for the Let field.
-func (r *ReplaceExecutor[I]) Let(l bson.UnorderedMap) *ReplaceExecutor[I] {
+func (r *ReplaceOneExecutor[I]) Let(l bson.UnorderedMap) *ReplaceOneExecutor[I] {
 	r.opts.SetLet(l)
 	return r
 }
 
-func (r *ReplaceExecutor[I]) Execute(ctx context.Context) (*updates.UpdateResult[I], error) {
+func (r *ReplaceOneExecutor[I]) Execute(ctx context.Context) (*updates.UpdateResult[I], error) {
 	res, err := r.coll.ReplaceOne(ctx, r.rep, r.opts)
 	return updates.FromUpdateResult[I](res), err
 }
