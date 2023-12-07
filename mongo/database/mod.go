@@ -9,31 +9,24 @@ import (
 )
 
 type Database struct {
-	primary         *mongo.Database
-	defaultReadpref *mongo.Database
-}
-
-func New(primary, defaultReadpref *mongo.Database) *Database {
-	return &Database{
-		primary:         primary,
-		defaultReadpref: defaultReadpref,
-	}
+	db      *mongo.Database
+	primary *mongo.Database
 }
 
 func (d *Database) Raw() *mongo.Database {
-	return d.defaultReadpref
+	return d.db
 }
 
 func (d *Database) Aggregate(pipe *aggregates.Pipeline) *AggregateExecutor {
-	return newAggregateExecutor(d.primary, d.defaultReadpref, pipe)
+	return newAggregateExecutor(d.primary, d.db, pipe)
 }
 
 func (d *Database) Collection(name string) *collection.Builder {
-	return collection.NewBuilder(d.defaultReadpref, name)
+	return collection.NewBuilder(d.db, name)
 }
 
 func (d *Database) ListCollections(filter *filters.Filter) *ListCollectionsExecutor {
-	return newListCollectionsExecutor(d.defaultReadpref, filter)
+	return newListCollectionsExecutor(d.db, filter)
 }
 
 func (d *Database) Drop(ctx context.Context) error {

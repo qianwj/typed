@@ -1,7 +1,31 @@
+// MIT License
+//
+// Copyright (c) 2022 qianwj
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package collection
 
 import (
 	"context"
+	"errors"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/util"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -29,7 +53,7 @@ func (i *InsertOneExecutor[D, I]) BypassDocumentValidation() *InsertOneExecutor[
 }
 
 // Comment sets the value for the Comment field.
-func (i *InsertOneExecutor[D, I]) Comment(comment string) *InsertOneExecutor[D, I] {
+func (i *InsertOneExecutor[D, I]) Comment(comment bson.UnorderedMap) *InsertOneExecutor[D, I] {
 	i.opts.SetComment(comment)
 	return i
 }
@@ -64,13 +88,13 @@ func (i *InsertManyExecutor[D, I]) BypassDocumentValidation() *InsertManyExecuto
 }
 
 // Comment sets the value for the Comment field.
-func (i *InsertManyExecutor[D, I]) Comment(comment string) *InsertManyExecutor[D, I] {
+func (i *InsertManyExecutor[D, I]) Comment(comment bson.UnorderedMap) *InsertManyExecutor[D, I] {
 	i.opts.SetComment(comment)
 	return i
 }
 
-// SetOrdered sets the value for the Ordered field.
-func (i *InsertManyExecutor[D, I]) SetOrdered() *InsertManyExecutor[D, I] {
+// Ordered sets the value for the Ordered field.
+func (i *InsertManyExecutor[D, I]) Ordered() *InsertManyExecutor[D, I] {
 	i.opts.SetOrdered(true)
 	return i
 }
@@ -88,4 +112,86 @@ func (i *InsertManyExecutor[D, I]) Execute(ctx context.Context) ([]I, error) {
 	return util.OrderedMap(res.InsertedIDs, func(i any) I {
 		return i.(I)
 	}), err
+}
+
+type InsertExecutor struct {
+	coll                     *mongo.Collection
+	bypassDocumentValidation *bool
+	comment                  *bson.UnorderedMap
+	ordered                  *bool
+	docs                     []any
+}
+
+func newInsertExecutor(coll *mongo.Collection, docs ...any) *InsertExecutor {
+	return &InsertExecutor{
+		coll: coll,
+		docs: docs,
+	}
+}
+
+// BypassDocumentValidation sets the value for the BypassDocumentValidation field.
+func (i *InsertExecutor) BypassDocumentValidation() *InsertExecutor {
+	i.bypassDocumentValidation = util.ToPtr(true)
+	return i
+}
+
+// Comment sets the value for the Comment field.
+func (i *InsertExecutor) Comment(comment bson.UnorderedMap) *InsertExecutor {
+	i.comment = util.ToPtr(comment)
+	return i
+}
+
+// Ordered sets the value for the Ordered field.
+func (i *InsertExecutor) Ordered() *InsertExecutor {
+	i.ordered = util.ToPtr(true)
+	return i
+}
+
+// Add append insert data.
+func (i *InsertExecutor) Add(docs ...any) *InsertExecutor {
+	i.docs = append(i.docs, docs...)
+	return i
+}
+
+func (i *InsertExecutor) One(ctx context.Context) (any, error) {
+	if len(i.docs) < 1 {
+		return nil, errors.New("insert empty data")
+	}
+	return i.coll.InsertOne(ctx, i.docs[0], i.insertOneOptions())
+}
+
+func (i *InsertExecutor) Many(ctx context.Context) ([]any, error) {
+	if len(i.docs) < 1 {
+		return nil, errors.New("insert empty data")
+	}
+	res, err := i.coll.InsertMany(ctx, i.docs, i.insertManyOptions())
+	if err != nil {
+		return nil, err
+	}
+	return res.InsertedIDs, nil
+}
+
+func (i *InsertExecutor) insertOneOptions() *rawopts.InsertOneOptions {
+	opts := rawopts.InsertOne()
+	if i.bypassDocumentValidation != nil {
+		opts = opts.SetBypassDocumentValidation(true)
+	}
+	if i.comment != nil {
+		opts = opts.SetComment(true)
+	}
+	return opts
+}
+
+func (i *InsertExecutor) insertManyOptions() *rawopts.InsertManyOptions {
+	opts := rawopts.InsertMany()
+	if i.bypassDocumentValidation != nil {
+		opts = opts.SetBypassDocumentValidation(true)
+	}
+	if i.comment != nil {
+		opts = opts.SetComment(true)
+	}
+	if i.ordered != nil {
+		opts = opts.SetOrdered(true)
+	}
+	return opts
 }
