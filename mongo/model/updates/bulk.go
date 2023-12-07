@@ -82,49 +82,49 @@ func NewUpdateMany() *TypedUpdateManyModel {
 	return &TypedUpdateManyModel{internal: mongo.NewUpdateManyModel()}
 }
 
-// SetHint specifies the index to use for the operation. This should either be the index name as a string or the index
+// Hint specifies the index to use for the operation. This should either be the index name as a string or the index
 // specification as a document. This option is only valid for MongoDB versions >= 4.2. Server versions >= 3.4 will
 // return an error if this option is specified. For server versions < 3.4, the driver will return a client-side error if
 // this option is specified. The driver will return an error if this option is specified during an unacknowledged write
 // operation. The driver will return an error if the hint parameter is a multi-key map. The default value is nil, which
 // means that no hint will be sent.
-func (umm *TypedUpdateManyModel) SetHint(index string) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) Hint(index string) *TypedUpdateManyModel {
 	umm.internal.Hint = index
 	return umm
 }
 
-// SetFilter specifies a filter to use to select documents to updates. The filter must be a document containing query
+// Filter specifies a filter to use to select documents to updates. The filter must be a document containing query
 // operators. It cannot be nil.
-func (umm *TypedUpdateManyModel) SetFilter(filter *filters.Filter) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) Filter(filter *filters.Filter) *TypedUpdateManyModel {
 	umm.internal.Filter = filter
 	return umm
 }
 
-// SetUpdate specifies the modifications to be made to the selected documents. The value must be a document containing
+// Update specifies the modifications to be made to the selected documents. The value must be a document containing
 // updates operators (https://www.mongodb.com/docs/manual/reference/operator/update/). It cannot be nil or empty.
-func (umm *TypedUpdateManyModel) SetUpdate(update Update) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) Update(update *Update) *TypedUpdateManyModel {
 	umm.internal.Update = update
 	return umm
 }
 
-// SetArrayFilters specifies a set of filters to determine which elements should be modified when updating an array
+// ArrayFilters specifies a set of filters to determine which elements should be modified when updating an array
 // field.
-func (umm *TypedUpdateManyModel) SetArrayFilters(filters options.ArrayFilters) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) ArrayFilters(filters options.ArrayFilters) *TypedUpdateManyModel {
 	umm.internal.ArrayFilters = &filters
 	return umm
 }
 
-// SetCollation specifies a collation to use for string comparisons. The default is nil, meaning no collation will be
+// Collation specifies a collation to use for string comparisons. The default is nil, meaning no collation will be
 // used.
-func (umm *TypedUpdateManyModel) SetCollation(collation *options.Collation) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) Collation(collation *options.Collation) *TypedUpdateManyModel {
 	umm.internal.Collation = collation
 	return umm
 }
 
-// SetUpsert specifies whether or not a new document should be inserted if no document matching the filter is found. If
+// Upsert specifies whether or not a new document should be inserted if no document matching the filter is found. If
 // an upsert is performed, the _id of the upserted document can be retrieved from the UpsertedIDs field of the
 // BulkWriteResult.
-func (umm *TypedUpdateManyModel) SetUpsert(upsert bool) *TypedUpdateManyModel {
+func (umm *TypedUpdateManyModel) Upsert(upsert bool) *TypedUpdateManyModel {
 	umm.internal.Upsert = &upsert
 	return umm
 }
