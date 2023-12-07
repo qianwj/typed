@@ -42,3 +42,7 @@ func (c *Collection) Insert(docs ...any) *InsertExecutor {
 func (c *Collection) Delete(filter *filters.Filter) *DeleteExecutor {
 	return newDeleteExecutor(c.coll, filter)
 }
+
+func (c *Collection) Replace(replacement any) *ReplaceExecutor[any] {
+	return newReplaceExecutor[any](c.coll, replacement)
+}
