@@ -50,9 +50,9 @@ func (b *TypedBulkWriteExecutor[D, I]) Comment(comment bson.UnorderedMap) *Typed
 	return b
 }
 
-// Ordered sets the value for the Ordered field.
-func (b *TypedBulkWriteExecutor[D, I]) Ordered() *TypedBulkWriteExecutor[D, I] {
-	b.opts.SetOrdered(true)
+// Unordered sets the value for the Ordered field.
+func (b *TypedBulkWriteExecutor[D, I]) Unordered() *TypedBulkWriteExecutor[D, I] {
+	b.opts.SetOrdered(false)
 	return b
 }
 
