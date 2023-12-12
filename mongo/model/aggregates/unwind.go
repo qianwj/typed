@@ -24,8 +24,8 @@
 package aggregates
 
 import (
-	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/util"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
 type UnwindOptions struct {
@@ -49,12 +49,13 @@ func (u *UnwindOptions) PreserveNullAndEmptyArrays(preserveNullAndEmptyArrays bo
 }
 
 func (u *UnwindOptions) MarshalBSON() ([]byte, error) {
-	m := bson.M(bson.E("path", u.path))
+	idx, doc := bsoncore.AppendDocumentStart(nil)
+	doc = bsoncore.AppendStringElement(doc, "path", u.path)
 	if util.IsNonNil(u.includeArrayIndex) {
-		m["includeArrayIndex"] = u.includeArrayIndex
+		doc = bsoncore.AppendStringElement(doc, "includeArrayIndex", util.FromPtr(u.includeArrayIndex))
 	}
 	if util.IsNonNil(u.preserveNullAndEmptyArrays) {
-		m["preserveNullAndEmptyArrays"] = u.preserveNullAndEmptyArrays
+		doc = bsoncore.AppendBooleanElement(doc, "preserveNullAndEmptyArrays", util.FromPtr(u.preserveNullAndEmptyArrays))
 	}
-	return m.Marshal()
+	return bsoncore.AppendDocumentEnd(doc, idx)
 }

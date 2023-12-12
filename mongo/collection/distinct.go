@@ -24,6 +24,7 @@ package collection
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/options"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
@@ -59,7 +60,7 @@ func (do *DistinctExecutor) Collation(c *options.Collation) *DistinctExecutor {
 }
 
 // Comment sets the value for the Comment field.
-func (do *DistinctExecutor) Comment(comment string) *DistinctExecutor {
+func (do *DistinctExecutor) Comment(comment bson.UnorderedMap) *DistinctExecutor {
 	do.opts.SetComment(comment)
 	return do
 }

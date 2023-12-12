@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"regexp"
 )
 
 type Options string
@@ -61,6 +62,11 @@ const (
 	AllowDotChar Options = "s"
 )
 
+var (
+	escapeRegex = regexp.MustCompile(`[|\\{}()[\]^$+*?.]`)
+	hyphenRegex = regexp.MustCompile(`-`)
+)
+
 func (o Options) String() string {
 	return string(o)
 }
@@ -94,6 +100,12 @@ func (m *Matcher) Extended() *Matcher {
 
 func (m *Matcher) AllowDotChar() *Matcher {
 	m.options[AllowDotChar] = true
+	return m
+}
+
+func (m *Matcher) Escape() *Matcher {
+	m.pattern = escapeRegex.ReplaceAllString(m.pattern, `\$0`)
+	m.pattern = hyphenRegex.ReplaceAllString(m.pattern, `\\x2d`)
 	return m
 }
 
