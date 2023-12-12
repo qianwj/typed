@@ -24,9 +24,9 @@ package collection
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/updates"
-	rawbson "go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -45,7 +45,7 @@ func newBulkWriteExecutor[D model.Doc[I], I model.ID](primary *mongo.Collection)
 }
 
 // Comment sets the value for the Comment field.
-func (b *TypedBulkWriteExecutor[D, I]) Comment(comment string) *TypedBulkWriteExecutor[D, I] {
+func (b *TypedBulkWriteExecutor[D, I]) Comment(comment bson.UnorderedMap) *TypedBulkWriteExecutor[D, I] {
 	b.opts.SetComment(comment)
 	return b
 }
@@ -66,7 +66,7 @@ func (b *TypedBulkWriteExecutor[D, I]) BypassDocumentValidation() *TypedBulkWrit
 // This option is only valid for MongoDB versions >= 5.0. Older servers will report an error for using this option.
 // This must be a document mapping parameter names to values. Values must be constant or closed expressions that do not
 // reference document fields. Parameters can then be accessed as variables in an aggregate expression context (e.g. "$$var").
-func (b *TypedBulkWriteExecutor[D, I]) Let(let rawbson.M) *TypedBulkWriteExecutor[D, I] {
+func (b *TypedBulkWriteExecutor[D, I]) Let(let bson.UnorderedMap) *TypedBulkWriteExecutor[D, I] {
 	b.opts.SetLet(let)
 	return b
 }
@@ -78,6 +78,21 @@ func (b *TypedBulkWriteExecutor[D, I]) UpdateOne(update *updates.UpdateOneModel)
 
 func (b *TypedBulkWriteExecutor[D, I]) UpdateMany(update *updates.UpdateManyModel) *TypedBulkWriteExecutor[D, I] {
 	b.models = append(b.models, update.WriteModel())
+	return b
+}
+
+func (b *TypedBulkWriteExecutor[D, I]) ReplaceOne(replace *updates.ReplaceOneModel) *TypedBulkWriteExecutor[D, I] {
+	b.models = append(b.models, replace.WriteModel())
+	return b
+}
+
+func (b *TypedBulkWriteExecutor[D, I]) DeleteOne(delete *updates.DeleteOneModel) *TypedBulkWriteExecutor[D, I] {
+	b.models = append(b.models, delete.WriteModel())
+	return b
+}
+
+func (b *TypedBulkWriteExecutor[D, I]) DeleteMany(delete *updates.DeleteManyModel) *TypedBulkWriteExecutor[D, I] {
+	b.models = append(b.models, delete.WriteModel())
 	return b
 }
 
