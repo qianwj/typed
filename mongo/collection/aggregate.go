@@ -111,7 +111,7 @@ func (a *AggregateExecutor[D, I]) Hint(index string) *AggregateExecutor[D, I] {
 }
 
 // Let sets the value for the Let field.
-func (a *AggregateExecutor[D, I]) Let(let rawbson.M) *AggregateExecutor[D, I] {
+func (a *AggregateExecutor[D, I]) Let(let any) *AggregateExecutor[D, I] {
 	a.opts.SetLet(let)
 	return a
 }
