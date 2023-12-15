@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func TestMap_PutAsArray(t *testing.T) {
+func TestOrderedMap_PutAsArray(t *testing.T) {
 
 	testCases := []struct {
 		Expected bson.D
@@ -64,7 +64,33 @@ func TestMap_PutAsArray(t *testing.T) {
 	}
 }
 
-func TestMap_Entries(t *testing.T) {
+func TestOrderedMap_PutAsHash(t *testing.T) {
+	testCases := []struct {
+		Expected bson.D
+		Actual   *OrderedMap
+	}{
+		{
+			Expected: bson.D{{Key: "aa", Value: NewMap(E("bb", 1))}},
+			Actual:   NewMap().PutAsHash("aa", "bb", 1),
+		},
+		{
+			Expected: bson.D{{Key: "aa", Value: NewMap(E("bb", 2))}},
+			Actual: FromM(bson.M{
+				"aa": NewMap(E("bb", 1)),
+			}).PutAsHash("aa", "bb", 2),
+		},
+	}
+
+	for i, testCase := range testCases {
+		t.Run(fmt.Sprintf("test_PutAsHash_%d", i), func(t *testing.T) {
+			eb, _ := bson.Marshal(testCase.Expected)
+			ab, _ := bson.Marshal(testCase.Actual)
+			assert.Equal(t, eb, ab)
+		})
+	}
+}
+
+func TestOrderedMap_Entries(t *testing.T) {
 	expected := []Entry{
 		{Key: "a", Value: "b"},
 		{Key: "c", Value: "d"},
@@ -73,7 +99,7 @@ func TestMap_Entries(t *testing.T) {
 	assert.Equal(t, expected, actual.Entries())
 }
 
-func TestMap_ToMap(t *testing.T) {
+func TestOrderedMap_ToMap(t *testing.T) {
 	testCases := []struct {
 		Expected *OrderedMap
 		Actual   map[string]any
@@ -117,7 +143,17 @@ func TestMap_ToMap(t *testing.T) {
 	}
 }
 
-func TestMap_MarshalJSON(t *testing.T) {
+func TestOrderedMap_Merge(t *testing.T) {
+	expected := NewMap(
+		E("a", 1),
+		E("b", 2),
+	)
+	actual := NewMap(E("a", 1))
+	actual.Merge(NewMap(E("b", 2)))
+	assert.Equal(t, expected, actual)
+}
+
+func TestOrderedMap_MarshalJSON(t *testing.T) {
 	oid := primitive.NewObjectID()
 	now := time.Now()
 	m := NewMap()
