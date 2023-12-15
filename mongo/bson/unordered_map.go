@@ -2,7 +2,6 @@ package bson
 
 import (
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type UnorderedMap bson.M
@@ -13,10 +12,6 @@ func M(e ...Entry) UnorderedMap {
 		m[entry.Key] = entry.Value
 	}
 	return m
-}
-
-func (u UnorderedMap) Primitive() primitive.M {
-	return primitive.M(u)
 }
 
 func (u UnorderedMap) Marshal() ([]byte, error) {

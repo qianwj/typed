@@ -32,6 +32,6 @@ func FromPtr[T any](t *T) T {
 	return *t
 }
 
-func IsNonNil[T any](t T) bool {
+func NonNil[T any](t T) bool {
 	return !reflect.ValueOf(t).IsNil()
 }

@@ -47,8 +47,10 @@ func (b *Builder) AppName(name string) *Builder {
 // Auth specifies a Credential containing options for configuring authentication. See the options.Credential
 // documentation for more information about Credential fields. The default is an empty Credential, meaning no
 // authentication will be configured.
-func (b *Builder) Auth(auth options.Credential) *Builder {
-	b.opts.SetAuth(rawopts.Credential(auth))
+func (b *Builder) Auth(auth *options.Credential) *Builder {
+	if util.NonNil(auth) {
+		b.opts.SetAuth(auth.Auth())
+	}
 	return b
 }
 
@@ -68,8 +70,8 @@ func (b *Builder) Auth(auth options.Credential) *Builder {
 //
 // This can also be set through the "compressors" URI option (e.g. "compressors=zstd,zlib,snappy"). The default is
 // an empty slice, meaning no compression will be enabled.
-func (b *Builder) Compressors(comps []options.ClientCompressorType) *Builder {
-	b.opts.SetCompressors(util.OrderedMap(comps, options.ClientCompressorType.String))
+func (b *Builder) Compressors(comps []options.CompressorType) *Builder {
+	b.opts.SetCompressors(util.OrderedMap(comps, options.CompressorType.String))
 	return b
 }
 
@@ -238,7 +240,7 @@ func (b *Builder) ReadPreference(rp *readpref.ReadPref) *Builder {
 
 // BSONOptions configures optional BSON marshaling and unmarshaling behavior.
 func (b *Builder) BSONOptions(opts *options.BSONOptions) *Builder {
-	b.opts.SetBSONOptions((*rawopts.BSONOptions)(opts))
+	b.opts.SetBSONOptions(opts.Raw())
 	return b
 }
 

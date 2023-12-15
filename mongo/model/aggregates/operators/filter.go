@@ -56,10 +56,10 @@ func (f *FilterSource) MarshalBSON() ([]byte, error) {
 		bson.E("input", f.input),
 		bson.E("cond", f.cond),
 	)
-	if util.IsNonNil(f.as) {
+	if util.NonNil(f.as) {
 		m["as"] = f.as
 	}
-	if util.IsNonNil(f.limit) {
+	if util.NonNil(f.limit) {
 		m["limit"] = f.limit
 	}
 	return m.Marshal()

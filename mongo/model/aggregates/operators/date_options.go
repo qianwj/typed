@@ -105,7 +105,7 @@ func (d *DateSubtracter) MarshalBSON() ([]byte, error) {
 		bson.E("unit", d.unit),
 		bson.E("amount", d.amount),
 	)
-	if util.IsNonNil(d.timezone) {
+	if util.NonNil(d.timezone) {
 		m["timezone"] = d.timezone
 	}
 	return m.Marshal()
