@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2022 qianwj
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package client
 
 import (
@@ -47,9 +69,9 @@ func (b *Builder) AppName(name string) *Builder {
 // Auth specifies a Credential containing options for configuring authentication. See the options.Credential
 // documentation for more information about Credential fields. The default is an empty Credential, meaning no
 // authentication will be configured.
-func (b *Builder) Auth(auth *options.Credential) *Builder {
-	if util.NonNil(auth) {
-		b.opts.SetAuth(auth.Auth())
+func (b *Builder) Auth(cred *options.CredentialOptions) *Builder {
+	if util.NonNil(cred) {
+		b.opts.SetAuth(cred.Auth())
 	}
 	return b
 }
@@ -284,7 +306,7 @@ func (b *Builder) DisableRetryWrites() *Builder {
 // EstimatedDocumentCount, Watch (for Client, Database, and Collection), ListCollections, and ListDatabases. Note that
 // operations run through RunCommand are not retried.
 //
-// This option requires server version >= 3.6 and driver version >= 1.1.0. The default is true.
+// This option requires server version >= 3.6 and driver version >= 1.1.0.
 func (b *Builder) DisableRetryReads() *Builder {
 	b.opts.SetRetryReads(false)
 	return b
@@ -402,8 +424,8 @@ func (b *Builder) ZstdLevel(level int) *Builder {
 // AutoEncryptionOptions specifies an AutoEncryptionOptions instance to automatically encrypt and decrypt commands
 // and their results. See the options.AutoEncryptionOptions documentation for more information about the supported
 // options.
-func (b *Builder) AutoEncryptionOptions(opts *rawopts.AutoEncryptionOptions) *Builder {
-	b.opts.SetAutoEncryptionOptions(opts)
+func (b *Builder) AutoEncryptionOptions(opts *options.AutoEncryptionOptions) *Builder {
+	b.opts.SetAutoEncryptionOptions(opts.Raw())
 	return b
 }
 
@@ -415,7 +437,7 @@ func (b *Builder) AutoEncryptionOptions(opts *rawopts.AutoEncryptionOptions) *Bu
 // continue the connection even though the certificate status is not known.
 //
 // This can also be set through the tlsDisableOCSPEndpointCheck URI option. Both this URI option and tlsInsecure must
-// not be set at the same time and will error if they are. The default value is false.
+// not be set at the same time and will error if they are.
 func (b *Builder) DisableOCSPEndpointCheck() *Builder {
 	b.opts.SetDisableOCSPEndpointCheck(true)
 	return b
@@ -424,8 +446,8 @@ func (b *Builder) DisableOCSPEndpointCheck() *Builder {
 // ServerAPIOptions specifies a ServerAPIOptions instance used to configure the API version sent to the server
 // when running commands. See the options.ServerAPIOptions documentation for more information about the supported
 // options.
-func (b *Builder) ServerAPIOptions(opts *rawopts.ServerAPIOptions) *Builder {
-	b.opts.SetServerAPIOptions(opts)
+func (b *Builder) ServerAPIOptions(opts *options.ServerAPIOptions) *Builder {
+	b.opts.SetServerAPIOptions(opts.Raw())
 	return b
 }
 
