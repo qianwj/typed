@@ -24,6 +24,7 @@ package database
 
 import (
 	"context"
+	"github.com/qianwj/typed/mongo/bson"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/options"
 	rawbson "go.mongodb.org/mongo-driver/bson"
@@ -116,8 +117,8 @@ func (a *AggregateExecutor) Let(let rawbson.M) *AggregateExecutor {
 // with desired option names and values. Values must be Marshalable. Custom options may conflict
 // with non-custom options, and custom options bypass client-side validation. Prefer using non-custom
 // options where possible.
-func (a *AggregateExecutor) Custom(c rawbson.M) *AggregateExecutor {
-	a.opts.SetCustom(c)
+func (a *AggregateExecutor) Custom(c bson.UnorderedMap) *AggregateExecutor {
+	a.opts.SetCustom(rawbson.M(c))
 	return a
 }
 

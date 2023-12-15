@@ -23,9 +23,10 @@
 package database
 
 import (
+	"github.com/qianwj/typed/mongo/options"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	rawopts "go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
@@ -34,14 +35,14 @@ import (
 type Builder struct {
 	cli  *mongo.Client
 	name string
-	opts *options.DatabaseOptions
+	opts *rawopts.DatabaseOptions
 }
 
 func NewBuilder(cli *mongo.Client, name string) *Builder {
 	return &Builder{
 		cli:  cli,
 		name: name,
-		opts: options.Database(),
+		opts: rawopts.Database(),
 	}
 }
 
@@ -71,12 +72,12 @@ func (b *Builder) Registry(r *bsoncodec.Registry) *Builder {
 
 // BSONOptions configures optional BSON marshaling and unmarshaling behavior.
 func (b *Builder) BSONOptions(opts *options.BSONOptions) *Builder {
-	b.opts.SetBSONOptions(opts)
+	b.opts.SetBSONOptions(opts.Raw())
 	return b
 }
 
 func (b *Builder) Build() *Database {
-	primary := b.cli.Database(b.name, options.Database().SetReadPreference(readpref.Primary()), b.opts)
+	primary := b.cli.Database(b.name, rawopts.Database().SetReadPreference(readpref.Primary()), b.opts)
 	db := b.cli.Database(b.name, b.opts)
 	return &Database{db: db, primary: primary}
 }
