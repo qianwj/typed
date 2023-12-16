@@ -5,6 +5,7 @@ import (
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/model/aggregates/operators"
+	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/util"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -50,5 +51,18 @@ func TestAggregateExecutor_Collect(t *testing.T) {
 		}
 		t.Logf("result: %+v", result)
 		assert.Equal(t, int32(3), result[0]["n"])
+	})
+
+	t.Run("testCountWithMatch", func(t *testing.T) {
+		pipe := aggregates.Match(filters.Eq("name", "gala")).Group(1, operators.Sum("n", 1))
+		t.Logf("pipe: %+v", pipe.Stages())
+		var result []primitive.M
+		err := newAggregateExecutor[*fruit, primitive.ObjectID](fruitColl, fruitColl, pipe).Collect(ctx, &result)
+		if err != nil {
+			t.Errorf("agg error: %+v", err)
+			t.FailNow()
+		}
+		t.Logf("result: %+v", result)
+		assert.Equal(t, int32(1), result[0]["n"])
 	})
 }
