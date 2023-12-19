@@ -1,6 +1,9 @@
 package elasticsearch
 
-import "github.com/elastic/go-elasticsearch/v8"
+import (
+	"github.com/elastic/go-elasticsearch/v8"
+	"net/http"
+)
 
 type ConfigBuilder struct {
 	config elasticsearch.Config
@@ -32,6 +35,31 @@ func (c *ConfigBuilder) CloudID(cloudId string) *ConfigBuilder {
 
 func (c *ConfigBuilder) APIKey(apiKey string) *ConfigBuilder {
 	c.config.APIKey = apiKey
+	return c
+}
+
+func (c *ConfigBuilder) ServiceToken(token string) *ConfigBuilder {
+	c.config.ServiceToken = token
+	return c
+}
+
+func (c *ConfigBuilder) DisableRetry() *ConfigBuilder {
+	c.config.DisableRetry = true
+	return c
+}
+
+func (c *ConfigBuilder) Retry(maxRetries int) *ConfigBuilder {
+	c.config.MaxRetries = maxRetries
+	return c
+}
+
+func (c *ConfigBuilder) RetryOnStatus(status []int) *ConfigBuilder {
+	c.config.RetryOnStatus = status
+	return c
+}
+
+func (c *ConfigBuilder) RetryOnError(retryOnError func(*http.Request, error) bool) *ConfigBuilder {
+	c.config.RetryOnError = retryOnError
 	return c
 }
 
