@@ -3,6 +3,7 @@ package elasticsearch
 import (
 	"elasticsearch/api"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/ping"
 )
 
 type Client struct {
@@ -14,8 +15,11 @@ func NewClient(builder ConfigBuilder) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	client.Search().Index("")
 	return &Client{internal: client}, nil
+}
+
+func (c *Client) Ping() *ping.Ping {
+	return c.internal.Ping()
 }
 
 func (c *Client) Indices() *api.IndicesAPI {

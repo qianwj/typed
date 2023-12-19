@@ -3,6 +3,7 @@ package api
 import (
 	"elasticsearch/requests"
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/mget"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/indices/close"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
@@ -41,4 +42,8 @@ func (i *IndicesAPI) Open(index string) *open.Open {
 
 func (i *IndicesAPI) Get(index string) *get.Get {
 	return get.NewGetFunc(i.tp)(index)
+}
+
+func (i *IndicesAPI) MGet() *mget.Mget {
+	return mget.NewMgetFunc(i.tp)()
 }
