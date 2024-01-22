@@ -5,7 +5,7 @@ type Publisher[V any] interface {
 }
 
 type Subscriber[V any] interface {
-	OnNext(item any)
+	OnNext(item V)
 	OnError(e error)
 	OnComplete()
 	OnSubscribe(s Subscription[V])

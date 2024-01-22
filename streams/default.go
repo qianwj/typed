@@ -16,7 +16,7 @@ type FixedSubscriber[V any] struct {
 	onComplete    OnComplete
 }
 
-func NewFixedSubscriber[V any](opts ...SubscribeOption[V]) *FixedSubscriber[V] {
+func NewFixedSubscriber[V any](opts ...SubscribeOption[V]) Subscriber[V] {
 	merged := merge(opts...)
 	return &FixedSubscriber[V]{
 		onNext:        merged.onNext,
@@ -27,7 +27,7 @@ func NewFixedSubscriber[V any](opts ...SubscribeOption[V]) *FixedSubscriber[V] {
 	}
 }
 
-func (s *FixedSubscriber[V]) OnSubscription(subscription Subscription[V]) {
+func (s *FixedSubscriber[V]) OnSubscribe(subscription Subscription[V]) {
 	s.subscription = subscription
 	for s.complete.Load() {
 		subscription.Request(s.requestNum)
