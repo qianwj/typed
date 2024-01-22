@@ -1,22 +1,23 @@
 package streams
 
-type Publisher interface {
-	Subscribe(sub Subscriber)
+type Publisher[V any] interface {
+	Subscribe(sub Subscriber[V])
 }
 
-type Subscriber interface {
+type Subscriber[V any] interface {
 	OnNext(item any)
 	OnError(e error)
 	OnComplete()
-	OnSubscribe(s Subscription)
+	OnSubscribe(s Subscription[V])
 }
 
-type Subscription interface {
+type Subscription[V any] interface {
 	Cancel()
-	Request(n int64)
+	Request(n int)
 }
 
-type Processor interface {
-	Publisher
-	Subscriber
-}
+//
+//type Processor interface {
+//	Publisher
+//	Subscriber
+//}
