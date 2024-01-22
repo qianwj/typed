@@ -5,6 +5,7 @@ import (
 	"github.com/qianwj/typed/mongo/model/filters"
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/util"
+	"github.com/qianwj/typed/streams"
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"testing"
@@ -125,4 +126,76 @@ func TestFindExecutor_Cursor(t *testing.T) {
 			i++
 		}
 	})
+}
+
+func TestFindExecutor_Stream(t *testing.T) {
+	prepared := []*TestDoc{
+		{Id: primitive.NewObjectID(), Name: "test_cursor1", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor2", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 10},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 20},
+		{Id: primitive.NewObjectID(), Name: "test_cursor3", Age: 30},
+		{Id: primitive.NewObjectID(), Name: "test_cursor4", Age: 40},
+	}
+	_, _ = testColl.InsertMany(context.TODO(), util.ToAny(prepared))
+
+	t.Run("test one", func(t *testing.T) {
+		sub := streams.NewFixedSubscriber[*TestDoc](
+			streams.DoOnNext[*TestDoc](func(doc *TestDoc) {
+				t.Logf("on next: %+v", doc)
+			}),
+			streams.DoOnError[*TestDoc](func(err error) {
+				t.Errorf("on error: %+v", err)
+			}),
+			streams.DoOnComplete[*TestDoc](func() {
+				t.Logf("complete.")
+			}),
+		)
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_cursor1"))
+		publisher, err := exec.Stream(context.TODO())
+		if err != nil {
+			t.Errorf("find error: %+v", err)
+			t.FailNow()
+		}
+		publisher.Subscribe(sub)
+	})
+	t.Run("test more", func(t *testing.T) {
+		sub := &testSubscriber{t: t}
+		exec := newFindExecutor[*TestDoc, primitive.ObjectID](testColl, testColl, filters.Eq("name", "test_cursor3"))
+		publisher, err := exec.Stream(context.TODO())
+		if err != nil {
+			t.Errorf("find error: %+v", err)
+			t.FailNow()
+		}
+		publisher.Subscribe(sub)
+	})
+}
+
+type testSubscriber struct {
+	streams.Subscriber[*TestDoc]
+	t            *testing.T
+	complete     bool
+	subscription streams.Subscription[*TestDoc]
+}
+
+func (s *testSubscriber) OnSubscribe(subscription streams.Subscription[*TestDoc]) {
+	s.subscription = subscription
+	for !s.complete {
+		subscription.Request(1)
+	}
+}
+
+func (s *testSubscriber) OnNext(val *TestDoc) {
+	s.t.Logf("on next: %+v", val)
+}
+
+func (s *testSubscriber) OnError(err error) {
+	s.t.Errorf("on error: %+v", err)
+	if s.subscription != nil {
+		s.subscription.Cancel()
+	}
+}
+
+func (s *testSubscriber) OnComplete() {
+	s.complete = true
 }

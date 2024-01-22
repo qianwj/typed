@@ -29,6 +29,7 @@ import (
 	"github.com/qianwj/typed/mongo/model/projections"
 	"github.com/qianwj/typed/mongo/model/sorts"
 	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/streams"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
@@ -194,16 +195,8 @@ func (f *FindExecutor[D, I]) Page(pageNo, pageSize int64) *FindExecutor[D, I] {
 }
 
 func (f *FindExecutor[D, I]) ToArray(ctx context.Context) ([]D, error) {
-	var (
-		data   []D
-		err    error
-		cursor *raw.Cursor
-	)
-	if f.primary {
-		cursor, err = f.readprefPrimary.Find(ctx, f.filter, f.opts)
-	} else {
-		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
-	}
+	var data []D
+	cursor, err := f.cursor(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -214,15 +207,7 @@ func (f *FindExecutor[D, I]) ToArray(ctx context.Context) ([]D, error) {
 }
 
 func (f *FindExecutor[D, I]) Collect(ctx context.Context, data any) error {
-	var (
-		err    error
-		cursor *raw.Cursor
-	)
-	if f.primary {
-		cursor, err = f.readprefPrimary.Find(ctx, f.filter, f.opts)
-	} else {
-		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
-	}
+	cursor, err := f.cursor(ctx)
 	if err != nil {
 		return err
 	}
@@ -230,6 +215,22 @@ func (f *FindExecutor[D, I]) Collect(ctx context.Context, data any) error {
 }
 
 func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], error) {
+	cursor, err := f.cursor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &FindIterator[D, I]{cursor: cursor}, nil
+}
+
+func (f *FindExecutor[D, I]) Stream(ctx context.Context) (streams.Publisher[D], error) {
+	cursor, err := f.cursor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return fromCursor[D](ctx, cursor), nil
+}
+
+func (f *FindExecutor[D, I]) cursor(ctx context.Context) (*raw.Cursor, error) {
 	var (
 		err    error
 		cursor *raw.Cursor
@@ -239,10 +240,7 @@ func (f *FindExecutor[D, I]) Cursor(ctx context.Context) (*FindIterator[D, I], e
 	} else {
 		cursor, err = f.readprefDefault.Find(ctx, f.filter, f.opts)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &FindIterator[D, I]{cursor: cursor}, nil
+	return cursor, err
 }
 
 type FindIterator[D model.Doc[I], I model.ID] struct {

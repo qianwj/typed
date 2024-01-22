@@ -27,6 +27,7 @@ import (
 	"github.com/qianwj/typed/mongo/model"
 	"github.com/qianwj/typed/mongo/model/aggregates"
 	"github.com/qianwj/typed/mongo/options"
+	"github.com/qianwj/typed/streams"
 	rawbson "go.mongodb.org/mongo-driver/bson"
 	raw "go.mongodb.org/mongo-driver/mongo"
 	rawopts "go.mongodb.org/mongo-driver/mongo/options"
@@ -39,6 +40,15 @@ type AggregateExecutor[D model.Doc[I], I model.ID] struct {
 	pipe            *aggregates.Pipeline
 	primary         bool
 	opts            *rawopts.AggregateOptions
+}
+
+func NewAggregator[D model.Doc[I], I model.ID](coll *raw.Collection, pipe *aggregates.Pipeline) *AggregateExecutor[D, I] {
+	return &AggregateExecutor[D, I]{
+		readprefPrimary: coll,
+		readprefDefault: coll,
+		pipe:            pipe,
+		opts:            rawopts.Aggregate(),
+	}
 }
 
 func newAggregateExecutor[D model.Doc[I], I model.ID](
@@ -126,6 +136,22 @@ func (a *AggregateExecutor[D, I]) Custom(c rawbson.M) *AggregateExecutor[D, I] {
 }
 
 func (a *AggregateExecutor[D, I]) Collect(ctx context.Context, result any) error {
+	cursor, err := a.cursor(ctx)
+	if err != nil {
+		return err
+	}
+	return cursor.All(ctx, result)
+}
+
+func (a *AggregateExecutor[D, I]) Stream(ctx context.Context) (streams.Publisher[D], error) {
+	cursor, err := a.cursor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return fromCursor[D](ctx, cursor), nil
+}
+
+func (a *AggregateExecutor[D, I]) cursor(ctx context.Context) (*raw.Cursor, error) {
 	var (
 		err    error
 		cursor *raw.Cursor
@@ -135,8 +161,5 @@ func (a *AggregateExecutor[D, I]) Collect(ctx context.Context, result any) error
 	} else {
 		cursor, err = a.readprefDefault.Aggregate(ctx, a.pipe.Stages(), a.opts)
 	}
-	if err != nil {
-		return err
-	}
-	return cursor.All(ctx, result)
+	return cursor, err
 }

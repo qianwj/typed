@@ -3,6 +3,7 @@ module github.com/qianwj/typed/mongo
 go 1.21.1
 
 require (
+	github.com/qianwj/typed/streams v0.0.4
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.13.1
 )
