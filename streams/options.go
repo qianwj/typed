@@ -24,6 +24,14 @@ func RequestNum[V any](n int) SubscribeOption[V] {
 	}
 }
 
+func DoOnNext[V any](onNext OnNext[V]) SubscribeOption[V] {
+	return func(opts *subscribeOptions[V]) {
+		if opts.onNext == nil {
+			opts.onNext = onNext
+		}
+	}
+}
+
 func DoOnError[V any](onErr OnError) SubscribeOption[V] {
 	return func(opts *subscribeOptions[V]) {
 		if opts.onErr == nil {
