@@ -4,7 +4,7 @@ import (
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
-	"github.com/qianwj/typed/utils"
+	"github.com/qianwj/typed/utils/option"
 )
 
 // ---------- LinkedList ----------
@@ -179,14 +179,14 @@ func (l *LinkedList[T]) Get(i int) (T, bool) {
 // First returns the first element wrapped in a present Optional,
 // or an absent Optional if the LinkedList is empty.
 //
-// First returns utils.Optional[T] rather than the (T, bool) shape
+// First returns option.Optional[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the result.
-func (l *LinkedList[T]) First() utils.Optional[T] {
+func (l *LinkedList[T]) First() option.Optional[T] {
 	if l.head == nil {
-		return utils.Empty[T]()
+		return option.Empty[T]()
 	}
-	return utils.Of(l.head.value)
+	return option.Of(l.head.value)
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -194,11 +194,11 @@ func (l *LinkedList[T]) First() utils.Optional[T] {
 //
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool).
-func (l *LinkedList[T]) Last() utils.Optional[T] {
+func (l *LinkedList[T]) Last() option.Optional[T] {
 	if l.tail == nil {
-		return utils.Empty[T]()
+		return option.Empty[T]()
 	}
-	return utils.Of(l.tail.value)
+	return option.Of(l.tail.value)
 }
 
 // Size returns the number of elements.
@@ -292,16 +292,19 @@ func (l *LinkedList[T]) None(p func(T) bool) bool {
 	return !l.Any(p)
 }
 
-// Find returns the first element for which p returns true, or the zero value
-// and false if none match.
-func (l *LinkedList[T]) Find(p func(T) bool) (T, bool) {
+// Find returns the first element for which p returns true, wrapped
+// in a present Optional, or an absent Optional if no element matches.
+//
+// See First for the rationale behind returning Optional[T] rather
+// than (T, bool). Find is a short-circuiting terminal-style
+// operation: it stops at the first match.
+func (l *LinkedList[T]) Find(p func(T) bool) option.Optional[T] {
 	for n := l.head; n != nil; n = n.next {
 		if p(n.value) {
-			return n.value, true
+			return option.Of(n.value)
 		}
 	}
-	var zero T
-	return zero, false
+	return option.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.

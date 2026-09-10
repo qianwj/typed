@@ -37,7 +37,7 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/qianwj/typed/utils"
+	"github.com/qianwj/typed/utils/option"
 )
 
 // Stream is a lazy, fluent pipeline of values of type T.
@@ -231,17 +231,17 @@ func (s Stream[T]) Count() int {
 // First returns the first element wrapped in a present Optional,
 // or an absent Optional if the Stream is empty.
 //
-// First returns utils.Optional[T] rather than the (T, bool) shape
+// First returns option.Optional[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the result.
 //
 // First is a terminal operation: it consumes the underlying
 // sequence and stops as soon as one element has been produced.
-func (s Stream[T]) First() utils.Optional[T] {
+func (s Stream[T]) First() option.Optional[T] {
 	for v := range s.seq {
-		return utils.Of(v)
+		return option.Of(v)
 	}
-	return utils.Empty[T]()
+	return option.Empty[T]()
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -250,7 +250,7 @@ func (s Stream[T]) First() utils.Optional[T] {
 // Last is a terminal operation: unlike First it has to walk the
 // entire sequence to know which value is last, so it cannot
 // short-circuit on an infinite source.
-func (s Stream[T]) Last() utils.Optional[T] {
+func (s Stream[T]) Last() option.Optional[T] {
 	var (
 		last  T
 		found bool
@@ -260,9 +260,9 @@ func (s Stream[T]) Last() utils.Optional[T] {
 		found = true
 	}
 	if !found {
-		return utils.Empty[T]()
+		return option.Empty[T]()
 	}
-	return utils.Of(last)
+	return option.Of(last)
 }
 
 // Any reports whether at least one element satisfies p.
@@ -292,16 +292,19 @@ func (s Stream[T]) None(p func(T) bool) bool {
 	return !s.Any(p)
 }
 
-// Find returns the first element for which p returns true, or the zero value
-// and false if none match.
-func (s Stream[T]) Find(p func(T) bool) (T, bool) {
+// Find returns the first element for which p returns true, wrapped
+// in a present Optional, or an absent Optional if no element matches.
+//
+// See First for the rationale behind returning Optional[T] rather
+// than (T, bool). Find is a short-circuiting terminal operation: it
+// stops the underlying sequence as soon as p returns true.
+func (s Stream[T]) Find(p func(T) bool) option.Optional[T] {
 	for v := range s.seq {
 		if p(v) {
-			return v, true
+			return option.Of(v)
 		}
 	}
-	var zero T
-	return zero, false
+	return option.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.

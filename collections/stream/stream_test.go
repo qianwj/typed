@@ -217,11 +217,11 @@ func TestLinkedListMapReduce(t *testing.T) {
 	}
 
 	// Find returns the first match.
-	if v, ok := ll.Find(func(n int) bool { return n > 2 }); !ok || v != 3 {
-		t.Fatalf("Find: got (%d, %v), want (3, true)", v, ok)
+	if v := ll.Find(func(n int) bool { return n > 2 }).OrElse(0); v != 3 {
+		t.Fatalf("Find: got %d, want 3", v)
 	}
-	if v, ok := ll.Find(func(n int) bool { return n > 100 }); ok || v != 0 {
-		t.Fatalf("Find (no match): got (%d, %v), want (0, false)", v, ok)
+	if got := ll.Find(func(n int) bool { return n > 100 }); got.IsPresent() {
+		t.Fatalf("Find (no match): got present %v, want absent", got)
 	}
 }
 

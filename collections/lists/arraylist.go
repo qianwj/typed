@@ -27,7 +27,7 @@ import (
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
-	"github.com/qianwj/typed/utils"
+	"github.com/qianwj/typed/utils/option"
 )
 
 // ---------- ArrayList ----------
@@ -282,14 +282,14 @@ func (a *ArrayList[T]) ForEach(visit func(T)) {
 // First returns the first element wrapped in a present Optional,
 // or an absent Optional if the ArrayList is empty.
 //
-// First returns utils.Optional[T] rather than the (T, bool) shape
+// First returns option.Optional[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the result.
-func (a *ArrayList[T]) First() utils.Optional[T] {
+func (a *ArrayList[T]) First() option.Optional[T] {
 	if len(a.items) == 0 {
-		return utils.Empty[T]()
+		return option.Empty[T]()
 	}
-	return utils.Of(a.items[0])
+	return option.Of(a.items[0])
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -297,11 +297,11 @@ func (a *ArrayList[T]) First() utils.Optional[T] {
 //
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool).
-func (a *ArrayList[T]) Last() utils.Optional[T] {
+func (a *ArrayList[T]) Last() option.Optional[T] {
 	if len(a.items) == 0 {
-		return utils.Empty[T]()
+		return option.Empty[T]()
 	}
-	return utils.Of(a.items[len(a.items)-1])
+	return option.Of(a.items[len(a.items)-1])
 }
 
 // Any reports whether at least one element satisfies p.
@@ -324,16 +324,19 @@ func (a *ArrayList[T]) None(p func(T) bool) bool {
 	return !a.Any(p)
 }
 
-// Find returns the first element for which p returns true, or the zero value
-// and false if none match.
-func (a *ArrayList[T]) Find(p func(T) bool) (T, bool) {
+// Find returns the first element for which p returns true, wrapped
+// in a present Optional, or an absent Optional if no element matches.
+//
+// See First for the rationale behind returning Optional[T] rather
+// than (T, bool). Find is a short-circuiting terminal-style
+// operation: it stops at the first match.
+func (a *ArrayList[T]) Find(p func(T) bool) option.Optional[T] {
 	for _, v := range a.items {
 		if p(v) {
-			return v, true
+			return option.Of(v)
 		}
 	}
-	var zero T
-	return zero, false
+	return option.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.

@@ -6,6 +6,7 @@ import (
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/collections/maps"
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils/option"
 )
 
 // HashSet is an unordered collection of unique comparable values.
@@ -340,15 +341,18 @@ func (s *HashSet[T]) None(p func(T) bool) bool {
 	return !s.Any(p)
 }
 
-// Find returns an arbitrary matching value and true, or the zero value and
-// false when no value satisfies p. Because HashSet is unordered, the
-// matching value is not deterministic when multiple values satisfy p.
-func (s *HashSet[T]) Find(p func(T) bool) (T, bool) {
+// Find returns an arbitrary matching value wrapped in a present
+// Optional, or an absent Optional when no value satisfies p.
+// Because HashSet is unordered, the matching value is not
+// deterministic when multiple values satisfy p.
+//
+// See ArrayList.Find for the rationale behind returning
+// Optional[T] rather than (T, bool).
+func (s *HashSet[T]) Find(p func(T) bool) option.Optional[T] {
 	for _, value := range s.Collect() {
 		if p(value) {
-			return value, true
+			return option.Of(value)
 		}
 	}
-	var zero T
-	return zero, false
+	return option.Empty[T]()
 }

@@ -1,17 +1,17 @@
-package utils_test
+package option_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/qianwj/typed/utils"
+	"github.com/qianwj/typed/utils/option"
 )
 
 // TestOptionalEmpty exercises the basic absence story for value
 // types, which is the case that breaks a nil-sentinel design.
 func TestOptionalEmpty(t *testing.T) {
 	t.Run("value type int", func(t *testing.T) {
-		o := utils.Empty[int]()
+		o := option.Empty[int]()
 		if o.IsPresent() {
 			t.Fatal("Empty[int] should be absent")
 		}
@@ -20,13 +20,13 @@ func TestOptionalEmpty(t *testing.T) {
 		}
 	})
 	t.Run("value type string", func(t *testing.T) {
-		o := utils.Empty[string]()
+		o := option.Empty[string]()
 		if o.IsPresent() || !o.IsEmpty() {
 			t.Fatal("Empty[string] should be absent")
 		}
 	})
 	t.Run("value type struct", func(t *testing.T) {
-		o := utils.Empty[user]()
+		o := option.Empty[user]()
 		if o.IsPresent() || !o.IsEmpty() {
 			t.Fatal("Empty[user] should be absent")
 		}
@@ -38,7 +38,7 @@ func TestOptionalEmpty(t *testing.T) {
 // value while staying present.
 func TestOptionalOf(t *testing.T) {
 	t.Run("non-zero", func(t *testing.T) {
-		o := utils.Of(42)
+		o := option.Of(42)
 		if !o.IsPresent() {
 			t.Fatal("Of(42) should be present")
 		}
@@ -47,7 +47,7 @@ func TestOptionalOf(t *testing.T) {
 		}
 	})
 	t.Run("zero value is still present", func(t *testing.T) {
-		o := utils.Of(0)
+		o := option.Of(0)
 		if !o.IsPresent() {
 			t.Fatal("Of(0) should be present — that is the whole point of the present flag")
 		}
@@ -56,7 +56,7 @@ func TestOptionalOf(t *testing.T) {
 		}
 	})
 	t.Run("empty string is still present", func(t *testing.T) {
-		o := utils.Of("")
+		o := option.Of("")
 		if !o.IsPresent() {
 			t.Fatal(`Of("") should be present`)
 		}
@@ -72,14 +72,14 @@ func TestOptionalOf(t *testing.T) {
 func TestOptionalOfNullable(t *testing.T) {
 	t.Run("nil pointer is absent", func(t *testing.T) {
 		var p *user
-		o := utils.OfNullable(p)
+		o := option.OfNullable(p)
 		if o.IsPresent() {
 			t.Fatal("OfNullable(nil) should be absent")
 		}
 	})
 	t.Run("non-nil pointer is present", func(t *testing.T) {
 		u := &user{Name: "bob", Age: 30}
-		o := utils.OfNullable(u)
+		o := option.OfNullable(u)
 		if !o.IsPresent() {
 			t.Fatal("OfNullable(&u) should be present")
 		}
@@ -89,36 +89,36 @@ func TestOptionalOfNullable(t *testing.T) {
 	})
 	t.Run("nil slice is absent", func(t *testing.T) {
 		var s []int
-		if utils.OfNullable(s).IsPresent() {
+		if option.OfNullable(s).IsPresent() {
 			t.Fatal("OfNullable(nil slice) should be absent")
 		}
 	})
 	t.Run("nil map is absent", func(t *testing.T) {
 		var m map[string]int
-		if utils.OfNullable(m).IsPresent() {
+		if option.OfNullable(m).IsPresent() {
 			t.Fatal("OfNullable(nil map) should be absent")
 		}
 	})
 	t.Run("non-nil slice is present", func(t *testing.T) {
-		if !utils.OfNullable([]int{1, 2, 3}).IsPresent() {
+		if !option.OfNullable([]int{1, 2, 3}).IsPresent() {
 			t.Fatal("OfNullable([]int{1,2,3}) should be present")
 		}
 	})
 	t.Run("nil channel is absent", func(t *testing.T) {
 		var ch chan int
-		if utils.OfNullable(ch).IsPresent() {
+		if option.OfNullable(ch).IsPresent() {
 			t.Fatal("OfNullable(nil chan) should be absent")
 		}
 	})
 	t.Run("nil function is absent", func(t *testing.T) {
 		var f func()
-		if utils.OfNullable(f).IsPresent() {
+		if option.OfNullable(f).IsPresent() {
 			t.Fatal("OfNullable(nil func) should be absent")
 		}
 	})
 	t.Run("nil interface is absent", func(t *testing.T) {
 		var i any
-		if utils.OfNullable(i).IsPresent() {
+		if option.OfNullable(i).IsPresent() {
 			t.Fatal("OfNullable(nil interface) should be absent")
 		}
 	})
@@ -128,13 +128,13 @@ func TestOptionalOfNullable(t *testing.T) {
 		// of the value, including the zero value. This is the
 		// reason OfNullable cannot be used as a universal
 		// constructor: prefer Of for value types.
-		if !utils.OfNullable(0).IsPresent() {
+		if !option.OfNullable(0).IsPresent() {
 			t.Fatal("OfNullable(0) should be present")
 		}
-		if !utils.OfNullable("").IsPresent() {
+		if !option.OfNullable("").IsPresent() {
 			t.Fatal(`OfNullable("") should be present`)
 		}
-		if !utils.OfNullable(user{}).IsPresent() {
+		if !option.OfNullable(user{}).IsPresent() {
 			t.Fatal("OfNullable(user{}) should be present")
 		}
 	})
@@ -148,15 +148,15 @@ func TestOptionalGetPanicOnEmpty(t *testing.T) {
 			t.Fatal("Get on empty Optional should panic")
 		}
 	}()
-	_ = utils.Empty[int]().Get()
+	_ = option.Empty[int]().Get()
 }
 
 // TestOptionalOrElse covers both branches of OrElse.
 func TestOptionalOrElse(t *testing.T) {
-	if got := utils.Of(7).OrElse(99); got != 7 {
+	if got := option.Of(7).OrElse(99); got != 7 {
 		t.Fatalf("OrElse on present: got %d, want 7", got)
 	}
-	if got := utils.Empty[int]().OrElse(99); got != 99 {
+	if got := option.Empty[int]().OrElse(99); got != 99 {
 		t.Fatalf("OrElse on empty: got %d, want 99", got)
 	}
 }
@@ -167,7 +167,7 @@ func TestOptionalOrElse(t *testing.T) {
 func TestOptionalOrElseGet(t *testing.T) {
 	t.Run("present skips the fallback", func(t *testing.T) {
 		called := false
-		got := utils.Of(5).OrElseGet(func() int {
+		got := option.Of(5).OrElseGet(func() int {
 			called = true
 			return 99
 		})
@@ -179,7 +179,7 @@ func TestOptionalOrElseGet(t *testing.T) {
 		}
 	})
 	t.Run("empty calls the fallback", func(t *testing.T) {
-		got := utils.Empty[int]().OrElseGet(func() int { return 42 })
+		got := option.Empty[int]().OrElseGet(func() int { return 42 })
 		if got != 42 {
 			t.Fatalf("got %d, want 42", got)
 		}
@@ -192,7 +192,7 @@ func TestOptionalOrElseGet(t *testing.T) {
 // Optional.orElseThrow.
 func TestOptionalOrElseThrow(t *testing.T) {
 	t.Run("present returns value with nil error", func(t *testing.T) {
-		v, err := utils.Of(7).OrElseThrow("missing")
+		v, err := option.Of(7).OrElseThrow("missing")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -201,7 +201,7 @@ func TestOptionalOrElseThrow(t *testing.T) {
 		}
 	})
 	t.Run("empty returns the message", func(t *testing.T) {
-		_, err := utils.Empty[int]().OrElseThrow("missing")
+		_, err := option.Empty[int]().OrElseThrow("missing")
 		if err == nil || err.Error() != "missing" {
 			t.Fatalf("got %v, want error 'missing'", err)
 		}
@@ -212,8 +212,8 @@ func TestOptionalOrElseThrow(t *testing.T) {
 // only invoked when the Optional is present.
 func TestOptionalIfPresent(t *testing.T) {
 	called := 0
-	utils.Of(10).IfPresent(func(int) { called++ })
-	utils.Empty[int]().IfPresent(func(int) { called++ })
+	option.Of(10).IfPresent(func(int) { called++ })
+	option.Empty[int]().IfPresent(func(int) { called++ })
 	if called != 1 {
 		t.Fatalf("IfPresent: callback ran %d times, want 1", called)
 	}
@@ -226,8 +226,8 @@ func TestOptionalIfPresentOrElse(t *testing.T) {
 	track := func(int) { present++ }
 	trackAbsent := func() { absent++ }
 
-	utils.Of(1).IfPresentOrElse(track, trackAbsent)
-	utils.Empty[int]().IfPresentOrElse(track, trackAbsent)
+	option.Of(1).IfPresentOrElse(track, trackAbsent)
+	option.Empty[int]().IfPresentOrElse(track, trackAbsent)
 
 	if present != 1 {
 		t.Fatalf("present callback ran %d times, want 1", present)
@@ -241,20 +241,20 @@ func TestOptionalIfPresentOrElse(t *testing.T) {
 // present+drop, and absent.
 func TestOptionalFilter(t *testing.T) {
 	t.Run("present and kept", func(t *testing.T) {
-		got := utils.Of(10).Filter(func(n int) bool { return n > 5 })
+		got := option.Of(10).Filter(func(n int) bool { return n > 5 })
 		if !got.IsPresent() || got.Get() != 10 {
 			t.Fatalf("got %v, want present 10", got)
 		}
 	})
 	t.Run("present and dropped", func(t *testing.T) {
-		got := utils.Of(3).Filter(func(n int) bool { return n > 5 })
+		got := option.Of(3).Filter(func(n int) bool { return n > 5 })
 		if got.IsPresent() {
 			t.Fatalf("got %v, want empty", got)
 		}
 	})
 	t.Run("absent stays absent", func(t *testing.T) {
 		called := false
-		got := utils.Empty[int]().Filter(func(int) bool {
+		got := option.Empty[int]().Filter(func(int) bool {
 			called = true
 			return true
 		})
@@ -271,7 +271,7 @@ func TestOptionalFilter(t *testing.T) {
 // absent branch is propagated without invoking f.
 func TestOptionalMap(t *testing.T) {
 	t.Run("present applies f and changes type", func(t *testing.T) {
-		got := utils.Of(7).Map(func(n int) string {
+		got := option.Of(7).Map(func(n int) string {
 			return "n=" + itoa(n)
 		})
 		if !got.IsPresent() || got.Get() != "n=7" {
@@ -280,7 +280,7 @@ func TestOptionalMap(t *testing.T) {
 	})
 	t.Run("empty propagates without calling f", func(t *testing.T) {
 		called := false
-		got := utils.Empty[int]().Map(func(int) string {
+		got := option.Empty[int]().Map(func(int) string {
 			called = true
 			return "x"
 		})
@@ -298,19 +298,19 @@ func TestOptionalMap(t *testing.T) {
 // without calling f.
 func TestOptionalFlatMap(t *testing.T) {
 	t.Run("present delegates to f", func(t *testing.T) {
-		got := utils.Of(5).FlatMap(func(n int) utils.Optional[string] {
+		got := option.Of(5).FlatMap(func(n int) option.Optional[string] {
 			if n > 0 {
-				return utils.Of(itoa(n))
+				return option.Of(itoa(n))
 			}
-			return utils.Empty[string]()
+			return option.Empty[string]()
 		})
 		if !got.IsPresent() || got.Get() != "5" {
 			t.Fatalf("got %v, want present 5", got)
 		}
 	})
 	t.Run("f returning empty stays empty", func(t *testing.T) {
-		got := utils.Of(-1).FlatMap(func(int) utils.Optional[string] {
-			return utils.Empty[string]()
+		got := option.Of(-1).FlatMap(func(int) option.Optional[string] {
+			return option.Empty[string]()
 		})
 		if got.IsPresent() {
 			t.Fatalf("got %v, want empty", got)
@@ -318,9 +318,9 @@ func TestOptionalFlatMap(t *testing.T) {
 	})
 	t.Run("empty propagates without calling f", func(t *testing.T) {
 		called := false
-		got := utils.Empty[int]().FlatMap(func(int) utils.Optional[string] {
+		got := option.Empty[int]().FlatMap(func(int) option.Optional[string] {
 			called = true
-			return utils.Of("x")
+			return option.Of("x")
 		})
 		if got.IsPresent() {
 			t.Fatalf("got %v, want empty", got)
@@ -335,15 +335,15 @@ func TestOptionalFlatMap(t *testing.T) {
 // sequence of conditionals. This is a smoke test for the
 // documentation example.
 func TestOptionalChained(t *testing.T) {
-	parse := func(s string) utils.Optional[int] {
+	parse := func(s string) option.Optional[int] {
 		if s == "" {
-			return utils.Empty[int]()
+			return option.Empty[int]()
 		}
 		v, err := atoi(s)
 		if err != nil {
-			return utils.Empty[int]()
+			return option.Empty[int]()
 		}
-		return utils.Of(v)
+		return option.Of(v)
 	}
 
 	got := parse("123").
