@@ -20,34 +20,9 @@ package option
 
 import (
 	"errors"
-	"reflect"
-)
 
-// isNil reports whether v is a typed nil in the Go sense: a nil
-// pointer, nil slice, nil map, nil channel, nil function value, or
-// a nil interface. Value types (int, string, struct, …) are never
-// nil and always return false.
-//
-// isNil is the building block for OfNullable. Reflection is used
-// because Go's generic type system cannot express "is this value a
-// nil of its type" without a runtime check; the alternative — a
-// type switch — is not reachable from a generic function.
-//
-// The untyped-nil-interface case (`var i any; OfNullable(i)`) is
-// caught up front: reflect.ValueOf on an untyped nil returns a
-// zero Value with Kind == Invalid, which would otherwise slip
-// through the switch below.
-func isNil[T any](v T) bool {
-	if any(v) == nil {
-		return true
-	}
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
-		return rv.IsNil()
-	}
-	return false
-}
+	"github.com/qianwj/typed/utils/objects"
+)
 
 // Optional[T] is a container that may or may not hold a value of type T.
 //
@@ -85,7 +60,7 @@ func Of[T any](value T) Optional[T] {
 // OfNullable is the right choice for pointer-like Ts. For value types
 // (int, string, struct, …) use Of directly: there is no nil to test.
 func OfNullable[T any](value T) Optional[T] {
-	if isNil(value) {
+	if objects.IsNil(value) {
 		return Optional[T]{}
 	}
 	return Optional[T]{value: value, present: true}
