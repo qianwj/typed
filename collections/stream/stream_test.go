@@ -156,22 +156,22 @@ func TestStreamSortByMinByMaxBy(t *testing.T) {
 // Go 1.27 generic methods is explicit: this is the only way to support
 // type-changing fluent methods such as Map[R].
 func TestArrayListIsConcreteType(t *testing.T) {
-	var _ lists.ArrayList[int] = lists.NewArrayList[int]()
+	var _ *lists.ArrayList[int] = lists.NewArrayList[int]()
+	var _ *lists.LinkedList[int] = lists.NewLinkedList[int]()
 	arr := lists.ArrayListOf(1, 2)
 	var _ stream.Stream[int] = arr.Stream()
 }
 
 // TestLinkedListMapReduce exercises the Map / Reduce / Any / All / None /
-// Find methods on LinkedList, all of which were brought up to the same
-// level as ArrayList.
+// Find methods on LinkedList.
 func TestLinkedListMapReduce(t *testing.T) {
 	ll := lists.LinkedListOf(1, 2, 3, 4, 5)
 
 	// Map changes the element type — generic method on a concrete
 	// receiver, allowed by Go 1.27.
 	strings := ll.Map(func(n int) string { return strconv.Itoa(n * 10) })
-	if got, want := strings.Len(), 5; got != want {
-		t.Fatalf("Map: len got %d, want %d", got, want)
+	if got, want := strings.Size(), 5; got != want {
+		t.Fatalf("Map: size got %d, want %d", got, want)
 	}
 	if v, ok := strings.Get(0); !ok || v != "10" {
 		t.Fatalf("Map: Get(0) got (%q, %v), want (\"10\", true)", v, ok)
@@ -288,8 +288,8 @@ func TestLinkedListBasics(t *testing.T) {
 	l.AddFirst(1)
 	l.Add(4) // tail
 
-	if got := l.Len(); got != 4 {
-		t.Fatalf("Len: got %d, want 4", got)
+	if got := l.Size(); got != 4 {
+		t.Fatalf("Size: got %d, want 4", got)
 	}
 	if v, _ := l.First(); v != 1 {
 		t.Fatalf("First: got %d, want 1", v)
@@ -309,20 +309,20 @@ func TestLinkedListBasics(t *testing.T) {
 	if v, ok := l.RemoveLast(); !ok || v != 4 {
 		t.Fatalf("RemoveLast: got (%d, %v), want (4, true)", v, ok)
 	}
-	if got := l.Len(); got != 2 {
-		t.Fatalf("Len after pops: got %d, want 2", got)
+	if got := l.Size(); got != 2 {
+		t.Fatalf("Size after pops: got %d, want 2", got)
 	}
 }
 
 // TestLinkedListMap verifies the Go 1.27 generic method Map[R any] also
-// works on the concrete LinkedList receiver, returning a LinkedList of the
-// new type.
+// works on the concrete LinkedList receiver, returning an ArrayList of the
+// new type with the original list order.
 func TestLinkedListMap(t *testing.T) {
 	src := lists.LinkedListOf(1, 2, 3, 4)
 	ll := src.Map(func(n int) string { return strconv.Itoa(n * 10) })
 
-	if got, want := ll.Len(), 4; got != want {
-		t.Fatalf("Map: len got %d, want %d", got, want)
+	if got, want := ll.Size(), 4; got != want {
+		t.Fatalf("Map: size got %d, want %d", got, want)
 	}
 	for i, want := range []string{"10", "20", "30", "40"} {
 		v, ok := ll.Get(i)
