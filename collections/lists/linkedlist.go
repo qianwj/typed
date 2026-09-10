@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils"
 )
 
 // ---------- LinkedList ----------
@@ -175,22 +176,29 @@ func (l *LinkedList[T]) Get(i int) (T, bool) {
 	return n.value, true
 }
 
-// First returns the first element, or the zero value and false if empty.
-func (l *LinkedList[T]) First() (T, bool) {
+// First returns the first element wrapped in a present Optional,
+// or an absent Optional if the LinkedList is empty.
+//
+// First returns utils.Optional[T] rather than the (T, bool) shape
+// so callers can chain the standard optional combinators
+// (OrElse, Map, FlatMap, …) without first unpacking the result.
+func (l *LinkedList[T]) First() utils.Optional[T] {
 	if l.head == nil {
-		var zero T
-		return zero, false
+		return utils.Empty[T]()
 	}
-	return l.head.value, true
+	return utils.Of(l.head.value)
 }
 
-// Last returns the last element, or the zero value and false if empty.
-func (l *LinkedList[T]) Last() (T, bool) {
+// Last returns the last element wrapped in a present Optional,
+// or an absent Optional if the LinkedList is empty.
+//
+// See First for the rationale behind returning Optional[T] rather
+// than (T, bool).
+func (l *LinkedList[T]) Last() utils.Optional[T] {
 	if l.tail == nil {
-		var zero T
-		return zero, false
+		return utils.Empty[T]()
 	}
-	return l.tail.value, true
+	return utils.Of(l.tail.value)
 }
 
 // Size returns the number of elements.

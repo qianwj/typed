@@ -27,6 +27,7 @@ import (
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils"
 )
 
 // ---------- ArrayList ----------
@@ -278,22 +279,29 @@ func (a *ArrayList[T]) ForEach(visit func(T)) {
 	}
 }
 
-// First returns the first element, or the zero value and false if empty.
-func (a *ArrayList[T]) First() (T, bool) {
+// First returns the first element wrapped in a present Optional,
+// or an absent Optional if the ArrayList is empty.
+//
+// First returns utils.Optional[T] rather than the (T, bool) shape
+// so callers can chain the standard optional combinators
+// (OrElse, Map, FlatMap, …) without first unpacking the result.
+func (a *ArrayList[T]) First() utils.Optional[T] {
 	if len(a.items) == 0 {
-		var zero T
-		return zero, false
+		return utils.Empty[T]()
 	}
-	return a.items[0], true
+	return utils.Of(a.items[0])
 }
 
-// Last returns the last element, or the zero value and false if empty.
-func (a *ArrayList[T]) Last() (T, bool) {
+// Last returns the last element wrapped in a present Optional,
+// or an absent Optional if the ArrayList is empty.
+//
+// See First for the rationale behind returning Optional[T] rather
+// than (T, bool).
+func (a *ArrayList[T]) Last() utils.Optional[T] {
 	if len(a.items) == 0 {
-		var zero T
-		return zero, false
+		return utils.Empty[T]()
 	}
-	return a.items[len(a.items)-1], true
+	return utils.Of(a.items[len(a.items)-1])
 }
 
 // Any reports whether at least one element satisfies p.

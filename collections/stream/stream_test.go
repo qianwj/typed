@@ -116,9 +116,9 @@ func TestStreamEarlyTermination(t *testing.T) {
 
 	// First must stop after yielding one value.
 	visited = 0
-	v, ok := stream.From(counter).First()
-	if !ok || v != 0 {
-		t.Fatalf("First: got (%v, %v), want (0, true)", v, ok)
+	v := stream.From(counter).First().OrElse(-1)
+	if v != 0 {
+		t.Fatalf("First: got %d, want 0", v)
 	}
 	if visited != 1 {
 		t.Fatalf("First visited %d values, want 1", visited)
@@ -291,10 +291,10 @@ func TestLinkedListBasics(t *testing.T) {
 	if got := l.Size(); got != 4 {
 		t.Fatalf("Size: got %d, want 4", got)
 	}
-	if v, _ := l.First(); v != 1 {
+	if v := l.First().OrElse(0); v != 1 {
 		t.Fatalf("First: got %d, want 1", v)
 	}
-	if v, _ := l.Last(); v != 4 {
+	if v := l.Last().OrElse(0); v != 4 {
 		t.Fatalf("Last: got %d, want 4", v)
 	}
 	if v, _ := l.Get(2); v != 3 {
