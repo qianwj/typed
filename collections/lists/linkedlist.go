@@ -1,6 +1,8 @@
 package lists
 
 import (
+	"slices"
+
 	"github.com/qianwj/typed/collections/stream"
 )
 
@@ -19,10 +21,11 @@ type node[T any] struct {
 // As a concrete generic type, its methods (including type-changing ones
 // such as Map[R]) can use Go 1.27's generic methods.
 //
-// All methods are defined on *LinkedList, not LinkedList, so the list is
-// treated as a single reference-shared instance. Copying a LinkedList
-// value copies only the head/tail/size fields and shares the underlying
-// node chain — do not copy a LinkedList after it has been put into use.
+// All methods are defined on *LinkedList, not LinkedList, and constructors
+// return *LinkedList, so the list is treated as a single reference-shared
+// instance. Copying a LinkedList value copies only the head/tail/size fields
+// and shares the underlying node chain; use the pointer returned by the
+// constructor and do not copy a LinkedList after it has been put into use.
 type LinkedList[T any] struct {
 	head *node[T]
 	tail *node[T]
@@ -30,12 +33,12 @@ type LinkedList[T any] struct {
 }
 
 // NewLinkedList returns a new empty LinkedList.
-func NewLinkedList[T any]() LinkedList[T] {
-	return LinkedList[T]{}
+func NewLinkedList[T any]() *LinkedList[T] {
+	return &LinkedList[T]{}
 }
 
 // LinkedListOf returns a LinkedList containing the given values in order.
-func LinkedListOf[T any](values ...T) LinkedList[T] {
+func LinkedListOf[T any](values ...T) *LinkedList[T] {
 	l := NewLinkedList[T]()
 	for _, v := range values {
 		l.Add(v)
@@ -107,8 +110,8 @@ func (l *LinkedList[T]) RemoveLast() (T, bool) {
 
 // Insert inserts value at the given index. Elements at index and after are
 // shifted one position to the right. If index == 0, value is prepended; if
-// index == l.Len(), value is appended. Panics if index < 0 or
-// index > l.Len().
+// index == l.Size(), value is appended. Panics if index < 0 or
+// index > l.Size().
 func (l *LinkedList[T]) Insert(index int, value T) {
 	if index < 0 || index > l.size {
 		panic("LinkedList.Insert: index out of range")
@@ -132,7 +135,7 @@ func (l *LinkedList[T]) Insert(index int, value T) {
 }
 
 // RemoveAt removes and returns the element at the given index. Panics if
-// index < 0 or index >= l.Len().
+// index < 0 or index >= l.Size().
 func (l *LinkedList[T]) RemoveAt(index int) T {
 	if index < 0 || index >= l.size {
 		panic("LinkedList.RemoveAt: index out of range")
@@ -190,9 +193,21 @@ func (l *LinkedList[T]) Last() (T, bool) {
 	return l.tail.value, true
 }
 
-// Len returns the number of elements.
-func (l *LinkedList[T]) Len() int {
+// Size returns the number of elements.
+func (l *LinkedList[T]) Size() int {
 	return l.size
+}
+
+// IsEmpty reports whether the list contains no elements.
+func (l *LinkedList[T]) IsEmpty() bool {
+	return l.Size() == 0
+}
+
+// Clear removes all elements from the list.
+func (l *LinkedList[T]) Clear() {
+	l.head = nil
+	l.tail = nil
+	l.size = 0
 }
 
 // Collect returns the list's values as a plain []T in head-to-tail order.
@@ -229,6 +244,17 @@ func (l *LinkedList[T]) ForEach(visit func(T)) {
 	for n := l.head; n != nil; n = n.next {
 		visit(n.value)
 	}
+}
+
+// Peek calls visit on each element and returns an independent copy of the
+// list.
+func (l *LinkedList[T]) Peek(visit func(T)) *LinkedList[T] {
+	out := NewLinkedList[T]()
+	for n := l.head; n != nil; n = n.next {
+		visit(n.value)
+		out.Add(n.value)
+	}
+	return out
 }
 
 // Any reports whether at least one element satisfies p. Stops as soon as a
@@ -284,7 +310,7 @@ func (l *LinkedList[T]) Reduce[U any](init U, f func(acc U, v T) U) U {
 
 // Filter returns a new LinkedList keeping only the elements for which p
 // returns true.
-func (l *LinkedList[T]) Filter(p func(T) bool) LinkedList[T] {
+func (l *LinkedList[T]) Filter(p func(T) bool) *LinkedList[T] {
 	out := NewLinkedList[T]()
 	for n := l.head; n != nil; n = n.next {
 		if p(n.value) {
@@ -294,12 +320,121 @@ func (l *LinkedList[T]) Filter(p func(T) bool) LinkedList[T] {
 	return out
 }
 
-// Map applies f to every element and returns a new LinkedList of the
-// results.
-func (l *LinkedList[T]) Map[R any](f func(T) R) LinkedList[R] {
-	out := NewLinkedList[R]()
+// Map applies f to every element and returns an ArrayList of the results.
+//
+// The mapped type is unconstrained and may be non-comparable. Results keep
+// the linked list's head-to-tail order.
+func (l *LinkedList[T]) Map[R any](f func(T) R) *ArrayList[R] {
+	values := make([]R, 0, l.size)
 	for n := l.head; n != nil; n = n.next {
-		out.Add(f(n.value))
+		values = append(values, f(n.value))
+	}
+	return ArrayListOf(values...)
+}
+
+// FlatMap applies f to every value and concatenates the returned ArrayLists.
+// A nil mapped list is treated as empty.
+func (l *LinkedList[T]) FlatMap[R any](f func(T) *ArrayList[R]) *ArrayList[R] {
+	var values []R
+	for n := l.head; n != nil; n = n.next {
+		mapped := f(n.value)
+		if mapped == nil {
+			continue
+		}
+		values = append(values, mapped.items...)
+	}
+	return ArrayListOf(values...)
+}
+
+// Take returns a new LinkedList with at most the first n elements.
+func (l *LinkedList[T]) Take(n int) *LinkedList[T] {
+	out := NewLinkedList[T]()
+	if n <= 0 {
+		return out
+	}
+	for current, taken := l.head, 0; current != nil && taken < n; current, taken = current.next, taken+1 {
+		out.Add(current.value)
 	}
 	return out
+}
+
+// Drop returns a new LinkedList with the first n elements removed.
+func (l *LinkedList[T]) Drop(n int) *LinkedList[T] {
+	out := NewLinkedList[T]()
+	if n < 0 {
+		n = 0
+	}
+	for current, index := l.head, 0; current != nil; current, index = current.next, index+1 {
+		if index >= n {
+			out.Add(current.value)
+		}
+	}
+	return out
+}
+
+// Distinct returns a new LinkedList keeping only the first occurrence of
+// each element under eq.
+func (l *LinkedList[T]) Distinct(eq func(T, T) bool) *LinkedList[T] {
+	out := NewLinkedList[T]()
+	l.ForEach(func(value T) {
+		duplicate := false
+		out.ForEach(func(existing T) {
+			if eq(existing, value) {
+				duplicate = true
+			}
+		})
+		if !duplicate {
+			out.Add(value)
+		}
+	})
+	return out
+}
+
+// Concat returns a new LinkedList that appends other to l.
+func (l *LinkedList[T]) Concat(other *LinkedList[T]) *LinkedList[T] {
+	out := NewLinkedList[T]()
+	l.ForEach(out.Add)
+	if other != nil {
+		other.ForEach(out.Add)
+	}
+	return out
+}
+
+// SortBy returns a new LinkedList with the elements ordered by less.
+func (l *LinkedList[T]) SortBy(less func(x, y T) int) *LinkedList[T] {
+	values := l.Collect()
+	slices.SortFunc(values, less)
+	return LinkedListOf(values...)
+}
+
+// MinBy returns the smallest element under less, or the zero value and false
+// if the list is empty.
+func (l *LinkedList[T]) MinBy(less func(x, y T) int) (T, bool) {
+	if l.head == nil {
+		var zero T
+		return zero, false
+	}
+	best := l.head.value
+	for n := l.head.next; n != nil; n = n.next {
+		if less(n.value, best) < 0 {
+			best = n.value
+		}
+	}
+	return best, true
+}
+
+// MaxBy returns the largest element under less, or the zero value and false
+// if the list is empty.
+func (l *LinkedList[T]) MaxBy(less func(x, y T) int) (T, bool) {
+	if l.head == nil {
+		var zero T
+		return zero, false
+	}
+	best := l.head.value
+	for n := l.head.next; n != nil; n = n.next {
+		if less(n.value, best) > 0 {
+			best = n.value
+		}
+	}
+	return best, true
 }

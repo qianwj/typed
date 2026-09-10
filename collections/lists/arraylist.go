@@ -46,8 +46,8 @@ type ArrayList[T any] struct {
 }
 
 // NewArrayList returns a new empty ArrayList.
-func NewArrayList[T any]() ArrayList[T] {
-	return ArrayList[T]{}
+func NewArrayList[T any]() *ArrayList[T] {
+	return &ArrayList[T]{}
 }
 
 // ArrayListOf returns an ArrayList containing the given values in order.
@@ -55,8 +55,13 @@ func NewArrayList[T any]() ArrayList[T] {
 // A plain slice can be passed via the spread operator: ArrayListOf(s...).
 // The values are stored without copying; the backing array is the variadic
 // slice that ArrayListOf received.
-func ArrayListOf[T any](values ...T) ArrayList[T] {
-	return ArrayList[T]{items: values}
+func ArrayListOf[T any](values ...T) *ArrayList[T] {
+	return &ArrayList[T]{items: values}
+}
+
+// Add appends value to the end of the list.
+func (a *ArrayList[T]) Add(value T) {
+	a.items = append(a.items, value)
 }
 
 // Stream returns a lazy stream.Stream[T] that is a snapshot of the
@@ -77,14 +82,14 @@ func (a *ArrayList[T]) Stream() stream.Stream[T] {
 
 // Filter returns a new ArrayList containing only the elements for which p
 // returns true.
-func (a *ArrayList[T]) Filter(p func(T) bool) ArrayList[T] {
+func (a *ArrayList[T]) Filter(p func(T) bool) *ArrayList[T] {
 	out := make([]T, 0, len(a.items))
 	for _, v := range a.items {
 		if p(v) {
 			out = append(out, v)
 		}
 	}
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // Map applies f to every element and returns a new ArrayList of the results.
@@ -92,57 +97,61 @@ func (a *ArrayList[T]) Filter(p func(T) bool) ArrayList[T] {
 // This is the operation that motivates ArrayList being a concrete generic
 // type in Go 1.27: the method declares its own type parameter R, which an
 // interface method cannot do.
-func (a *ArrayList[T]) Map[R any](f func(T) R) ArrayList[R] {
+func (a *ArrayList[T]) Map[R any](f func(T) R) *ArrayList[R] {
 	out := make([]R, len(a.items))
 	for i, v := range a.items {
 		out[i] = f(v)
 	}
-	return ArrayList[R]{items: out}
+	return &ArrayList[R]{items: out}
 }
 
 // FlatMap applies f to every element and concatenates the resulting
 // ArrayLists.
-func (a *ArrayList[T]) FlatMap[R any](f func(T) ArrayList[R]) ArrayList[R] {
+func (a *ArrayList[T]) FlatMap[R any](f func(T) *ArrayList[R]) *ArrayList[R] {
 	var out []R
 	for _, v := range a.items {
-		out = append(out, f(v).items...)
+		mapped := f(v)
+		if mapped == nil {
+			continue
+		}
+		out = append(out, mapped.items...)
 	}
-	return ArrayList[R]{items: out}
+	return &ArrayList[R]{items: out}
 }
 
 // Take returns a new ArrayList with at most the first n elements.
-func (a *ArrayList[T]) Take(n int) ArrayList[T] {
+func (a *ArrayList[T]) Take(n int) *ArrayList[T] {
 	if n <= 0 {
-		return ArrayList[T]{}
+		return &ArrayList[T]{}
 	}
 	if n >= len(a.items) {
 		out := make([]T, len(a.items))
 		copy(out, a.items)
-		return ArrayList[T]{items: out}
+		return &ArrayList[T]{items: out}
 	}
 	out := make([]T, n)
 	copy(out, a.items[:n])
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // Drop returns a new ArrayList with the first n elements removed.
-func (a *ArrayList[T]) Drop(n int) ArrayList[T] {
+func (a *ArrayList[T]) Drop(n int) *ArrayList[T] {
 	if n <= 0 {
 		out := make([]T, len(a.items))
 		copy(out, a.items)
-		return ArrayList[T]{items: out}
+		return &ArrayList[T]{items: out}
 	}
 	if n >= len(a.items) {
-		return ArrayList[T]{}
+		return &ArrayList[T]{}
 	}
 	out := make([]T, len(a.items)-n)
 	copy(out, a.items[n:])
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // Distinct returns a new ArrayList keeping only the first occurrence of each
 // element under eq.
-func (a *ArrayList[T]) Distinct(eq func(T, T) bool) ArrayList[T] {
+func (a *ArrayList[T]) Distinct(eq func(T, T) bool) *ArrayList[T] {
 	out := make([]T, 0, len(a.items))
 outer:
 	for _, v := range a.items {
@@ -153,24 +162,31 @@ outer:
 		}
 		out = append(out, v)
 	}
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // Concat returns a new ArrayList that appends other to a.
-func (a *ArrayList[T]) Concat(other ArrayList[T]) ArrayList[T] {
+func (a *ArrayList[T]) Concat(other *ArrayList[T]) *ArrayList[T] {
 	out := make([]T, 0, len(a.items)+len(other.items))
 	out = append(out, a.items...)
 	out = append(out, other.items...)
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // Peek calls visit on each element and returns a unchanged. Useful for
 // debugging or observing a pipeline without modifying it.
-func (a *ArrayList[T]) Peek(visit func(T)) ArrayList[T] {
+func (a *ArrayList[T]) Peek(visit func(T)) *ArrayList[T] {
 	for _, v := range a.items {
 		visit(v)
 	}
-	return *a
+	out := make([]T, len(a.items))
+	copy(out, a.items)
+	return &ArrayList[T]{items: out}
+}
+
+// AddFirst prepends value to the list.
+func (a *ArrayList[T]) AddFirst(value T) {
+	a.items = slices.Insert(a.items, 0, value)
 }
 
 // Insert inserts value at the given index. Elements at index and after are
@@ -195,6 +211,36 @@ func (a *ArrayList[T]) RemoveAt(index int) T {
 	return v
 }
 
+// RemoveFirst removes and returns the first element, or the zero value and
+// false if the list is empty.
+func (a *ArrayList[T]) RemoveFirst() (T, bool) {
+	if len(a.items) == 0 {
+		var zero T
+		return zero, false
+	}
+	v := a.items[0]
+	a.items = slices.Delete(a.items, 0, 1)
+	return v, true
+}
+
+// RemoveLast removes and returns the last element, or the zero value and
+// false if the list is empty.
+func (a *ArrayList[T]) RemoveLast() (T, bool) {
+	if len(a.items) == 0 {
+		var zero T
+		return zero, false
+	}
+	last := len(a.items) - 1
+	v := a.items[last]
+	a.items = slices.Delete(a.items, last, len(a.items))
+	return v, true
+}
+
+// Clear removes all elements from the list.
+func (a *ArrayList[T]) Clear() {
+	a.items = nil
+}
+
 // Collect returns the ArrayList's values as a freshly allocated []T.
 //
 // The returned slice is a copy, decoupled from the ArrayList's internal
@@ -205,16 +251,14 @@ func (a *ArrayList[T]) Collect() []T {
 	return out
 }
 
-// Count returns the number of elements.
-func (a *ArrayList[T]) Count() int {
+// Size returns the number of elements.
+func (a *ArrayList[T]) Size() int {
 	return len(a.items)
 }
 
-// Len returns the number of elements. It is an alias for Count, kept so
-// that ArrayList satisfies the common List[T] interface alongside
-// LinkedList (which exposes Len as its primary size method).
-func (a *ArrayList[T]) Len() int {
-	return len(a.items)
+// IsEmpty reports whether the list contains no elements.
+func (a *ArrayList[T]) IsEmpty() bool {
+	return a.Size() == 0
 }
 
 // Get returns the value at index i, or the zero value and false if i is
@@ -298,11 +342,11 @@ func (a *ArrayList[T]) Reduce[R any](init R, f func(acc R, v T) R) R {
 // A no-arg Sort() that uses cmp.Compare would require T cmp.Ordered, which
 // a single ArrayList[T any] type cannot express on its method set. Provide
 // the comparator explicitly to keep the fluent API type-parameter-free.
-func (a *ArrayList[T]) SortBy(less func(x, y T) int) ArrayList[T] {
+func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
 	out := make([]T, len(a.items))
 	copy(out, a.items)
 	slices.SortFunc(out, less)
-	return ArrayList[T]{items: out}
+	return &ArrayList[T]{items: out}
 }
 
 // MinBy returns the smallest element under less, or the zero value and false
