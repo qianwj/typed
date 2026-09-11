@@ -2,6 +2,7 @@ package maps_test
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 
 	"github.com/qianwj/typed/collections/maps"
@@ -122,6 +123,9 @@ func TestHashMapMarshalStructValues(t *testing.T) {
 
 // TestHashMapMarshalIntKey confirms that non-string key
 // types also round-trip, as long as they are json-marshalable.
+// The Marshal assertion is set-based because map iteration
+// order is non-deterministic; the test parses the output back
+// and checks the resulting map.
 func TestHashMapMarshalIntKey(t *testing.T) {
 	src := maps.NewHashMap[int, string]()
 	src.Put(1, "one")
@@ -132,11 +136,19 @@ func TestHashMapMarshalIntKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal: %v", err)
 	}
-	// Keys are JSON object keys; the standard library renders
-	// int keys as their decimal string form.
-	want := `{"1":"one","2":"two","3":"three"}`
-	if string(data) != want {
-		t.Fatalf("Marshal: got %s, want %s", data, want)
+
+	// Parse the output and check the entries as a set,
+	// since the underlying Go map iteration order is
+	// non-deterministic. The previous version of this test
+	// asserted byte-equality with sorted keys, which only
+	// happened to pass by chance on a particular run.
+	var rawMap map[string]string
+	if err := json.Unmarshal(data, &rawMap); err != nil {
+		t.Fatalf("parse Marshal output: %v", err)
+	}
+	wantRaw := map[string]string{"1": "one", "2": "two", "3": "three"}
+	if !reflect.DeepEqual(rawMap, wantRaw) {
+		t.Fatalf("Marshal: got %v, want %v", rawMap, wantRaw)
 	}
 
 	var dst maps.HashMap[int, string]
@@ -172,8 +184,11 @@ func TestHashMapMarshalReplacesContents(t *testing.T) {
 }
 
 // TestHashMapMarshalMatchesCollect confirms that
-// json.Marshal(HashMap) produces the same bytes as
-// json.Marshal(HashMap.Collect()).
+// json.Marshal(HashMap) produces the same byte content as
+// json.Marshal(HashMap.Collect()). Byte-exact equality is not
+// asserted because Go map iteration order is non-deterministic;
+// the test parses both outputs back into maps and compares
+// them as a set.
 func TestHashMapMarshalMatchesCollect(t *testing.T) {
 	src := maps.NewHashMap[string, int]()
 	src.Put("a", 1)
@@ -187,7 +202,15 @@ func TestHashMapMarshalMatchesCollect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal slice: %v", err)
 	}
-	if string(fromMap) != string(fromCollect) {
-		t.Fatalf("Marshal map and slice disagree: %s vs %s", fromMap, fromCollect)
+
+	var fromMapParsed, fromCollectParsed map[string]int
+	if err := json.Unmarshal(fromMap, &fromMapParsed); err != nil {
+		t.Fatalf("parse fromMap: %v", err)
+	}
+	if err := json.Unmarshal(fromCollect, &fromCollectParsed); err != nil {
+		t.Fatalf("parse fromCollect: %v", err)
+	}
+	if !reflect.DeepEqual(fromMapParsed, fromCollectParsed) {
+		t.Fatalf("Marshal map and slice disagree: %v vs %v", fromMapParsed, fromCollectParsed)
 	}
 }

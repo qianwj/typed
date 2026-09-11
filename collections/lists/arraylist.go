@@ -24,10 +24,10 @@
 package lists
 
 import (
-	"encoding/json"
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/utils/option"
 )
 
@@ -423,26 +423,30 @@ func (a *ArrayList[T]) Collect() []T {
 // user-visible content of the list.
 //
 // An empty ArrayList marshals to "[]" rather than "null": a
-// nil live range is normalised to an empty slice before
-// passing to encoding/json. This matches the project's
-// convention that "absent" and "empty" collections are
-// indistinguishable in the JSON output.
+// nil live range is normalised to the literal "[]" before
+// being passed to utils/json.Encode. This matches the
+// project's convention that "absent" and "empty" collections
+// are indistinguishable in the JSON output.
 //
-// MarshalJSON uses encoding/json under the hood. An ArrayList
-// whose element type T satisfies json.Marshaler (including
-// user-defined types with their own MarshalJSON) is marshaled
-// element-by-element; for T that does not implement
-// MarshalJSON the default encoding for T applies.
+// MarshalJSON delegates to utils/json.Encode, the project-
+// wide wrapper around encoding/json/v2 that returns a
+// result.Result[[]byte]. The wrapper is invoked via Unwrap to
+// recover the ([]byte, error) shape that the standard
+// json.Marshaler interface requires. An ArrayList whose
+// element type T satisfies json.Marshaler (or v2's marshaler
+// variant) is marshaled element-by-element; for T that does
+// not implement MarshalJSON the default encoding for T
+// applies.
 func (a *ArrayList[T]) MarshalJSON() ([]byte, error) {
 	live := a.items[a.head:]
 	if live == nil {
 		// A nil slice would marshal to "null"; normalise it
-		// to an empty slice so the output is "[]". This
-		// keeps the "absent" and "empty" cases
+		// to the empty-array literal so the output is "[]".
+		// This keeps the "absent" and "empty" cases
 		// indistinguishable in the JSON.
 		return []byte("[]"), nil
 	}
-	return json.Marshal(live)
+	return json.Encode(live).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON array into the ArrayList,
@@ -451,17 +455,21 @@ func (a *ArrayList[T]) MarshalJSON() ([]byte, error) {
 // reset to zero so the next Add / AddFirst / Get operates on
 // the freshly decoded data without any leftover prefix.
 //
-// UnmarshalJSON returns the underlying json error if data is
-// not a JSON array or if any element fails to decode into T.
-// JSON null is accepted and treated as an empty array,
-// matching the v1 json package's behaviour for slices: a
-// nil-decoded ArrayList is empty (head == 0, items == nil).
+// UnmarshalJSON delegates to utils/json.Decode and then
+// plumbs the resulting []T directly into the ArrayList's
+// backing slice. JSON null is accepted and treated as an
+// empty array, matching the v1 json package's behaviour for
+// slices: a nil-decoded ArrayList is empty (head == 0,
+// items == nil).
+//
+// The return value is the underlying v2 error if data is not
+// a JSON array or if any element fails to decode into T.
 func (a *ArrayList[T]) UnmarshalJSON(data []byte) error {
-	var items []T
-	if err := json.Unmarshal(data, &items); err != nil {
+	r := json.Decode[[]T](data)
+	if err := r.Error(); err != nil {
 		return err
 	}
-	a.items = items
+	a.items = r.Value()
 	a.head = 0
 	return nil
 }

@@ -1,8 +1,7 @@
 package collections
 
 import (
-	"encoding/json"
-
+	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/utils/option"
 )
 
@@ -109,12 +108,16 @@ func (s *Stack[T]) Clear() {
 // Push(2), Push(3) marshals to [1, 2, 3] and unmarshals back to
 // a Stack where Pop() yields 3, then 2, then 1.
 //
-// MarshalJSON uses encoding/json under the hood. A Stack whose
-// element type T does not satisfy json.Marshaler falls back to
-// the default encoding for T, exactly as json.Marshal on a
-// []T would.
+// MarshalJSON delegates to utils/json.Encode, the project-wide
+// wrapper around encoding/json/v2 that returns a
+// result.Result[[]byte]. The wrapper is invoked via Unwrap to
+// recover the ([]byte, error) shape that the standard
+// json.Marshaler interface requires. A Stack whose element
+// type T satisfies json.Marshaler (or v2's marshaler variant)
+// is encoded element-by-element; for T that does not implement
+// Marshaler the default encoding for T applies.
 func (s *Stack[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.items)
+	return json.Encode(s.items).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON array into the Stack, replacing
@@ -123,16 +126,21 @@ func (s *Stack[T]) MarshalJSON() ([]byte, error) {
 // This is the inverse of MarshalJSON: a round-trip of a Stack
 // preserves its push order.
 //
-// UnmarshalJSON returns the underlying json error if data is
-// not a JSON array or if any element fails to decode into T.
-// On error the Stack is left in an unspecified state; callers
+// UnmarshalJSON delegates to utils/json.Decode and then plumbs
+// the resulting []T directly into the Stack's backing slice.
+// The previous backing slice is replaced; any references it
+// held are released for GC.
+//
+// The return value is the underlying v2 error if data is not
+// a JSON array or if any element fails to decode into T. On
+// error the Stack is left in an unspecified state; callers
 // that need to recover should treat the Stack as invalid and
 // replace it.
 func (s *Stack[T]) UnmarshalJSON(data []byte) error {
-	var items []T
-	if err := json.Unmarshal(data, &items); err != nil {
+	r := json.Decode[[]T](data)
+	if err := r.Error(); err != nil {
 		return err
 	}
-	s.items = items
+	s.items = r.Value()
 	return nil
 }

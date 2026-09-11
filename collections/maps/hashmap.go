@@ -18,11 +18,11 @@
 package maps
 
 import (
-	"encoding/json"
 	"maps"
 
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils/json"
 )
 
 // Entry is a single key-value pair as yielded by HashMap.Entries and
@@ -291,12 +291,13 @@ func (m *HashMap[K, V]) Collect() map[K]V {
 // map[K]V values and is documented for users who need
 // stable serialisation.
 //
-// MarshalJSON uses encoding/json under the hood. Keys and
-// values that satisfy json.Marshaler are encoded by their
-// respective MarshalJSON methods; otherwise the default
-// encoding for K and V applies.
+// MarshalJSON delegates to utils/json.Encode, the project-
+// wide wrapper around encoding/json/v2. Keys and values that
+// satisfy json.Marshaler (or v2's marshaler variant) are
+// encoded by their respective MarshalJSON methods; otherwise
+// the default encoding for K and V applies.
 func (m *HashMap[K, V]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(m.items)
+	return json.Encode(m.items).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON object into the HashMap,
@@ -304,18 +305,22 @@ func (m *HashMap[K, V]) MarshalJSON() ([]byte, error) {
 // the object becomes an entry in the HashMap; the previous
 // entries are dropped.
 //
-// UnmarshalJSON returns the underlying json error if data is
-// not a JSON object or if any key or value fails to decode
-// into K or V. JSON null is accepted and treated as an empty
+// UnmarshalJSON delegates to utils/json.Decode and plumbs
+// the resulting map[K]V directly into the HashMap's internal
+// storage. JSON null is accepted and treated as an empty
 // object: a nil-decoded HashMap is empty (items == nil).
 // Decoding into a key type that does not support a particular
 // JSON value (for example, decoding a JSON string into an int
 // key) returns a type-mismatch error.
+//
+// The return value is the underlying v2 error if data is not
+// a JSON object or if any key or value fails to decode into
+// K or V.
 func (m *HashMap[K, V]) UnmarshalJSON(data []byte) error {
-	var items map[K]V
-	if err := json.Unmarshal(data, &items); err != nil {
+	r := json.Decode[map[K]V](data)
+	if err := r.Error(); err != nil {
 		return err
 	}
-	m.items = items
+	m.items = r.Value()
 	return nil
 }

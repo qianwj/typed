@@ -1,12 +1,12 @@
 package sets
 
 import (
-	"encoding/json"
 	"slices"
 
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/collections/maps"
 	"github.com/qianwj/typed/collections/stream"
+	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/utils/option"
 )
 
@@ -120,12 +120,14 @@ func (s *HashSet[T]) Stream() stream.Stream[T] {
 // order, so the round-trip preserves the set's content even
 // though the JSON byte sequence may differ between runs.
 //
-// MarshalJSON uses encoding/json under the hood. A HashSet
-// whose element type T satisfies json.Marshaler is marshaled
-// element-by-element; for T that does not implement
-// MarshalJSON the default encoding for T applies.
+// MarshalJSON delegates to utils/json.Encode, the project-
+// wide wrapper around encoding/json/v2. A HashSet whose
+// element type T satisfies json.Marshaler (or v2's marshaler
+// variant) is marshaled element-by-element; for T that does
+// not implement MarshalJSON the default encoding for T
+// applies.
 func (s *HashSet[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.Collect())
+	return json.Encode(s.Collect()).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON array into the HashSet,
@@ -134,14 +136,18 @@ func (s *HashSet[T]) MarshalJSON() ([]byte, error) {
 // input are collapsed (a set has unique elements); the
 // resulting set has exactly one entry per distinct value.
 //
-// UnmarshalJSON returns the underlying json error if data is
-// not a JSON array or if any element fails to decode into T.
-// JSON null is accepted and treated as an empty array.
+// UnmarshalJSON delegates to utils/json.Decode and rebuilds
+// the underlying HashMap[T, struct{}] from the resulting
+// []T. JSON null is accepted and treated as an empty array.
+//
+// The return value is the underlying v2 error if data is not
+// a JSON array or if any element fails to decode into T.
 func (s *HashSet[T]) UnmarshalJSON(data []byte) error {
-	var items []T
-	if err := json.Unmarshal(data, &items); err != nil {
+	r := json.Decode[[]T](data)
+	if err := r.Error(); err != nil {
 		return err
 	}
+	items := r.Value()
 	s.container = maps.NewHashMap[T, struct{}]()
 	for _, v := range items {
 		s.container.Put(v, struct{}{})

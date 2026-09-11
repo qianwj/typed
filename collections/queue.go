@@ -1,9 +1,8 @@
 package collections
 
 import (
-	"encoding/json"
-
 	"github.com/qianwj/typed/collections/lists"
+	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/utils/option"
 )
 
@@ -103,11 +102,12 @@ func (q *Queue[T]) Clear() {
 // Push(2), Push(3) marshals to [1, 2, 3] and unmarshals back
 // to a Queue where Pop() yields 1, then 2, then 3.
 //
-// MarshalJSON delegates to ArrayList.MarshalJSON, which means
-// it only serialises the live range and ignores the head
-// offset.
+// MarshalJSON delegates to utils/json.Encode on the embedded
+// ArrayList. The &q.items pointer triggers ArrayList's
+// MarshalJSON method, which serialises only the live range
+// and ignores the head offset.
 func (q *Queue[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&q.items)
+	return json.Encode(&q.items).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON array into the Queue, replacing
@@ -116,9 +116,16 @@ func (q *Queue[T]) MarshalJSON() ([]byte, error) {
 // tail. This is the inverse of MarshalJSON: a round-trip of a
 // Queue preserves its push order.
 //
-// UnmarshalJSON delegates to ArrayList.UnmarshalJSON, which
-// resets the head offset to zero. After unmarshal, the Queue
-// behaves exactly as one built by successive Push calls.
+// UnmarshalJSON delegates to utils/json.Decode on the
+// embedded ArrayList. The result is a fresh ArrayList with
+// head=0, which replaces the previous items in one
+// assignment. After unmarshal, the Queue behaves exactly as
+// one built by successive Push calls.
 func (q *Queue[T]) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &q.items)
+	r := json.Decode[lists.ArrayList[T]](data)
+	if err := r.Error(); err != nil {
+		return err
+	}
+	q.items = r.Value()
+	return nil
 }

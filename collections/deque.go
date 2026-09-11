@@ -1,9 +1,8 @@
 package collections
 
 import (
-	"encoding/json"
-
 	"github.com/qianwj/typed/collections/lists"
+	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/utils/option"
 )
 
@@ -165,10 +164,12 @@ func (d *Deque[T]) Clear() {
 // [0, 1, 2] and unmarshals back to a Deque where PopFront
 // yields 0, then 1, then 2.
 //
-// MarshalJSON delegates to LinkedList.MarshalJSON, which
-// walks the node chain from head to tail.
+// MarshalJSON delegates to utils/json.Encode on the embedded
+// LinkedList. The &d.items pointer triggers LinkedList's
+// MarshalJSON method, which walks the node chain from head
+// to tail.
 func (d *Deque[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&d.items)
+	return json.Encode(&d.items).Unwrap()
 }
 
 // UnmarshalJSON decodes a JSON array into the Deque, replacing
@@ -177,8 +178,14 @@ func (d *Deque[T]) MarshalJSON() ([]byte, error) {
 // inverse of MarshalJSON: a round-trip of a Deque preserves
 // its front-to-back order.
 //
-// UnmarshalJSON delegates to LinkedList.UnmarshalJSON, which
-// resets the node chain and rebuilds it via Add.
+// UnmarshalJSON delegates to utils/json.Decode on the
+// embedded LinkedList. The result is a fresh LinkedList whose
+// node chain was rebuilt via Add during the v2 decode step.
 func (d *Deque[T]) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, &d.items)
+	r := json.Decode[lists.LinkedList[T]](data)
+	if err := r.Error(); err != nil {
+		return err
+	}
+	d.items = r.Value()
+	return nil
 }
