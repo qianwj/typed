@@ -70,3 +70,64 @@
 // operates exclusively at the tail, so it does not need the
 // head-offset pattern and is cheaper than a wrapper would be.
 package collections
+
+import (
+	"golang.org/x/exp/constraints"
+
+	"github.com/qianwj/typed/collections/stream"
+)
+
+// Range returns a lazy stream.Stream[T] of consecutive integer
+// values starting at start (inclusive) and ending at end
+// (exclusive). The values are produced one at a time on
+// iteration, in order, with step 1. The Stream is the standard
+// building block for iota-style "do something n times" or
+// "iterate 0..n-1" pipelines:
+//
+//	indices := collections.Range(0, 10).Collect()  // [0, 1, ..., 9]
+//	squares := collections.Range(1, 6).
+//	    Map(func(x int) int { return x * x }).
+//	    Collect()                                    // [1, 4, 9, 16, 25]
+//
+// # Half-open interval
+//
+// The interval is half-open: [start, end). This matches Rust's
+// 0..n, Python's range(0, n), and Java's IntStream.range. The
+// result has end - start elements when start < end, and zero
+// elements when start >= end. start == end produces an empty
+// Stream and start > end also produces an empty Stream; neither
+// is an error.
+//
+// # Why half-open and not closed
+//
+// A half-open interval makes the result length equal to
+// end - start, which is the most useful length for downstream
+// combinators (Take, ForEach, Count). With a closed [start, end]
+// interval the length would be end - start + 1, and callers would
+// have to remember the off-by-one. Half-open is the convention
+// used by every standard library "range" in modern languages.
+//
+// # Memory
+//
+// Range wraps a counter in the underlying iter.Seq[T]. The
+// Stream's memory cost is independent of end - start: iterating
+// a Range(0, 1_000_000_000) costs a few bytes, not a billion
+// values.
+//
+// # Type constraint
+//
+// Range is generic over any constraints.Integer (int, int8/16/32/64,
+// uint, uint8/16/32/64, uintptr). The "Integer" constraint is
+// chosen deliberately over cmp.Ordered: a Range of floats would
+// be ambiguous without a step, and a Range of strings is just
+// a slice, so neither fits the iota-style use case the function
+// is named for.
+func Range[T constraints.Integer](start, end T) stream.Stream[T] {
+	return stream.From(func(yield func(T) bool) {
+		for i := start; i < end; i++ {
+			if !yield(i) {
+				return
+			}
+		}
+	})
+}
