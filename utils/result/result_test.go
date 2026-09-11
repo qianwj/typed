@@ -449,3 +449,250 @@ func atoi(s string) (int, error) {
 	}
 	return n, nil
 }
+
+// ---------- Wrap ----------
+
+// TestResultWrapSuccessNilErr confirms that Wrap(value, nil)
+// produces a success carrying value, the same as
+// Success(value).
+func TestResultWrapSuccessNilErr(t *testing.T) {
+	r := result.Wrap(42, nil)
+	if !r.IsSuccess() {
+		t.Fatal("Wrap(42, nil): IsSuccess = false, want true")
+	}
+	if r.IsFailure() {
+		t.Fatal("Wrap(42, nil): IsFailure = true, want false")
+	}
+	if got := r.Value(); got != 42 {
+		t.Fatalf("Wrap(42, nil).Value: got %d, want 42", got)
+	}
+	if err := r.Error(); err != nil {
+		t.Fatalf("Wrap(42, nil).Error: got %v, want nil", err)
+	}
+}
+
+// TestResultWrapFailureNonNilErr confirms that Wrap(_, err)
+// with a non-nil err produces a failure carrying err. The
+// value parameter is stored internally but not visible
+// through the Result API.
+func TestResultWrapFailureNonNilErr(t *testing.T) {
+	sentinel := errors.New("wrap failure")
+	r := result.Wrap(99, sentinel)
+	if r.IsSuccess() {
+		t.Fatal("Wrap(99, err): IsSuccess = true, want false")
+	}
+	if !r.IsFailure() {
+		t.Fatal("Wrap(99, err): IsFailure = false, want true")
+	}
+	if err := r.Error(); err != sentinel {
+		t.Fatalf("Wrap(99, err).Error: got %v, want %v", err, sentinel)
+	}
+}
+
+// TestResultWrapZeroValueSuccess confirms that Wrap(0, nil)
+// produces a success carrying the zero value, not a failure.
+// This is the case where Wrap differs from Failure: a zero
+// value with a nil err is unambiguously a success.
+func TestResultWrapZeroValueSuccess(t *testing.T) {
+	r := result.Wrap(0, nil)
+	if !r.IsSuccess() {
+		t.Fatal("Wrap(0, nil): IsSuccess = false, want true (zero value with nil err is success)")
+	}
+	if got := r.Value(); got != 0 {
+		t.Fatalf("Wrap(0, nil).Value: got %d, want 0", got)
+	}
+}
+
+// TestResultWrapObservationalIgnoresValueOnFailure confirms
+// that the value parameter is unreachable through the Result
+// API when err is non-nil. This is the property that lets
+// callers write `return result.Wrap(r, err)` after a (T, error)
+// call without first checking which branch they are in.
+func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
+	err := errors.New("ignored-value test")
+	withIgnored := result.Wrap(42, err)
+	withZero := result.Wrap(0, err)
+	// Both must be observationally identical: same error,
+	// same Unwrap output, same Optional, same Map / OrElse.
+	if withIgnored.Error() != withZero.Error() {
+		t.Fatal("ignored vs zero: errors differ")
+	}
+	if vIgnored, eIgnored := withIgnored.Unwrap(); eIgnored != err || vIgnored != 0 {
+		t.Fatalf("withIgnored.Unwrap: got (%v, %v), want (0, err)", vIgnored, eIgnored)
+	}
+	if vZero, eZero := withZero.Unwrap(); eZero != err || vZero != 0 {
+		t.Fatalf("withZero.Unwrap: got (%v, %v), want (0, err)", vZero, eZero)
+	}
+	if withIgnored.Optional().IsPresent() || withZero.Optional().IsPresent() {
+		t.Fatal("Optional of a failure must be absent, regardless of value")
+	}
+	if withIgnored.OrElse(7) != withZero.OrElse(7) {
+		t.Fatal("OrElse of failures must agree, regardless of value")
+	}
+	if withIgnored.OrElseGet(func() int { return 7 }) != withZero.OrElseGet(func() int { return 7 }) {
+		t.Fatal("OrElseGet of failures must agree, regardless of value")
+	}
+}
+
+// TestResultWrapMatchesSuccessAndFailure confirms that Wrap
+// is exactly equivalent to Success on the success path and
+// exactly equivalent to Failure on the failure path. The
+// comparison is made through the public methods, so this
+// also serves as a regression test for the internal storage
+// invariants.
+func TestResultWrapMatchesSuccessAndFailure(t *testing.T) {
+	cases := []struct {
+		name    string
+		wrapped result.Result[int]
+		plain   result.Result[int]
+	}{
+		{"nil err, value 42", result.Wrap(42, nil), result.Success(42)},
+		{"nil err, value 0", result.Wrap(0, nil), result.Success(0)},
+		{"err, value 99", result.Wrap(99, errors.New("x")), result.Failure[int](errors.New("x"))},
+		{"err, value 0", result.Wrap(0, errors.New("x")), result.Failure[int](errors.New("x"))},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if c.wrapped.IsSuccess() != c.plain.IsSuccess() {
+				t.Fatalf("IsSuccess differs: %v vs %v", c.wrapped.IsSuccess(), c.plain.IsSuccess())
+			}
+			if c.wrapped.IsFailure() != c.plain.IsFailure() {
+				t.Fatalf("IsFailure differs")
+			}
+			// Error must agree (or both be nil).
+			wErr, pErr := c.wrapped.Error(), c.plain.Error()
+			if (wErr == nil) != (pErr == nil) {
+				t.Fatalf("Error nilness differs: %v vs %v", wErr, pErr)
+			}
+		})
+	}
+}
+
+// TestResultWrapWithUnwrap confirms that Wrap is the forward
+// half of the (T, error) bridge and Unwrap is the reverse
+// half: Wrap + Unwrap round-trips.
+func TestResultWrapWithUnwrap(t *testing.T) {
+	v, err := result.Wrap(42, nil).Unwrap()
+	if err != nil {
+		t.Fatalf("Unwrap on success: err = %v, want nil", err)
+	}
+	if v != 42 {
+		t.Fatalf("Unwrap on success: v = %d, want 42", v)
+	}
+
+	sentinel := errors.New("bridge test")
+	v, err = result.Wrap(0, sentinel).Unwrap()
+	if err != sentinel {
+		t.Fatalf("Unwrap on failure: err = %v, want %v", err, sentinel)
+	}
+	if v != 0 {
+		t.Fatalf("Unwrap on failure: v = %d, want 0", v)
+	}
+}
+
+// TestResultWrapComposesWithMap confirms that a Wrap-built
+// result participates in the standard Map chain. Map on a
+// success transforms the value; Map on a failure propagates
+// the error.
+func TestResultWrapComposesWithMap(t *testing.T) {
+	success := result.Wrap(21, nil).Map(func(n int) int { return n * 2 })
+	if v := success.Value(); v != 42 {
+		t.Fatalf("Map on success: got %d, want 42", v)
+	}
+
+	failure := result.Wrap(0, errors.New("map test")).
+		Map(func(n int) int { return n * 2 })
+	if !failure.IsFailure() {
+		t.Fatal("Map on failure: should remain a failure")
+	}
+}
+
+// TestResultWrapComposesWithOrElse confirms that Wrap-built
+// results participate in OrElse and OrElseGet.
+func TestResultWrapComposesWithOrElse(t *testing.T) {
+	if v := result.Wrap(42, nil).OrElse(0); v != 42 {
+		t.Fatalf("OrElse on success: got %d, want 42", v)
+	}
+	if v := result.Wrap(0, errors.New("orelse test")).OrElse(99); v != 99 {
+		t.Fatalf("OrElse on failure: got %d, want 99 (fallback)", v)
+	}
+	if v := result.Wrap(0, errors.New("orelseget test")).
+		OrElseGet(func() int { return 100 }); v != 100 {
+		t.Fatalf("OrElseGet on failure: got %d, want 100", v)
+	}
+}
+
+// TestResultWrapComposesWithRecover confirms that the
+// error-aware fallback chain works on a Wrap-built failure:
+// Recover runs the fallback and returns the fallback T.
+func TestResultWrapComposesWithRecover(t *testing.T) {
+	got := result.Wrap(0, errors.New("recover test")).
+		Recover(func(err error) int {
+			if err == nil {
+				t.Fatal("Recover: f called with nil error")
+			}
+			return -1
+		})
+	if got != -1 {
+		t.Fatalf("Recover: got %d, want -1 (fallback)", got)
+	}
+
+	// Recover on a Wrap-built success returns the original
+	// value, untouched.
+	got = result.Wrap(42, nil).
+		Recover(func(err error) int {
+			t.Fatal("Recover: f called on success")
+			return 0
+		})
+	if got != 42 {
+		t.Fatalf("Recover on success: got %d, want 42", got)
+	}
+}
+
+// TestResultWrapComposesWithOptional confirms that
+// Optional() collapses a Wrap-built result the same way it
+// collapses Success / Failure: success → present Optional,
+// failure → absent Optional (error dropped).
+func TestResultWrapComposesWithOptional(t *testing.T) {
+	present := result.Wrap(42, nil).Optional()
+	if !present.IsPresent() {
+		t.Fatal("Optional on success: should be present")
+	}
+	if v := present.OrElse(0); v != 42 {
+		t.Fatalf("Optional on success: got %d, want 42", v)
+	}
+
+	absent := result.Wrap(0, errors.New("optional test")).Optional()
+	if absent.IsPresent() {
+		t.Fatal("Optional on failure: should be absent")
+	}
+}
+
+// TestResultWrapPracticalAdapter documents the realistic
+// shape that Wrap is for: a function that returns (T, error)
+// and is being plugged into a Result chain. The test confirms
+// the adapter does what the doc comment claims — replaces
+// the if-err ladder with a single return.
+func TestResultWrapPracticalAdapter(t *testing.T) {
+	// Source function: returns (int, error), the standard
+	// (T, error) shape. We will call it twice and route
+	// each result through a Result chain via Wrap.
+	double := func(n int) (int, error) {
+		if n < 0 {
+			return 0, errors.New("negative input")
+		}
+		return n * 2, nil
+	}
+
+	// Wrap the success into a chain.
+	okResult := result.Wrap(double(21)) // 42, nil
+	if v := okResult.Map(func(n int) int { return n + 1 }).Value(); v != 43 {
+		t.Fatalf("Wrap(success).Map: got %d, want 43", v)
+	}
+
+	// Wrap the failure into a chain that falls back.
+	badResult := result.Wrap(double(-1)) // 0, error
+	if v := badResult.OrElse(99); v != 99 {
+		t.Fatalf("Wrap(failure).OrElse: got %d, want 99 (fallback)", v)
+	}
+}
