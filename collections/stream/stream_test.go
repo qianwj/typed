@@ -297,17 +297,17 @@ func TestLinkedListBasics(t *testing.T) {
 	if v := l.Last().OrElse(0); v != 4 {
 		t.Fatalf("Last: got %d, want 4", v)
 	}
-	if v, _ := l.Get(2); v != 3 {
+	if v := l.Get(2).OrElse(0); v != 3 {
 		t.Fatalf("Get(2): got %d, want 3", v)
 	}
 
 	// RemoveFirst returns 1.
-	if v, ok := l.RemoveFirst(); !ok || v != 1 {
-		t.Fatalf("RemoveFirst: got (%d, %v), want (1, true)", v, ok)
+	if v := l.RemoveFirst().OrElse(0); v != 1 {
+		t.Fatalf("RemoveFirst: got %d, want 1", v)
 	}
 	// RemoveLast returns 4.
-	if v, ok := l.RemoveLast(); !ok || v != 4 {
-		t.Fatalf("RemoveLast: got (%d, %v), want (4, true)", v, ok)
+	if v := l.RemoveLast().OrElse(0); v != 4 {
+		t.Fatalf("RemoveLast: got %d, want 4", v)
 	}
 	if got := l.Size(); got != 2 {
 		t.Fatalf("Size after pops: got %d, want 2", got)

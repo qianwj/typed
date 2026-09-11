@@ -78,12 +78,12 @@ func TestArrayListAddFirstIsConstantTime(t *testing.T) {
 	// Drain with RemoveLast. The list is [n-1, n-2, ..., 0],
 	// so RemoveLast returns 0 first, then 1, ..., then n-1.
 	for i := 0; i < n; i++ {
-		v, ok := a.RemoveLast()
-		if !ok {
-			t.Fatalf("RemoveLast: ok=false at i=%d", i)
+		v := a.RemoveLast()
+		if v.IsEmpty() {
+			t.Fatalf("RemoveLast: empty at i=%d", i)
 		}
-		if v != i {
-			t.Fatalf("RemoveLast at i=%d: got %d, want %d", i, v, i)
+		if got := v.Get(); got != i {
+			t.Fatalf("RemoveLast at i=%d: got %d, want %d", i, got, i)
 		}
 	}
 }
@@ -98,9 +98,9 @@ func TestArrayListMixedHeadTailDrain(t *testing.T) {
 		a.Add(i) // [0..9]
 	}
 	for i := 0; i < 5; i++ {
-		v, _ := a.RemoveFirst() // drops 0,1,2,3,4; [5..9]
-		if v != i {
-			t.Fatalf("RemoveFirst at i=%d: got %d, want %d", i, v, i)
+		v := a.RemoveFirst() // drops 0,1,2,3,4; [5..9]
+		if got := v.OrElse(-1); got != i {
+			t.Fatalf("RemoveFirst at i=%d: got %d, want %d", i, got, i)
 		}
 	}
 	for i := 0; i < 3; i++ {
@@ -344,8 +344,8 @@ func TestArrayListRemoveFirstReleasesPointerElements(t *testing.T) {
 	// offset is n-1 and items[0:head] should be zeroed
 	// (with possible periodic compaction folding them down).
 	for i := 0; i < n-1; i++ {
-		if _, ok := a.RemoveFirst(); !ok {
-			t.Fatalf("RemoveFirst at i=%d: !ok", i)
+		if a.RemoveFirst().IsEmpty() {
+			t.Fatalf("RemoveFirst at i=%d: empty", i)
 		}
 	}
 

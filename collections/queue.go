@@ -56,11 +56,7 @@ func (q *Queue[T]) Push(value T) {
 // bumped, and the discarded prefix is folded back to zero once
 // it grows past 64 elements.
 func (q *Queue[T]) Pop() option.Optional[T] {
-	v, ok := q.items.RemoveFirst()
-	if !ok {
-		return option.Empty[T]()
-	}
-	return option.Of(v)
+	return q.items.RemoveFirst()
 }
 
 // Peek returns the front element wrapped in a present
