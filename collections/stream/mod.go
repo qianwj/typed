@@ -219,6 +219,21 @@ func (s Stream[T]) Collect() []T {
 	return out
 }
 
+// Associate builds a map[K]V by applying f to every element to produce a
+// (key, value) pair. If two elements produce the same key, the later
+// element overwrites the earlier one.
+//
+// K must be a comparable type (the key constraint of any Go map). The
+// collector is eager: it walks the entire stream before returning.
+func (s Stream[T]) Associate[K comparable, V any](f func(T) (K, V)) map[K]V {
+	out := make(map[K]V)
+	for v := range s.seq {
+		k, val := f(v)
+		out[k] = val
+	}
+	return out
+}
+
 // Count returns the number of elements.
 func (s Stream[T]) Count() int {
 	n := 0

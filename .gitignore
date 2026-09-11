@@ -21,3 +21,8 @@
 
 # macOS filesystem noise
 .DS_Store
+
+# Local AI-agent scratch directory. The directory is created
+# by codex-style agents to hold session state and prompts;
+# nothing in it belongs in the repository.
+.codex/

@@ -564,3 +564,60 @@ func equal[T comparable](a, b []T) bool {
 	}
 	return true
 }
+
+// TestStreamAssociate exercises the list -> map collector. The mapping
+// function provides both the key and the value for each element, and a
+// later element with the same key overwrites an earlier one.
+func TestStreamAssociate(t *testing.T) {
+	type user struct {
+		ID   int
+		Name string
+	}
+	users := []user{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+		{ID: 3, Name: "Carol"},
+	}
+
+	got := lists.ArrayListOf(users...).
+		Stream().
+		Associate(func(u user) (int, string) { return u.ID, u.Name })
+
+	want := map[int]string{1: "Alice", 2: "Bob", 3: "Carol"}
+	if len(got) != len(want) {
+		t.Fatalf("len: got %d, want %d", len(got), len(want))
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Fatalf("got[%d] = %q, want %q", k, got[k], v)
+		}
+	}
+
+	// Same key from multiple elements: later one wins.
+	type pair struct {
+		k string
+		v int
+	}
+	pairs := []pair{
+		{"a", 1},
+		{"b", 2},
+		{"a", 99}, // overwrites the first "a"
+	}
+	merged := stream.FromSlice(pairs).
+		Associate(func(p pair) (string, int) { return p.k, p.v })
+	if merged["a"] != 99 {
+		t.Fatalf("collision: got[\"a\"] = %d, want 99", merged["a"])
+	}
+	if merged["b"] != 2 {
+		t.Fatalf("got[\"b\"] = %d, want 2", merged["b"])
+	}
+
+	// Empty stream -> empty map (not nil).
+	empty := lists.NewArrayList[int]().Stream().Associate(func(n int) (int, int) { return n, n })
+	if empty == nil {
+		t.Fatal("Associate on empty stream should return non-nil empty map")
+	}
+	if len(empty) != 0 {
+		t.Fatalf("empty map len: got %d, want 0", len(empty))
+	}
+}
