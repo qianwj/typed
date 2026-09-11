@@ -353,38 +353,45 @@ func (a *ArrayList[T]) RemoveAt(index int) T {
 	return v
 }
 
-// RemoveFirst removes and returns the first element, or the zero value and
-// false if the list is empty. RemoveFirst is O(1) under the head-offset
-// layout: it advances head, zeroes the freed slot to release any
-// reference it held, and triggers a periodic compaction when the
-// discarded prefix grows past a threshold.
-func (a *ArrayList[T]) RemoveFirst() (T, bool) {
+// RemoveFirst removes and returns the first element wrapped in a present
+// option.Optional[T], or an absent Optional if the list is empty.
+//
+// RemoveFirst is O(1) under the head-offset layout: it advances
+// head, zeroes the freed slot to release any reference it held,
+// and triggers a periodic compaction when the discarded prefix
+// grows past a threshold.
+//
+// RemoveFirst returns option.Optional[T] rather than (T, bool) so
+// the result is symmetric with First / Last / Find, with
+// LinkedList.RemoveFirst, and with Stack.Pop and Queue.Pop.
+func (a *ArrayList[T]) RemoveFirst() option.Optional[T] {
 	if a.size() == 0 {
-		var zero T
-		return zero, false
+		return option.Empty[T]()
 	}
 	v := a.items[a.head]
 	var zero T
 	a.items[a.head] = zero
 	a.head++
 	a.compactIfNeeded()
-	return v, true
+	return option.Of(v)
 }
 
-// RemoveLast removes and returns the last element, or the zero value and
-// false if the list is empty. RemoveLast is O(1): it shrinks the
-// slice by one and zeroes the vacated slot.
-func (a *ArrayList[T]) RemoveLast() (T, bool) {
+// RemoveLast removes and returns the last element wrapped in a
+// present option.Optional[T], or an absent Optional if the list
+// is empty.
+//
+// RemoveLast is O(1): it shrinks the slice by one and zeroes
+// the vacated slot. See RemoveFirst for the Optional rationale.
+func (a *ArrayList[T]) RemoveLast() option.Optional[T] {
 	if a.size() == 0 {
-		var zero T
-		return zero, false
+		return option.Empty[T]()
 	}
 	last := a.head + a.size() - 1
 	v := a.items[last]
 	var zero T
 	a.items[last] = zero
 	a.items = a.items[:last]
-	return v, true
+	return option.Of(v)
 }
 
 // Clear removes all elements from the list. Clear resets the head
