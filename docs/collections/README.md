@@ -207,6 +207,33 @@ API 命名上使用 `Front` / `Back` 限定词,因为 Deque 是双端的,Stack/Q
 
 选择 backing 时,Queue 仍然使用 `ArrayList`(只操作一端,head offset 正好契合),Deque 选择 `LinkedList`(两端都是严格的 O(1),没有周期性压缩的隐式 O(n))。`LinkedList` 的代价是每节点多两个 `*node[T]` 指针和节点头开销——对 BFS、单调队列、滑动窗口等典型 Deque 用法而言可接受,因为 push/pop 频度远高于迭代。
 
+## Range[T]
+
+`Range[T constraints.Integer](start, end T) stream.Stream[T]` 是父包提供的一个惰性流构造函数,产生从 `start`(含)到 `end`(不含)的连续整数序列,步长固定为 1。区间是半开 `[start, end)`,与 Rust 的 `0..n`、Python 的 `range(0, n)`、Java 的 `IntStream.range` 一致;`start >= end` 不会 panic,而是返回空流。
+
+```go
+indices := collections.Range(0, 10).Collect()                 // [0 1 2 3 4 5 6 7 8 9]
+squares := collections.Range(1, 6).
+    Map(func(x int) int { return x * x }).
+    Collect()                                                  // [1 4 9 16 25]
+negatives := collections.Range(-3, 2).Collect()              // [-3 -2 -1 0 1]
+```
+
+主要特点：
+
+- 惰性：`Range` 本身只包装一个计数器,内存成本与 `end - start` 无关;迭代一个 `Range(0, 1e9)` 只占几个字节,而不是十亿个值。
+- 可组合：返回 `stream.Stream[T]`,所以 `.Map` / `.Filter` / `.Take` / `.Reduce` / `.Concat` 都可以直接挂在后面。
+- 类型约束使用 `golang.org/x/exp/constraints.Integer`,只接受整数类型(避免 `cmp.Ordered` 引入 float / string 这种对 Range 没意义的类型)。
+
+典型用法：
+
+```text
+iota 风格的下标:        Range(0, len(xs)).ForEach(func(i int) { ... })
+"做 n 次" 模式:          Range(0, n).ForEach(func(int) { doWork() })
+平方数 / 立方数:        Range(1, k+1).Map(square)
+时间窗口:              Range(t0, t1).Filter(inBusinessHours)
+```
+
 ## HashMap[K, V]
 
 `HashMap[K, V]` 是无序的键值集合，键必须满足 `comparable`，值可以是任意类型。

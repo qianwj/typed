@@ -67,6 +67,12 @@ result := lists.ArrayListOf(users...).
 | `Deque[T]` | 具体泛型 struct | `collections` | 双端;`LinkedList[T]` 的薄包装。所有操作都是严格 O(1)。 |
 | `Stream[T]` | 具体泛型 struct | `collections/stream` | 惰性、单次消费的管道,基于 `iter.Seq[T]`。 |
 
+### 父包构造函数
+
+| 函数 | 源码 | 说明 |
+| --- | --- | --- |
+| `Range[T constraints.Integer](start, end T) Stream[T]` | `collections` | iota 风格的 `[start, end)` 惰性整数流。 |
+
 ### 抽象类型
 
 | 类型 | 源码 | 说明 |
@@ -236,6 +242,7 @@ typed/
 | `Optional.of` / `ofNullable` | `option.Of` / `option.OfNullable` |
 | `Optional.orElse` | `OrElse` |
 | 惰性 Stream | `Stream[T]` |
+| `IntStream.range` | `Range(start, end) Stream[T]` |
 | `Deque`(Java) | `Deque[T]`(LinkedList-backed) |
 
 项目不试图复制 Java 或 JavaScript 的运行时模型。它借鉴了它们的集合处理风格,同时保留 Go 的静态类型、显式错误和直接的控制流。
@@ -300,6 +307,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] 基于 Optional 的访问:`Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` 返回 `Optional[T]`。
 - [x] `Stream[T]` 适配器,基于 `iter.Seq[T]`,带可提前停止的终止操作。
 - [x] 线性结构:`Stack[T]`、`Queue[T]`、`Deque[T]`。
+- [x] 父包辅助函数:`Range[T constraints.Integer](start, end T) Stream[T]`,iota 风格的整数序列。
 - [x] `Option[T]` / `Result[T]` / `Equaler[T]` / `IsNil[T]` / `Equals[T]` 工具集。
 - [x] 有界内存:head-offset `ArrayList` 加周期性压缩,`Stack.Pop` 与列表的 `Remove*` 路径清零释放的槽位。
 - [x] 启用 race detector 的测试,活跃开发的文件 100% 语句覆盖。

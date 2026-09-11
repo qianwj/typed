@@ -67,6 +67,12 @@ result := lists.ArrayListOf(users...).
 | `Deque[T]` | Concrete generic struct | `collections` | Double-ended; thin wrapper over `LinkedList[T]`. All operations are strict O(1). |
 | `Stream[T]` | Concrete generic struct | `collections/stream` | Lazy, single-use pipeline over `iter.Seq[T]`. |
 
+### Parent-package constructors
+
+| Function | Source | Notes |
+| --- | --- | --- |
+| `Range[T constraints.Integer](start, end T) Stream[T]` | `collections` | Lazy iota-style `[start, end)` stream. |
+
 ### Abstraction types
 
 | Type | Source | Notes |
@@ -236,6 +242,7 @@ typed/
 | `Optional.of` / `ofNullable` | `option.Of` / `option.OfNullable` |
 | `Optional.orElse` | `OrElse` |
 | `Stream` lazy | `Stream[T]` |
+| `IntStream.range` | `Range(start, end) Stream[T]` |
 | `Deque` (Java) | `Deque[T]` (LinkedList-backed) |
 
 The project does not attempt to copy the Java or JavaScript runtime model. It borrows their collection-processing style while preserving Go's static typing, explicit errors, and straightforward control flow.
@@ -300,6 +307,7 @@ Done:
 - [x] Optional-based access: `Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` return `Optional[T]`.
 - [x] `Stream[T]` adapter backed by `iter.Seq[T]`, with early-terminating terminals.
 - [x] Linear structures: `Stack[T]`, `Queue[T]`, `Deque[T]`.
+- [x] Parent-package helpers: `Range[T constraints.Integer](start, end T) Stream[T]` for iota-style integer sequences.
 - [x] `Option[T]` / `Result[T]` / `Equaler[T]` / `IsNil[T]` / `Equals[T]` utilities.
 - [x] Bounded memory: head-offset `ArrayList` with periodic compaction, slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
 - [x] Tests with race detector, 100% statement coverage on the actively-developed files.
