@@ -33,17 +33,51 @@ import (
 // ---------- ArrayList ----------
 
 // ArrayList is an ordered, resizable collection of T backed by a private
-// []T.
-//
-// The underlying slice is not exported; callers cannot index into it or
-// otherwise bypass the API. All reads and writes go through the methods
-// defined on *ArrayList. To obtain the values as a plain []T, call Collect
-// (which returns a copy).
+// []T and a head offset.
 //
 // As a concrete generic type, ArrayList's methods (including type-changing
 // ones such as Map[R]) can take advantage of Go 1.27's generic methods.
+//
+// # Internal layout
+//
+// The backing slice items is laid out as [discarded prefix | live range |
+// trailing zeroed slots]. head is the index of the first live element; the
+// live count is len(items) - head. All public methods address elements by
+// their *logical* position, which is translated to a physical position via
+// head + i.
+//
+// # Why a head offset
+//
+// Before the head-offset refactor, ArrayList.RemoveFirst used
+// slices.Delete(items, 0, 1), which shifts every remaining element down by
+// one. That meant two things:
+//
+//  1. RemoveFirst was O(n): each call copied the entire tail. AddFirst was
+//     the same shape via slices.Insert.
+//  2. The slice's capacity never shrank after a head removal, so an
+//     ArrayList that grew to a million elements and was then drained
+//     from the front still held a million-element backing array for the
+//     last few elements it carried.
+//
+// The head offset makes both operations O(1): RemoveFirst just bumps head
+// past the discarded slot, and AddFirst writes at items[head-1] and
+// decrements head. The capacity of the backing array is then bounded by
+// the high-water mark of in-flight elements, not by the all-time maximum
+// the ArrayList ever saw, because the array is reused and reset rather
+// than grown monotonically.
+//
+// # Periodic compaction
+//
+// When the discarded prefix grows past a threshold (head >= 64 and head
+// is at least half of len(items)), the live range is copied down to the
+// start of items, head is reset to zero, and the now-vacated tail is
+// zeroed. The threshold of 64 prevents short-lived lists from paying a
+// copy on every RemoveFirst. Tests in arraylist_test.go drive a long
+// sequence of push / pop-from-front cycles and assert that retained
+// capacity drops back to the in-flight size, not the all-time maximum.
 type ArrayList[T any] struct {
 	items []T
+	head  int
 }
 
 // NewArrayList returns a new empty ArrayList.
@@ -60,7 +94,56 @@ func ArrayListOf[T any](values ...T) *ArrayList[T] {
 	return &ArrayList[T]{items: values}
 }
 
-// Add appends value to the end of the list.
+// size returns the number of live elements, which is the public Size.
+// It is kept as an unexported helper to make the head-offset translation
+// obvious in every method that needs it.
+func (a *ArrayList[T]) size() int {
+	return len(a.items) - a.head
+}
+
+// compact folds the live range down to the start of items and resets
+// head to zero, releasing the discarded prefix back to the runtime.
+//
+// compact is called automatically when the discarded prefix grows past
+// a threshold (see the type doc). It is a no-op when head is already
+// zero. The vacating tail is zeroed so that any references the
+// displaced slots held are released for GC.
+func (a *ArrayList[T]) compact() {
+	if a.head == 0 {
+		return
+	}
+	n := copy(a.items, a.items[a.head:])
+	var zero T
+	for i := n; i < len(a.items); i++ {
+		a.items[i] = zero
+	}
+	a.items = a.items[:n]
+	a.head = 0
+}
+
+// compactIfNeeded is the threshold-driven entry point. It avoids
+// paying the copy cost on lists that have not yet grown a meaningful
+// discarded prefix.
+//
+// The threshold is "head >= 64": once the discarded prefix reaches
+// 64 elements, the wasted capacity is large enough that folding
+// it back to zero is worth the O(n) copy. With this rule the
+// backing array's wasted prefix is bounded by a constant (64),
+// so the capacity of a long-running head-drained list is bounded
+// by the high-water mark of in-flight elements plus a constant,
+// not by the all-time maximum. There is no second "head*2 >= len"
+// check: the absolute threshold alone is enough, and a per-list
+// ratio would over-compact small lists that have a small
+// high-water mark anyway.
+func (a *ArrayList[T]) compactIfNeeded() {
+	if a.head >= 64 {
+		a.compact()
+	}
+}
+
+// Add appends value to the end of the list. Add is amortised O(1):
+// append may grow the backing slice, but the amortised cost is
+// constant per call.
 func (a *ArrayList[T]) Add(value T) {
 	a.items = append(a.items, value)
 }
@@ -76,16 +159,16 @@ func (a *ArrayList[T]) Add(value T) {
 //
 // The Stream is single-use.
 func (a *ArrayList[T]) Stream() stream.Stream[T] {
-	out := make([]T, len(a.items))
-	copy(out, a.items)
+	out := make([]T, a.size())
+	copy(out, a.items[a.head:])
 	return stream.FromSlice(out)
 }
 
 // Filter returns a new ArrayList containing only the elements for which p
 // returns true.
 func (a *ArrayList[T]) Filter(p func(T) bool) *ArrayList[T] {
-	out := make([]T, 0, len(a.items))
-	for _, v := range a.items {
+	out := make([]T, 0, a.size())
+	for _, v := range a.items[a.head:] {
 		if p(v) {
 			out = append(out, v)
 		}
@@ -99,8 +182,8 @@ func (a *ArrayList[T]) Filter(p func(T) bool) *ArrayList[T] {
 // type in Go 1.27: the method declares its own type parameter R, which an
 // interface method cannot do.
 func (a *ArrayList[T]) Map[R any](f func(T) R) *ArrayList[R] {
-	out := make([]R, len(a.items))
-	for i, v := range a.items {
+	out := make([]R, a.size())
+	for i, v := range a.items[a.head:] {
 		out[i] = f(v)
 	}
 	return &ArrayList[R]{items: out}
@@ -110,52 +193,54 @@ func (a *ArrayList[T]) Map[R any](f func(T) R) *ArrayList[R] {
 // ArrayLists.
 func (a *ArrayList[T]) FlatMap[R any](f func(T) *ArrayList[R]) *ArrayList[R] {
 	var out []R
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		mapped := f(v)
 		if mapped == nil {
 			continue
 		}
-		out = append(out, mapped.items...)
+		out = append(out, mapped.items[mapped.head:]...)
 	}
 	return &ArrayList[R]{items: out}
 }
 
 // Take returns a new ArrayList with at most the first n elements.
 func (a *ArrayList[T]) Take(n int) *ArrayList[T] {
+	size := a.size()
 	if n <= 0 {
 		return &ArrayList[T]{}
 	}
-	if n >= len(a.items) {
-		out := make([]T, len(a.items))
-		copy(out, a.items)
+	if n >= size {
+		out := make([]T, size)
+		copy(out, a.items[a.head:])
 		return &ArrayList[T]{items: out}
 	}
 	out := make([]T, n)
-	copy(out, a.items[:n])
+	copy(out, a.items[a.head:a.head+n])
 	return &ArrayList[T]{items: out}
 }
 
 // Drop returns a new ArrayList with the first n elements removed.
 func (a *ArrayList[T]) Drop(n int) *ArrayList[T] {
+	size := a.size()
 	if n <= 0 {
-		out := make([]T, len(a.items))
-		copy(out, a.items)
+		out := make([]T, size)
+		copy(out, a.items[a.head:])
 		return &ArrayList[T]{items: out}
 	}
-	if n >= len(a.items) {
+	if n >= size {
 		return &ArrayList[T]{}
 	}
-	out := make([]T, len(a.items)-n)
-	copy(out, a.items[n:])
+	out := make([]T, size-n)
+	copy(out, a.items[a.head+n:])
 	return &ArrayList[T]{items: out}
 }
 
 // Distinct returns a new ArrayList keeping only the first occurrence of each
 // element under eq.
 func (a *ArrayList[T]) Distinct(eq func(T, T) bool) *ArrayList[T] {
-	out := make([]T, 0, len(a.items))
+	out := make([]T, 0, a.size())
 outer:
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		for _, x := range out {
 			if eq(x, v) {
 				continue outer
@@ -168,113 +253,183 @@ outer:
 
 // Concat returns a new ArrayList that appends other to a.
 func (a *ArrayList[T]) Concat(other *ArrayList[T]) *ArrayList[T] {
-	out := make([]T, 0, len(a.items)+len(other.items))
-	out = append(out, a.items...)
-	out = append(out, other.items...)
+	out := make([]T, 0, a.size()+other.size())
+	out = append(out, a.items[a.head:]...)
+	out = append(out, other.items[other.head:]...)
 	return &ArrayList[T]{items: out}
 }
 
 // Peek calls visit on each element and returns a unchanged. Useful for
 // debugging or observing a pipeline without modifying it.
 func (a *ArrayList[T]) Peek(visit func(T)) *ArrayList[T] {
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		visit(v)
 	}
-	out := make([]T, len(a.items))
-	copy(out, a.items)
+	out := make([]T, a.size())
+	copy(out, a.items[a.head:])
 	return &ArrayList[T]{items: out}
 }
 
-// AddFirst prepends value to the list.
+// AddFirst prepends value to the list. AddFirst is O(1) under the
+// head-offset layout: the value is written at items[head-1] and head
+// is decremented. (If head is already 0 the slice is grown to make
+// room, which is amortised O(1).)
 func (a *ArrayList[T]) AddFirst(value T) {
+	if a.head > 0 {
+		a.head--
+		a.items[a.head] = value
+		return
+	}
+	// head is 0: prepend by growing the slice and shifting the
+	// live range right by one. The wasted slot at items[0] is
+	// reclaimed on the next compaction.
 	a.items = slices.Insert(a.items, 0, value)
+	// After slices.Insert, head is still 0; the new element is
+	// at items[0] and the live range is items[0:size+1]. No
+	// translation needed.
 }
 
-// Insert inserts value at the given index. Elements at index and after are
-// shifted one position to the right. If index == len(a), value is appended.
-// Panics if index < 0 or index > len(a).
+// Insert inserts value at the given index. Elements at index and after
+// are shifted one position to the right. If index == size, value is
+// appended. If index == 0, value becomes the new first element.
+// Panics if index < 0 or index > size.
 func (a *ArrayList[T]) Insert(index int, value T) {
-	if index < 0 || index > len(a.items) {
+	size := a.size()
+	if index < 0 || index > size {
 		panic("ArrayList.Insert: index out of range")
 	}
-	a.items = slices.Insert(a.items, index, value)
+	if index == 0 {
+		a.AddFirst(value)
+		return
+	}
+	if index == size {
+		a.Add(value)
+		return
+	}
+	// index is strictly inside the live range. Grow by one
+	// (with a zero fill — Go's copy uses memmove, so shifting
+	// the live tail right by one in place is safe even when
+	// the source and destination ranges overlap). The new
+	// logical slot at items[head+index] is then filled with
+	// value.
+	var zero T
+	a.items = append(a.items, zero)
+	copy(a.items[a.head+index+1:], a.items[a.head+index:a.head+size])
+	a.items[a.head+index] = value
 }
 
 // RemoveAt removes and returns the element at the given index. Subsequent
 // elements are shifted one position to the left. Panics if index < 0 or
-// index >= len(a).
+// index >= size.
 func (a *ArrayList[T]) RemoveAt(index int) T {
-	if index < 0 || index >= len(a.items) {
+	size := a.size()
+	if index < 0 || index >= size {
 		panic("ArrayList.RemoveAt: index out of range")
 	}
-	v := a.items[index]
-	a.items = slices.Delete(a.items, index, index+1)
+	phys := a.head + index
+	v := a.items[phys]
+	if index == 0 {
+		// Common case: head-side removal. Bump head and zero
+		// the freed slot to release any reference it held.
+		var zero T
+		a.items[phys] = zero
+		a.head++
+		a.compactIfNeeded()
+		return v
+	}
+	if index == size-1 {
+		// Tail-side removal: just shrink the slice.
+		var zero T
+		a.items[phys] = zero
+		a.items = a.items[:phys]
+		return v
+	}
+	// Middle removal: shift the live tail left by one and zero
+	// the vacated tail slot.
+	var zero T
+	copy(a.items[phys:phys+size-index-1], a.items[phys+1:phys+size-index])
+	a.items[phys+size-index-1] = zero
+	a.items = a.items[:size-1+a.head]
 	return v
 }
 
 // RemoveFirst removes and returns the first element, or the zero value and
-// false if the list is empty.
+// false if the list is empty. RemoveFirst is O(1) under the head-offset
+// layout: it advances head, zeroes the freed slot to release any
+// reference it held, and triggers a periodic compaction when the
+// discarded prefix grows past a threshold.
 func (a *ArrayList[T]) RemoveFirst() (T, bool) {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		var zero T
 		return zero, false
 	}
-	v := a.items[0]
-	a.items = slices.Delete(a.items, 0, 1)
+	v := a.items[a.head]
+	var zero T
+	a.items[a.head] = zero
+	a.head++
+	a.compactIfNeeded()
 	return v, true
 }
 
 // RemoveLast removes and returns the last element, or the zero value and
-// false if the list is empty.
+// false if the list is empty. RemoveLast is O(1): it shrinks the
+// slice by one and zeroes the vacated slot.
 func (a *ArrayList[T]) RemoveLast() (T, bool) {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		var zero T
 		return zero, false
 	}
-	last := len(a.items) - 1
+	last := a.head + a.size() - 1
 	v := a.items[last]
-	a.items = slices.Delete(a.items, last, len(a.items))
+	var zero T
+	a.items[last] = zero
+	a.items = a.items[:last]
 	return v, true
 }
 
-// Clear removes all elements from the list.
+// Clear removes all elements from the list. Clear resets the head
+// offset to 0 and re-allocates a new (empty) backing slice, releasing
+// every reference the live range held.
 func (a *ArrayList[T]) Clear() {
 	a.items = nil
+	a.head = 0
 }
 
 // Collect returns the ArrayList's values as a freshly allocated []T.
 //
 // The returned slice is a copy, decoupled from the ArrayList's internal
-// storage; mutating it does not affect the ArrayList.
+// storage; mutating it does not affect the ArrayList. Collect does
+// not include the discarded prefix; only the live range is copied.
 func (a *ArrayList[T]) Collect() []T {
-	out := make([]T, len(a.items))
-	copy(out, a.items)
+	out := make([]T, a.size())
+	copy(out, a.items[a.head:])
 	return out
 }
 
-// Size returns the number of elements.
+// Size returns the number of live elements in the list, not the
+// capacity of the backing slice. Size is O(1).
 func (a *ArrayList[T]) Size() int {
-	return len(a.items)
+	return a.size()
 }
 
 // IsEmpty reports whether the list contains no elements.
 func (a *ArrayList[T]) IsEmpty() bool {
-	return a.Size() == 0
+	return a.size() == 0
 }
 
 // Get returns the value at index i, or the zero value and false if i is
-// out of range. O(1) on ArrayList since the data is contiguous.
+// out of range. Get is O(1) on ArrayList since the data is contiguous.
 func (a *ArrayList[T]) Get(i int) (T, bool) {
-	if i < 0 || i >= len(a.items) {
+	if i < 0 || i >= a.size() {
 		var zero T
 		return zero, false
 	}
-	return a.items[i], true
+	return a.items[a.head+i], true
 }
 
-// ForEach invokes visit on every element.
+// ForEach invokes visit on every element in the live range.
 func (a *ArrayList[T]) ForEach(visit func(T)) {
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		visit(v)
 	}
 }
@@ -286,10 +441,10 @@ func (a *ArrayList[T]) ForEach(visit func(T)) {
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the result.
 func (a *ArrayList[T]) First() option.Optional[T] {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		return option.Empty[T]()
 	}
-	return option.Of(a.items[0])
+	return option.Of(a.items[a.head])
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -298,20 +453,25 @@ func (a *ArrayList[T]) First() option.Optional[T] {
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool).
 func (a *ArrayList[T]) Last() option.Optional[T] {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		return option.Empty[T]()
 	}
-	return option.Of(a.items[len(a.items)-1])
+	return option.Of(a.items[a.head+a.size()-1])
 }
 
 // Any reports whether at least one element satisfies p.
 func (a *ArrayList[T]) Any(p func(T) bool) bool {
-	return slices.ContainsFunc(a.items, p)
+	for _, v := range a.items[a.head:] {
+		if p(v) {
+			return true
+		}
+	}
+	return false
 }
 
 // All reports whether every element satisfies p.
 func (a *ArrayList[T]) All(p func(T) bool) bool {
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		if !p(v) {
 			return false
 		}
@@ -331,7 +491,7 @@ func (a *ArrayList[T]) None(p func(T) bool) bool {
 // than (T, bool). Find is a short-circuiting terminal-style
 // operation: it stops at the first match.
 func (a *ArrayList[T]) Find(p func(T) bool) option.Optional[T] {
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		if p(v) {
 			return option.Of(v)
 		}
@@ -342,7 +502,7 @@ func (a *ArrayList[T]) Find(p func(T) bool) option.Optional[T] {
 // Reduce folds the elements left-to-right using f, starting from init.
 func (a *ArrayList[T]) Reduce[R any](init R, f func(acc R, v T) R) R {
 	acc := init
-	for _, v := range a.items {
+	for _, v := range a.items[a.head:] {
 		acc = f(acc, v)
 	}
 	return acc
@@ -354,8 +514,8 @@ func (a *ArrayList[T]) Reduce[R any](init R, f func(acc R, v T) R) R {
 // a single ArrayList[T any] type cannot express on its method set. Provide
 // the comparator explicitly to keep the fluent API type-parameter-free.
 func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
-	out := make([]T, len(a.items))
-	copy(out, a.items)
+	out := make([]T, a.size())
+	copy(out, a.items[a.head:])
 	slices.SortFunc(out, less)
 	return &ArrayList[T]{items: out}
 }
@@ -363,12 +523,12 @@ func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
 // MinBy returns the smallest element under less, or the zero value and false
 // if the ArrayList is empty.
 func (a *ArrayList[T]) MinBy(less func(x, y T) int) (T, bool) {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		var zero T
 		return zero, false
 	}
-	best := a.items[0]
-	for _, v := range a.items[1:] {
+	best := a.items[a.head]
+	for _, v := range a.items[a.head+1 : a.head+a.size()] {
 		if less(v, best) < 0 {
 			best = v
 		}
@@ -379,12 +539,12 @@ func (a *ArrayList[T]) MinBy(less func(x, y T) int) (T, bool) {
 // MaxBy returns the largest element under less, or the zero value and false
 // if the ArrayList is empty.
 func (a *ArrayList[T]) MaxBy(less func(x, y T) int) (T, bool) {
-	if len(a.items) == 0 {
+	if a.size() == 0 {
 		var zero T
 		return zero, false
 	}
-	best := a.items[0]
-	for _, v := range a.items[1:] {
+	best := a.items[a.head]
+	for _, v := range a.items[a.head+1 : a.head+a.size()] {
 		if less(v, best) > 0 {
 			best = v
 		}
