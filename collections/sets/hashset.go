@@ -1,6 +1,7 @@
 package sets
 
 import (
+	"encoding/json"
 	"slices"
 
 	"github.com/qianwj/typed/collections/lists"
@@ -109,6 +110,43 @@ func (s *HashSet[T]) Collect() []T {
 // Stream is called. Mutations to the set after this call do not affect it.
 func (s *HashSet[T]) Stream() stream.Stream[T] {
 	return stream.FromSlice(s.Collect())
+}
+
+// MarshalJSON encodes the HashSet's elements as a JSON array.
+// Because the set is unordered, the order of elements in the
+// output is unspecified (it follows Go's map iteration
+// order, which is the same as Collect()). Unmarshaling the
+// result produces a set with the same elements regardless of
+// order, so the round-trip preserves the set's content even
+// though the JSON byte sequence may differ between runs.
+//
+// MarshalJSON uses encoding/json under the hood. A HashSet
+// whose element type T satisfies json.Marshaler is marshaled
+// element-by-element; for T that does not implement
+// MarshalJSON the default encoding for T applies.
+func (s *HashSet[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.Collect())
+}
+
+// UnmarshalJSON decodes a JSON array into the HashSet,
+// replacing any existing contents. Each element of the array
+// becomes a member of the new set. Duplicates in the JSON
+// input are collapsed (a set has unique elements); the
+// resulting set has exactly one entry per distinct value.
+//
+// UnmarshalJSON returns the underlying json error if data is
+// not a JSON array or if any element fails to decode into T.
+// JSON null is accepted and treated as an empty array.
+func (s *HashSet[T]) UnmarshalJSON(data []byte) error {
+	var items []T
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	s.container = maps.NewHashMap[T, struct{}]()
+	for _, v := range items {
+		s.container.Put(v, struct{}{})
+	}
+	return nil
 }
 
 // Peek calls visit on every value and returns an independent copy of the set.

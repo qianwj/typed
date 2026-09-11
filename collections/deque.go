@@ -1,6 +1,8 @@
 package collections
 
 import (
+	"encoding/json"
+
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/option"
 )
@@ -154,4 +156,29 @@ func (d *Deque[T]) IsEmpty() bool {
 // Clear, the Deque behaves exactly as one returned by NewDeque.
 func (d *Deque[T]) Clear() {
 	d.items.Clear()
+}
+
+// MarshalJSON encodes the Deque's elements as a JSON array in
+// front-to-back order: the front of the Deque is the first
+// element of the array, the back is the last. A Deque built
+// by PushBack(1), PushFront(0), PushBack(2) marshals to
+// [0, 1, 2] and unmarshals back to a Deque where PopFront
+// yields 0, then 1, then 2.
+//
+// MarshalJSON delegates to LinkedList.MarshalJSON, which
+// walks the node chain from head to tail.
+func (d *Deque[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&d.items)
+}
+
+// UnmarshalJSON decodes a JSON array into the Deque, replacing
+// any existing contents. The first element of the array
+// becomes the front; the last becomes the back. This is the
+// inverse of MarshalJSON: a round-trip of a Deque preserves
+// its front-to-back order.
+//
+// UnmarshalJSON delegates to LinkedList.UnmarshalJSON, which
+// resets the node chain and rebuilds it via Add.
+func (d *Deque[T]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &d.items)
 }

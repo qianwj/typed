@@ -1,6 +1,8 @@
 package collections
 
 import (
+	"encoding/json"
+
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/option"
 )
@@ -93,4 +95,30 @@ func (q *Queue[T]) IsEmpty() bool {
 // returned by NewQueue.
 func (q *Queue[T]) Clear() {
 	q.items.Clear()
+}
+
+// MarshalJSON encodes the Queue's elements as a JSON array in
+// FIFO order: the head of the Queue is the first element of
+// the array, the tail is the last. A Queue built by Push(1),
+// Push(2), Push(3) marshals to [1, 2, 3] and unmarshals back
+// to a Queue where Pop() yields 1, then 2, then 3.
+//
+// MarshalJSON delegates to ArrayList.MarshalJSON, which means
+// it only serialises the live range and ignores the head
+// offset.
+func (q *Queue[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&q.items)
+}
+
+// UnmarshalJSON decodes a JSON array into the Queue, replacing
+// any existing contents. The first element of the array
+// becomes the head of the Queue; the last element becomes the
+// tail. This is the inverse of MarshalJSON: a round-trip of a
+// Queue preserves its push order.
+//
+// UnmarshalJSON delegates to ArrayList.UnmarshalJSON, which
+// resets the head offset to zero. After unmarshal, the Queue
+// behaves exactly as one built by successive Push calls.
+func (q *Queue[T]) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &q.items)
 }

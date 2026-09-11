@@ -1,6 +1,10 @@
 package collections
 
-import "github.com/qianwj/typed/utils/option"
+import (
+	"encoding/json"
+
+	"github.com/qianwj/typed/utils/option"
+)
 
 // Stack[T] is a Last-In-First-Out container of T, backed by a
 // single private []T. The zero value is ready to use: NewStack
@@ -97,4 +101,38 @@ func (s *Stack[T]) IsEmpty() bool {
 // behaves exactly as one returned by NewStack.
 func (s *Stack[T]) Clear() {
 	s.items = make([]T, 0)
+}
+
+// MarshalJSON encodes the Stack's elements as a JSON array. The
+// top of the Stack is the last element of the array, matching
+// the natural "stack-as-list" view: a Stack built by Push(1),
+// Push(2), Push(3) marshals to [1, 2, 3] and unmarshals back to
+// a Stack where Pop() yields 3, then 2, then 1.
+//
+// MarshalJSON uses encoding/json under the hood. A Stack whose
+// element type T does not satisfy json.Marshaler falls back to
+// the default encoding for T, exactly as json.Marshal on a
+// []T would.
+func (s *Stack[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.items)
+}
+
+// UnmarshalJSON decodes a JSON array into the Stack, replacing
+// any existing contents. The first element of the array becomes
+// the bottom of the Stack; the last element becomes the top.
+// This is the inverse of MarshalJSON: a round-trip of a Stack
+// preserves its push order.
+//
+// UnmarshalJSON returns the underlying json error if data is
+// not a JSON array or if any element fails to decode into T.
+// On error the Stack is left in an unspecified state; callers
+// that need to recover should treat the Stack as invalid and
+// replace it.
+func (s *Stack[T]) UnmarshalJSON(data []byte) error {
+	var items []T
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	s.items = items
+	return nil
 }

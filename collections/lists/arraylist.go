@@ -24,6 +24,7 @@
 package lists
 
 import (
+	"encoding/json"
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
@@ -411,6 +412,58 @@ func (a *ArrayList[T]) Collect() []T {
 	out := make([]T, a.size())
 	copy(out, a.items[a.head:])
 	return out
+}
+
+// MarshalJSON encodes the ArrayList's live range as a JSON
+// array in logical order. The discarded prefix is not part of
+// the output: an ArrayList that has been drained from the
+// front 100 times and then has 3 elements marshals to a
+// 3-element array, not a 103-element array with 100 stale
+// slots. This matches what Collect() returns and is the
+// user-visible content of the list.
+//
+// An empty ArrayList marshals to "[]" rather than "null": a
+// nil live range is normalised to an empty slice before
+// passing to encoding/json. This matches the project's
+// convention that "absent" and "empty" collections are
+// indistinguishable in the JSON output.
+//
+// MarshalJSON uses encoding/json under the hood. An ArrayList
+// whose element type T satisfies json.Marshaler (including
+// user-defined types with their own MarshalJSON) is marshaled
+// element-by-element; for T that does not implement
+// MarshalJSON the default encoding for T applies.
+func (a *ArrayList[T]) MarshalJSON() ([]byte, error) {
+	live := a.items[a.head:]
+	if live == nil {
+		// A nil slice would marshal to "null"; normalise it
+		// to an empty slice so the output is "[]". This
+		// keeps the "absent" and "empty" cases
+		// indistinguishable in the JSON.
+		return []byte("[]"), nil
+	}
+	return json.Marshal(live)
+}
+
+// UnmarshalJSON decodes a JSON array into the ArrayList,
+// replacing any existing contents. The new elements become
+// the live range starting at index 0; the head offset is
+// reset to zero so the next Add / AddFirst / Get operates on
+// the freshly decoded data without any leftover prefix.
+//
+// UnmarshalJSON returns the underlying json error if data is
+// not a JSON array or if any element fails to decode into T.
+// JSON null is accepted and treated as an empty array,
+// matching the v1 json package's behaviour for slices: a
+// nil-decoded ArrayList is empty (head == 0, items == nil).
+func (a *ArrayList[T]) UnmarshalJSON(data []byte) error {
+	var items []T
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	a.items = items
+	a.head = 0
+	return nil
 }
 
 // Size returns the number of live elements in the list, not the

@@ -18,6 +18,7 @@
 package maps
 
 import (
+	"encoding/json"
 	"maps"
 
 	"github.com/qianwj/typed/collections/lists"
@@ -278,4 +279,43 @@ func (m *HashMap[K, V]) Collect() map[K]V {
 	out := make(map[K]V, len(m.items))
 	maps.Copy(out, m.items)
 	return out
+}
+
+// MarshalJSON encodes the HashMap as a JSON object whose keys
+// are the K values and whose values are the corresponding V
+// values. The output is identical to marshaling Collect().
+//
+// Because Go's map iteration order is unspecified, the order
+// of keys in the marshaled object is not stable across runs;
+// this matches the v1 json package's behaviour for plain
+// map[K]V values and is documented for users who need
+// stable serialisation.
+//
+// MarshalJSON uses encoding/json under the hood. Keys and
+// values that satisfy json.Marshaler are encoded by their
+// respective MarshalJSON methods; otherwise the default
+// encoding for K and V applies.
+func (m *HashMap[K, V]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.items)
+}
+
+// UnmarshalJSON decodes a JSON object into the HashMap,
+// replacing any existing contents. Each key/value pair in
+// the object becomes an entry in the HashMap; the previous
+// entries are dropped.
+//
+// UnmarshalJSON returns the underlying json error if data is
+// not a JSON object or if any key or value fails to decode
+// into K or V. JSON null is accepted and treated as an empty
+// object: a nil-decoded HashMap is empty (items == nil).
+// Decoding into a key type that does not support a particular
+// JSON value (for example, decoding a JSON string into an int
+// key) returns a type-mismatch error.
+func (m *HashMap[K, V]) UnmarshalJSON(data []byte) error {
+	var items map[K]V
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	m.items = items
+	return nil
 }

@@ -1,6 +1,7 @@
 package lists
 
 import (
+	"encoding/json"
 	"slices"
 
 	"github.com/qianwj/typed/collections/stream"
@@ -243,6 +244,49 @@ func (l *LinkedList[T]) Collect() []T {
 		out = append(out, n.value)
 	}
 	return out
+}
+
+// MarshalJSON encodes the LinkedList's elements as a JSON
+// array in head-to-tail order. The internal node chain is
+// walked once and the values are collected into a fresh
+// []T, which is then marshaled. The output is identical to
+// marshaling Collect() — there is no internal detail
+// (pointer addresses, prev/next wiring) leaked into the
+// output.
+//
+// MarshalJSON uses encoding/json under the hood. A LinkedList
+// whose element type T satisfies json.Marshaler is marshaled
+// element-by-element; for T that does not implement
+// MarshalJSON the default encoding for T applies.
+func (l *LinkedList[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(l.Collect())
+}
+
+// UnmarshalJSON decodes a JSON array into the LinkedList,
+// replacing any existing contents. The first element of the
+// array becomes the head of the new node chain; the last
+// element becomes the tail. The previous node chain is
+// dropped: any references it held are released for GC
+// (assuming no other path retains them).
+//
+// UnmarshalJSON returns the underlying json error if data is
+// not a JSON array or if any element fails to decode into T.
+// JSON null is accepted and treated as an empty array,
+// matching the v1 json package's behaviour for slices: a
+// nil-decoded LinkedList has head == nil, tail == nil,
+// size == 0.
+func (l *LinkedList[T]) UnmarshalJSON(data []byte) error {
+	var items []T
+	if err := json.Unmarshal(data, &items); err != nil {
+		return err
+	}
+	l.head = nil
+	l.tail = nil
+	l.size = 0
+	for _, v := range items {
+		l.Add(v)
+	}
+	return nil
 }
 
 // Stream returns a lazy stream.Stream[T] that is a snapshot of the list at
