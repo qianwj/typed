@@ -9,11 +9,24 @@
 // as one chain instead of scattering (val, err) := ...; if err != nil
 // checks at every level.
 //
-// The package exposes only the operations the rest of the project
-// needs from JSON. The full encoding/json/v2 surface (streaming
-// Decoder, options, custom Marshalers, ...) is still reachable
-// through the standard import path; this package is not a
-// re-export, it is a small surface on top.
+// The package exposes two operations:
+//
+//   - Decode turns JSON-encoded bytes into a value of type T,
+//     returning result.Result[T]. A Success carries the decoded
+//     value; a Failure carries the underlying json/v2 error.
+//   - Encode turns a value of type T into JSON-encoded bytes,
+//     returning result.Result[[]byte]. A Success carries the
+//     bytes; a Failure carries the underlying json/v2 error.
+//
+// Decode and Encode are inverses: a value encoded by Encode
+// can be decoded back with Decode, modulo JSON-marshaling
+// lossiness for channels, functions, and complex numbers.
+//
+// The package is not a re-export of the full encoding/json/v2
+// surface. The streaming Decoder, custom Marshalers, and the
+// remaining v2 features are still reachable through the
+// standard import path; this package is a small surface on
+// top, sized for the rest of the project.
 package json
 
 import (
