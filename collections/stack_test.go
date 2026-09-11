@@ -216,7 +216,7 @@ type finalizableBox struct {
 // finalizableBoxTracker counts how many finalizableBox
 // instances have been finalised. Read/Write from the test only.
 var finalizableBoxTracker struct {
-	mu      chan struct{}
+	mu        chan struct{}
 	finalised int
 }
 
