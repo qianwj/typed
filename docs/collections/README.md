@@ -123,9 +123,9 @@ names := users.
 | `Add(value)` | 追加到列表尾部 |
 | `AddFirst(value)` | 插入到列表头部 |
 | `Insert(index, value)` | 在指定位置插入；使用 `Insert(list.Size(), value)` 追加，越界时 panic |
-| `RemoveFirst` / `RemoveLast` | 删除并返回首/尾元素，没有元素时返回 `(zero, false)` |
+| `RemoveFirst` / `RemoveLast` | 删除并返回首/尾元素，没有元素时返回 absent `Optional[T]` |
 | `RemoveAt(index)` | 删除并返回指定位置的元素，越界时 panic |
-| `Get(index)` | 返回 `(value, ok)` |
+| `Get(index)` | 返回 `Optional[T]`，越界时 absent |
 | `Size()` | 返回元素数量 |
 | `IsEmpty` / `Clear` | 查询或清空列表 |
 | `Filter(p)` | 返回满足条件的新列表 |
@@ -174,6 +174,38 @@ Collect、Stream
 `LinkedList` 的 `Collect` 按头到尾顺序返回副本。复制一个已经使用中的 `LinkedList` 值会共享底层节点链，使用时应保留原实例，不要复制结构体值。
 
 `LinkedList.Map` 和 `LinkedList.FlatMap` 返回 `*ArrayList[R]`，这样它们和 `ArrayList`、`HashSet` 的类型变换 API 一致，同时允许 `R` 为任意类型。
+
+## Deque[T]
+
+`Deque[T]` 是双端队列，包装 `lists.LinkedList[T]`。在双向链表之上,`PushFront` / `PushBack` / `PopFront` / `PopBack` / `Front` / `Back` 全部是严格的 O(1),没有任何均摊成本:每次 push 都是一次节点分配 + 指针赋值,每次 pop 都是几次指针赋值,没有类似 `ArrayList` 那种周期性压缩的隐式 O(n) 调用。
+
+```go
+d := collections.NewDeque[int]()
+d.PushBack(1)   // [1]
+d.PushBack(2)   // [1, 2]
+d.PushFront(0)  // [0, 1, 2]
+d.PushBack(3)   // [0, 1, 2, 3]
+
+front := d.Front().OrElse(-1)   // 0
+back  := d.Back().OrElse(-1)    // 3
+left  := d.PopFront().OrElse(-1) // 0
+right := d.PopBack().OrElse(-1)  // 3
+// 现在 d = [1, 2]
+```
+
+主要方法：
+
+```text
+NewDeque[T]()
+PushFront(value) / PushBack(value)
+PopFront() / PopBack()  返回 option.Optional[T],空时 absent
+Front() / Back()        返回 option.Optional[T],空时 absent
+Size() / IsEmpty() / Clear()
+```
+
+API 命名上使用 `Front` / `Back` 限定词,因为 Deque 是双端的,Stack/Queue 的 `Push` / `Pop` / `Peek` 无法表达「从前面 push」「从后面 pop」这种语义。`Optional[T]` 返回值与 `Stack`、`Queue` 和 `lists` 子包保持一致:命中 present,未命中 absent,调用方可直接链式 `OrElse` / `OrElseGet` / `Map`。
+
+选择 backing 时,Queue 仍然使用 `ArrayList`(只操作一端,head offset 正好契合),Deque 选择 `LinkedList`(两端都是严格的 O(1),没有周期性压缩的隐式 O(n))。`LinkedList` 的代价是每节点多两个 `*node[T]` 指针和节点头开销——对 BFS、单调队列、滑动窗口等典型 Deque 用法而言可接受,因为 push/pop 频度远高于迭代。
 
 ## HashMap[K, V]
 
