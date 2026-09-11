@@ -124,10 +124,7 @@ func TestArrayListMixedHeadTailDrain(t *testing.T) {
 		t.Fatalf("Last: got %d, want 9", got)
 	}
 	for i, want := range []int{2, 1, 0, 5, 6, 7, 8, 9} {
-		got, ok := a.Get(i)
-		if !ok {
-			t.Fatalf("Get(%d): not ok", i)
-		}
+		got := a.Get(i).OrElse(-1)
 		if got != want {
 			t.Fatalf("Get(%d): got %d, want %d", i, got, want)
 		}
@@ -266,8 +263,8 @@ func TestArrayListClearResetsHead(t *testing.T) {
 		t.Fatalf("Clear: Size = %d, want 0", a.Size())
 	}
 	a.Add(42)
-	if v, ok := a.Get(0); !ok || v != 42 {
-		t.Fatalf("Get(0) after Clear+Add: got (%d, %v), want (42, true)", v, ok)
+	if v := a.Get(0).OrElse(-1); v != 42 {
+		t.Fatalf("Get(0) after Clear+Add: got %d, want 42", v)
 	}
 }
 

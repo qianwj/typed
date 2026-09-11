@@ -419,12 +419,11 @@ func (a *ArrayList[T]) IsEmpty() bool {
 
 // Get returns the value at index i, or the zero value and false if i is
 // out of range. Get is O(1) on ArrayList since the data is contiguous.
-func (a *ArrayList[T]) Get(i int) (T, bool) {
+func (a *ArrayList[T]) Get(i int) option.Optional[T] {
 	if i < 0 || i >= a.size() {
-		var zero T
-		return zero, false
+		return option.Empty[T]()
 	}
-	return a.items[a.head+i], true
+	return option.Of(a.items[a.head+i])
 }
 
 // ForEach invokes visit on every element in the live range.
