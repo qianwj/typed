@@ -45,7 +45,7 @@ type Optional[T any] struct {
 | `Of(value)` | 已知有值,包括零值 |
 | `OfNullable(value)` | 指针/slice/map 等可空类型;nil 视为空 |
 
-`OfNullable` 内部用 `isNil` 反射判断。`isNil` 同时处理 typed nil 和 untyped nil interface(`var i any`)两种情况,因为后者会让 `reflect.ValueOf` 返回 `Kind() == Invalid` 的零 Value,被任何显式的 Kind switch 漏掉。
+`OfNullable` 内部使用 `utils/objects.IsNil` 判断。它同时处理 typed nil 和 untyped nil interface(`var i any`)两种情况，并集中识别 pointer、slice、map、chan、func 等可为空类型。
 
 ## 关键方法
 

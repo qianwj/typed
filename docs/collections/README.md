@@ -53,6 +53,40 @@ import (
 
 列表拥有顺序和索引，因此额外提供 `Get`、`Insert`、`RemoveAt`、`First`、`Last`、`Take`、`Drop`、`Distinct` 和 `SortBy`。HashSet 没有这些依赖稳定顺序的操作，额外提供 `Union`、`Intersect`、`Difference`、`SymmetricDifference`、`IsSubsetOf` 和 `IsSupersetOf`。
 
+## ArrayList 与 LinkedList API 对比
+
+两种列表的通用方法保持相同的命名和主要语义，区别集中在底层存储和操作复杂度。下面的复杂度以当前列表长度 `n`、目标索引 `i` 和另一个列表长度 `m` 表示；`Add` 的 `O(1)` 是 `ArrayList` 的均摊复杂度。
+
+| 能力 | API | `ArrayList` | `LinkedList` | 说明 |
+| --- | --- | --- | --- | --- |
+| 构造空列表 | `NewX[T]()` | `*ArrayList[T]` | `*LinkedList[T]` | 两者都返回指针 |
+| 按值构造 | `XOf(values...)` | `ArrayListOf` | `LinkedListOf` | 保留传入顺序 |
+| 尾部追加 | `Add(value)` | `O(1)` 均摊 | `O(1)` | 原地修改 |
+| 头部插入 | `AddFirst(value)` | `O(1)` 均摊 | `O(1)` | 原地修改；`ArrayList` 通过 head offset 实现，周期性压缩把丢弃前缀归零 |
+| 尾部删除 | `RemoveLast() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
+| 头部删除 | `RemoveFirst() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]`；`ArrayList` head offset + 周期性压缩 |
+| 按索引插入 | `Insert(i, value)` | `O(n)` | 查找 `O(i)`，链接 `O(1)` | 越界时 panic |
+| 按索引删除 | `RemoveAt(i) T` | `O(n)` | 查找 `O(i)`，摘链 `O(1)` | 越界时 panic |
+| 按索引读取 | `Get(i) option.Optional[T]` | `O(1)` | `O(i)`，最坏 `O(n)` | 越界返回 absent `Optional[T]` |
+| 首元素 | `First() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
+| 尾元素 | `Last() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
+| 数量 | `Size() int` | `O(1)` | `O(1)` | 所有容器统一使用 `Size()` |
+| 判空/清空 | `IsEmpty()` / `Clear()` | `O(1)` | `O(1)` | `Clear` 原地清空 |
+| 导出 | `Collect() []T` | `O(n)` | `O(n)` | 返回独立副本，保留列表顺序 |
+| 快照流 | `Stream()` | 创建快照 `O(n)` | 创建快照 `O(n)` | 返回单次消费的 `Stream[T]` |
+| 筛选 | `Filter(p)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 返回同一种列表 |
+| 映射 | `Map[R](f)` | `*ArrayList[R]`，`O(n)` | `*ArrayList[R]`，`O(n)` | 结果统一为 `ArrayList`，`R` 可为任意类型 |
+| 扁平化 | `FlatMap[R](f)` | `*ArrayList[R]` | `*ArrayList[R]` | 结果统一为 `ArrayList`，复杂度为遍历和输出总量 |
+| 截取/跳过 | `Take(n)` / `Drop(n)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 返回新列表，不修改原列表 |
+| 去重 | `Distinct(eq)` | `*ArrayList[T]`，`O(n²)` | `*LinkedList[T]`，`O(n²)` | 按相等函数保留第一次出现的元素 |
+| 拼接 | `Concat(other)` | `*ArrayList[T]`，`O(n+m)` | `*LinkedList[T]`，`O(n+m)` | 返回新列表，不修改输入 |
+| 观察 | `Peek(visit)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 调用回调后返回独立副本 |
+| 排序 | `SortBy(less)` | `*ArrayList[T]`，`O(n log n)` | `*LinkedList[T]`，`O(n log n)` | 返回排序后的新列表 |
+| 聚合查询 | `Any` / `All` / `None` / `Find` | `O(n)`，支持提前停止 | `O(n)`，支持提前停止 | `Find` 返回 absent/present `Optional[T]` |
+| 折叠/极值 | `Reduce` / `MinBy` / `MaxBy` | `O(n)` | `O(n)` | `Reduce` 按列表顺序执行；`MinBy`/`MaxBy` 返回 `Optional[T]` |
+
+选择时可以按访问模式判断：需要频繁按索引读取、尾部追加或批量遍历时使用 `ArrayList`；需要频繁在头部增删，且主要按顺序遍历时使用 `LinkedList`。两者的 `Map` 和 `FlatMap` 返回类型已经统一，普通变换可以直接切换实现。
+
 ## 设计边界
 
 `ArrayList`、`LinkedList`、`HashMap` 和 `HashSet` 是立即执行的具体集合。`Filter`、`Map`、`FlatMap` 等操作调用后就会生成结果。
