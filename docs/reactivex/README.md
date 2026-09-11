@@ -170,7 +170,23 @@ func (o Observable[T]) ForEach(
 ) Subscription
 ```
 
-首批数据源建议包括 `Just`、`FromSlice`、`FromSeq`、`FromChannel`、`Create` 和 `Interval`。
+当前模块已经提供上述核心类型和 API。`Observable[T]` 是具体的 cold publisher，`Publisher[T]` 是稳定的订阅边界：
+
+```go
+type Publisher[T any] interface {
+    Subscribe(context.Context, Subscriber[T]) Subscription
+}
+```
+
+终止收集可以使用：
+
+```go
+values, err := observable.ToSlice(ctx)
+total, err := reactivex.Collect(ctx, observable, 0,
+    func(sum, value int) int { return sum + value })
+```
+
+首批数据源包括 `Just`、`FromSlice`、`FromSeq`、`FromChannel`、`FromChannelWithOptions`、`Create` 和 `Interval`。
 
 ## 背压模型
 
@@ -186,6 +202,33 @@ type Subscription interface {
 }
 ```
 
+背压配置使用函数式选项，不把配置塞进一个大型参数列表：
+
+```go
+subject := reactivex.NewSubject[int](
+    reactivex.WithBuffer(128),
+    reactivex.WithOverflow(reactivex.OverflowDropOldest),
+)
+
+source := reactivex.FromChannelWithOptions(
+    input,
+    reactivex.WithBuffer(64),
+    reactivex.WithOverflow(reactivex.OverflowError),
+)
+```
+
+支持的溢出策略有：
+
+| 策略 | 行为 |
+| --- | --- |
+| `OverflowBlock` | 等待 demand 或缓冲空间，保留所有值 |
+| `OverflowDropLatest` | 缓冲区满时丢弃刚到达的值 |
+| `OverflowDropOldest` | 缓冲区满时丢弃最早的待处理值 |
+| `OverflowKeepLatest` | 只保留一个最新值 |
+| `OverflowError` | 终止订阅并发送 `ErrBackpressureOverflow` |
+
+`Request(n)` 表示订阅者可以接收的数量，`WithBuffer` 和 `WithOverflow` 只控制异步边界溢出，两者不是同一个概念。默认策略是 `OverflowBlock`，默认缓冲区大小为零。
+
 如果目标是更贴近 RxGo，可以提供阻塞、缓冲和丢弃策略作为高层便利模式，但必须在 API 文档中说明每种策略的语义。
 
 ## Hot 与 Cold Observable
@@ -193,6 +236,17 @@ type Subscription interface {
 Cold Observable 为每个订阅者创建独立的数据生产过程，适合请求、文件读取和数据库查询。Hot Observable 独立于订阅者持续产生事件，适合行情、日志、设备事件和 WebSocket 消息。
 
 建议将多播能力集中在 `Subject`、`Publish`、`Replay`、`Share` 等明确 API 中，而不是让普通 `Observable` 在不同场景下改变行为。
+
+当前的 `Subject[T]` 同时实现 `Publisher[T]` 和 `Subscriber[T]`：
+
+```go
+subject := reactivex.NewSubject[int]()
+subject.Subscribe(ctx, subscriber)
+subject.OnNext(1)
+subject.OnComplete()
+```
+
+每个订阅者拥有独立的 demand 和缓冲区。来自同一个 channel 的多个订阅会竞争消费；`Subject` 才是面向多个订阅者的广播入口。
 
 ## Pull 与 Push 的桥接
 
@@ -331,4 +385,3 @@ func (o Observable[T]) ToSeq(ctx context.Context) iter.Seq[T]
 7. 是否提供独立 scheduler，还是优先使用显式 goroutine 和 context？
 
 这些问题会直接影响 API 兼容性和资源安全，因此应当在第一版实现前确定，而不是隐藏在 `Option` 中。
-
