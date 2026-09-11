@@ -21,6 +21,20 @@
 // dropped). This is the one-way bridge from this package to
 // github.com/qianwj/typed/utils/option; Result depends on option,
 // not the other way around.
+//
+// # Bridge from (T, error)
+//
+// Result.Wrap is the forward bridge from Go's standard `(T, error)`
+// shape into Result[T]. It replaces the conventional
+//
+//	if err != nil { return result.Failure[T](err) }
+//	return result.Success(value)
+//
+// ladder with a single return. Unwrap is the reverse bridge
+// (Result[T] → (T, error)), for handing control back to
+// ordinary Go error handling at the end of a chain. Wrap and
+// Unwrap together make the Result and (T, error) shapes
+// interchangeable; the rest of the API is built on top.
 package result
 
 import (
@@ -54,6 +68,61 @@ func Failure[T any](err error) Result[T] {
 		panic("result.Failure: nil error")
 	}
 	return Result[T]{err: err}
+}
+
+// Wrap builds a Result from a (value, error) pair, the shape
+// most Go APIs return. Wrap is the standard adapter for
+// turning a `(T, error)` return into a Result[T] without a
+// two-line `if err != nil` ladder:
+//
+//	// Before:
+//	profile, err := loadProfile(id)
+//	if err != nil {
+//	    return result.Failure[Profile](err)
+//	}
+//	return result.Success(profile)
+//
+//	// After:
+//	profile, err := loadProfile(id)
+//	return result.Wrap(profile, err)
+//
+// The contract is:
+//
+//   - err == nil: Wrap returns a success carrying value. The
+//     success / failure of the result is determined entirely
+//     by err; value is stored verbatim in either case.
+//   - err != nil: Wrap returns a failure carrying err. The
+//     value parameter is stored in the underlying struct but
+//     is not reachable through any Result method (Value
+//     panics, Unwrap returns the zero value of T, OrElse and
+//     friends return their fallback). This means a failure
+//     Wrap(v, err) is observationally identical to Wrap(zero, err)
+//     — the value parameter is "for success only".
+//
+// Unlike Failure, Wrap does not panic when err is nil. The
+// distinction between Success and Failure is replaced by the
+// value of err at the call site:
+//
+//	// Both produce the same success Result:
+//	result.Success(42)
+//	result.Wrap(42, nil)
+//
+//	// Both produce the same failure Result:
+//	result.Failure[int](errors.New("x"))
+//	result.Wrap(0, errors.New("x"))
+//
+// Wrap is the right shape for two specific call sites:
+//
+//   - The end of a `(T, error)` API boundary, where the
+//     caller wants to keep going inside a Result-based
+//     pipeline (Map, FlatMap, OrElse, ...) instead of
+//     returning and unwrapping.
+//   - The bridge back from a Result chain to plain Go
+//     error handling. The companion Unwrap is the other
+//     direction (Result → (T, error)); Wrap is the forward
+//     direction ((T, error) → Result).
+func Wrap[T any](value T, err error) Result[T] {
+	return Result[T]{value: value, err: err}
 }
 
 // IsSuccess reports whether the Result is a success.

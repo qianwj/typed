@@ -37,6 +37,10 @@ import (
 // other errors can use errors.Is / errors.As against the v2
 // error types.
 //
+// Decode is implemented in terms of result.Wrap: a single
+// (value, err) pair from json.Unmarshal is wrapped into a
+// Result without an explicit if-err check.
+//
 // # Memory
 //
 // Decode does not retain a reference to data after returning.
@@ -75,8 +79,5 @@ import (
 func Decode[T any](data []byte) result.Result[T] {
 	var r T
 	err := json.Unmarshal(data, &r)
-	if err != nil {
-		return result.Failure[T](err)
-	}
-	return result.Success[T](r)
+	return result.Wrap(r, err)
 }
