@@ -73,8 +73,7 @@ func (q *Queue[T]) Peek() option.Optional[T] {
 	if q.items.IsEmpty() {
 		return option.Empty[T]()
 	}
-	v, _ := q.items.Get(0)
-	return option.Of(v)
+	return q.items.Get(0)
 }
 
 // Size returns the number of elements currently in the Queue.

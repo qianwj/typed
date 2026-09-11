@@ -173,8 +173,8 @@ func TestLinkedListMapReduce(t *testing.T) {
 	if got, want := strings.Size(), 5; got != want {
 		t.Fatalf("Map: size got %d, want %d", got, want)
 	}
-	if v, ok := strings.Get(0); !ok || v != "10" {
-		t.Fatalf("Map: Get(0) got (%q, %v), want (\"10\", true)", v, ok)
+	if v := strings.Get(0).OrElse(""); v != "10" {
+		t.Fatalf("Map: Get(0) got %q, want \"10\"", v)
 	}
 
 	// Reduce folds left-to-right (U = T case).
@@ -325,9 +325,9 @@ func TestLinkedListMap(t *testing.T) {
 		t.Fatalf("Map: size got %d, want %d", got, want)
 	}
 	for i, want := range []string{"10", "20", "30", "40"} {
-		v, ok := ll.Get(i)
-		if !ok || v != want {
-			t.Fatalf("Map: Get(%d) got (%q, %v), want (%q, true)", i, v, ok, want)
+		v := ll.Get(i).OrElse("")
+		if v != want {
+			t.Fatalf("Map: Get(%d) got %q, want %q", i, v, want)
 		}
 	}
 }

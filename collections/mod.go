@@ -42,10 +42,12 @@
 // Why have a separate Queue at all if ArrayList does the same
 // thing? Two reasons: naming, and return-type uniformity.
 // ArrayList's queue-style operations are named Add /
-// RemoveFirst / Get(0) and return (T, bool); Queue's are named
-// Push / Pop / Peek and return option.Optional[T], so callers
-// can chain OrElse or Map directly. Queue is the "I want FIFO
-// and nothing else" entry point.
+// RemoveFirst / Get(0) and now also return option.Optional[T];
+// Queue's are named Push / Pop / Peek and return the same
+// option.Optional[T]. After the Get → Optional change, the
+// distinction is mostly naming, but Queue still pays its way:
+// it is the natural focal point for FIFO-only consumers and
+// the place to add FIFO-specific helpers in the future.
 //
 // Stack is still a standalone type with its own []T field, not
 // a wrapper. Stack is the only collection in the package that
