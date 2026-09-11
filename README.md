@@ -1,14 +1,16 @@
 # typed
 
-`typed` is a type-safe collection toolkit built with Go generics.
+`typed` is a type-safe collection toolkit built with Go generics. It provides concrete, eager collection types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`), a small lazy `Stream[T]` layer, dedicated linear data structures (`Stack[T]`, `Queue[T]`, `Deque[T]`), and the supporting abstractions (`Option[T]`, `Result[T]`, `Equaler[T]`) that the collections are built on.
 
-Its first goal is to provide fluent, Java/JavaScript-inspired collection types such as `ArrayList[T]` and `HashMap[K, V]`. A lazy `Stream[T]` layer can be used when a pipeline should be evaluated on demand.
+The collections are Java / JavaScript-style: concrete generic types with fluent methods such as `Filter`, `Map[R]`, `FlatMap[R]`, and `Reduce[R]`. Optional accessors (`Get`, `First`, `Last`, `Find`, `MinBy`, `MaxBy`, `Pop`, `Peek`, `Front`, `Back`) return `Option[T]` rather than `(T, bool)` so callers can chain `OrElse` / `OrElseGet` / `Map` on the result.
 
-> The project is currently in an early design stage. `collections/stream` is still a placeholder API, so the fluent examples below describe the intended direction and may not compile yet.
+## Status
 
-## Goal
+The core types and the `Option[T]` / `Result[T]` abstractions are in place and tested. Roadmap items below describe work that is not yet started.
 
-Go's `for` loop is clear and should remain the preferred choice for simple logic. However, when a collection goes through several transformations, nested functions or repeated temporary slices can make the processing flow harder to read:
+## Why
+
+Go's `for` loop is clear and should remain the preferred choice for simple logic. But when a collection goes through several transformations, nested functions or repeated temporary slices can make the processing flow harder to read:
 
 ```go
 result := Collect(
@@ -19,22 +21,19 @@ result := Collect(
 )
 ```
 
-`typed` aims to support a left-to-right collection style:
+`typed` supports a left-to-right collection style:
 
 ```go
-result := typed.ArrayList[User](users).
-    Filter(func(u User) bool {
-        return u.Age >= 18
-    }).
-    Map(func(u User) string {
-        return u.Name
-    })
+result := lists.ArrayListOf(users...).
+    Filter(func(u User) bool { return u.Age >= 18 }).
+    Map(func(u User) string { return u.Name }).
+    Collect()
 ```
 
 For lazy processing, the same collection can become a stream explicitly:
 
 ```go
-result := typed.ArrayList[User](users).
+result := lists.ArrayListOf(users...).
     Stream().
     Filter(isAdult).
     Map(toProfile).
@@ -44,196 +43,272 @@ result := typed.ArrayList[User](users).
 
 ## Design Principles
 
-- **Type safety**: Use Go generics and avoid `any`, reflection, and runtime type assertions wherever possible.
-- **Collection first**: `ArrayList[T]` and `HashMap[K, V]` are the primary user-facing types for ordinary collection work.
-- **Fluent calls**: Collection and stream operations return typed values, making the data flow readable from left to right.
-- **Optional laziness**: Collection operations are straightforward and eager; `Stream[T]` is available for lazy pipelines and early termination.
-- **Composability**: Collections, iterators, and other Streams can be combined into new data sources.
-- **Early termination**: Operations such as `First`, `Any`, and `Take` should avoid processing unnecessary values.
-- **Go style**: Do not copy every Java Stream semantic blindly; simple logic should remain easy to write with `for range`.
+- **Type safety first.** Use Go generics and avoid `any`, reflection, and runtime type assertions wherever possible. `Option[T]` carries an explicit `present` flag rather than relying on a nil check, so it works for any `T` including value types such as `int`, `string`, and `struct{}`.
+- **Concrete types over interfaces.** `ArrayList[T]` and the rest are concrete generic types, not interfaces. Go 1.27's generic methods (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) only work on concrete receivers; an interface would have to break fluent chaining by returning the interface type from methods that today return the concrete type.
+- **Optional-based access.** Every accessor that can fail by absence returns `option.Optional[T]` rather than `(T, bool)`. The convention is uniform across `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`, `LinkedList`, `Stack`, `Queue`, and `Deque`.
+- **Bounded memory.** `ArrayList` uses a head-offset layout with periodic compaction so the retained capacity of a long-running head-drained list is bounded by the high-water mark of in-flight elements plus a constant, not by the all-time maximum the list ever saw. `Stack.Pop`, `ArrayList.RemoveFirst / RemoveLast`, and `Deque.PopFront / PopBack` zero the freed slot so the runtime's reachability walk does not keep popped references alive.
+- **Optional laziness.** Collection operations are eager; `Stream[T]` is the explicit lazy layer, backed by Go's `iter.Seq[T]`.
+- **Composability.** Collections, iterators, and `Stream` can be combined into new data sources; the snapshot contract on `Stream()` keeps mutations from leaking into in-flight pipelines.
+- **Early termination.** `First`, `Any`, `All`, `Find`, `Take`, and the `Optional`-returning accessors stop as soon as the answer is known.
+- **Go style.** Do not copy every Java Stream semantic blindly; simple logic should remain easy to write with `for range`. The toolkit is opt-in: existing code that prefers slices and maps is unaffected.
 
-## API Draft
+## What ships today
 
-### Collections
+### Collection types
 
-The planned collection types are concrete generic types rather than interfaces:
+| Type | Kind | Source | Notes |
+| --- | --- | --- | --- |
+| `ArrayList[T]` | Concrete generic struct | `collections/lists` | Head-offset `[]T`; O(1) `Add` / `AddFirst` / `RemoveFirst` / `RemoveLast`; periodic compaction at head ≥ 64. |
+| `LinkedList[T]` | Concrete generic struct | `collections/lists` | Doubly-linked; O(1) head / tail, O(i) random access. |
+| `HashMap[K, V]` | Concrete generic struct | `collections/maps` | Open-addressed hash table; `K comparable`. |
+| `HashSet[T]` | Concrete generic struct | `collections/sets` | `T comparable`; built on top of the same hash-table machinery. |
+| `Stack[T]` | Concrete generic struct | `collections` | Single-ended LIFO; `[]T` with explicit slot zeroing on `Pop`. |
+| `Queue[T]` | Concrete generic struct | `collections` | Single-ended FIFO; thin wrapper over `ArrayList[T]`. |
+| `Deque[T]` | Concrete generic struct | `collections` | Double-ended; thin wrapper over `LinkedList[T]`. All operations are strict O(1). |
+| `Stream[T]` | Concrete generic struct | `collections/stream` | Lazy, single-use pipeline over `iter.Seq[T]`. |
 
-```go
-type ArrayList[T any] []T
-type HashMap[K comparable, V any] map[K]V
-```
+### Abstraction types
 
-This allows type-changing generic methods such as:
-
-```go
-names := ArrayList[User](users).
-    Filter(isAdult).
-    Map(func(u User) string { return u.Name })
-```
-
-`ArrayList[T]` is intended for slice-like ordered data. `HashMap[K, V]` is intended for key-value operations such as `Filter`, `MapValues`, `Keys`, `Values`, and `ToSlice`. The exact naming and eager/lazy boundary are still under design.
-
-### Lazy Streams
-
-`Stream[T]` is an optional lazy layer backed by Go's iterator conventions. It is useful for large, one-shot, channel-backed, or potentially infinite sources:
-
-```go
-profiles := ArrayList[User](users).
-    Stream().
-    Filter(isAdult).
-    Map(toProfile).
-    Collect()
-```
-
-The stream API is not intended to replace the collection types or ordinary `for range` loops.
-
-Planned operations fall into three broad groups.
-
-### Intermediate Operations
-
-These operations generally return another collection or `Stream`, depending on the receiver:
-
-- `Filter`
-- `Map`
-- `FlatMap`
-- `Distinct`
-- `Take` / `Drop`
-- `Skip` / `Limit`
-- `Concat`
-- `Peek`
-
-### Terminal Operations
-
-These operations consume the Stream:
-
-- `Collect`
-- `Count`
-- `First` / `Last`
-- `Any` / `All` / `None`
-- `Find`
-- `Reduce`
-- `ToMap`
-- `GroupBy`
-- `ForEach`
-
-### Sorting and Aggregation
-
-- `Sort` / `SortBy`
-- `Min` / `Max`
-- `Sum` / `Average`
-- `GroupBy`
-- `PartitionBy`
-- `Join`
-
-The concrete API will be refined around Go error handling, generic method support, and lazy iterator semantics.
-
-## Relationship to go-linq
-
-[`go-linq`](https://github.com/ahmetb/go-linq) is an important reference project and already provides a complete typed LINQ implementation for Go 1.27. Its central abstraction is `Query[T]`, a lazy query value with a broad LINQ-style operator set such as `Where`, `Select`, `GroupBy`, `Join`, and `Aggregate`.
-
-`typed` intentionally takes a different top-level approach:
-
-| Concern | `go-linq` | `typed` direction |
+| Type | Source | Notes |
 | --- | --- | --- |
-| Primary abstraction | Lazy `Query[T]` | Concrete `ArrayList[T]` and `HashMap[K, V]` first |
-| Naming | LINQ-oriented: `Where`, `Select` | Collection-oriented: `Filter`, `Map` |
-| Evaluation | Lazy by default | Eager collections, explicit lazy `Stream[T]` |
-| JavaScript-style arrays | Adapted through queries | First-class `ArrayList[T]` goal |
-| Map operations | Query key-value pairs | First-class `HashMap[K, V]` goal |
-| Error-aware pipelines | Not the primary model | Explicit error-aware operations are planned |
+| `option.Optional[T]` | `utils/option` | Present / absent value, no nil check on `T`. |
+| `result.Result[T]` | `utils/result` | Success / failure; `Unwrap` returns `(T, error)`, `Recover` does error-aware fallback. |
+| `objects.Equaler[T]` | `utils/objects` | Static interface `Equal(T) bool`. |
+| `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch (handles typed nil, `Equaler[T]`, `time.Time.Equal`). |
 
-The goal is not to duplicate `go-linq`. `typed` explores a collection model that feels natural for developers moving between Go, Java, and JavaScript, while still interoperating with `iter.Seq[T]` and allowing a lazy stream when it is actually useful.
+### Control
 
-## Java / JavaScript Mapping
+| Type | Source | Notes |
+| --- | --- | --- |
+| `match.Case[T, R]` | `control/match` | Pattern matching primitives for Go 1.27 generic methods. |
 
-| Java / JavaScript | `typed` direction |
+## Quick tour
+
+```go
+import (
+    "github.com/qianwj/typed/collections"
+    "github.com/qianwj/typed/collections/lists"
+    "github.com/qianwj/typed/utils/option"
+)
+
+// Eager transformation.
+adults := lists.ArrayListOf(users...).
+    Filter(func(u User) bool { return u.Age >= 18 }).
+    Map(func(u User) string { return u.Name }).
+    Collect()
+
+// Optional-based access: no (T, bool) dance.
+firstAdult := adults.First().OrElse("(none)")
+
+// Linear structures.
+s := collections.NewStack[int]()
+s.Push(1); s.Push(2); s.Push(3)
+top := s.Pop().OrElse(0)  // 3
+
+q := collections.NewQueue[int]()
+q.Push(1); q.Push(2)
+front := q.Pop().OrElse(0)  // 1
+
+d := collections.NewDeque[int]()
+d.PushBack(1); d.PushFront(0); d.PushBack(2)
+// [0, 1, 2]
+left  := d.PopFront().OrElse(-1)  // 0
+right := d.PopBack().OrElse(-1)   // 2
+
+// Optional chaining.
+v := option.Of(7).Map(func(x int) int { return x * 2 }).OrElse(0)  // 14
+```
+
+## Fluent collection API
+
+`ArrayList[T]`, `LinkedList[T]`, and `HashSet[T]` all provide a common core of operations:
+
+| Capability | API |
 | --- | --- |
-| `stream()` | `ArrayList(values).Stream()` |
-| `filter` | `Filter` |
-| `map` | `Map` |
-| `flatMap` | `FlatMap` |
+| Construction | `NewX[T]()`, `XOf(values...)` — both return `*X[T]` |
+| Cardinality | `Size()` |
+| Lifecycle | `IsEmpty()`, `Clear()` |
+| Traversal | `ForEach`, `Collect`, `Stream` |
+| Conditional | `Any`, `All`, `None`, `Find` (returns `Optional[T]`) |
+| Selection | `Filter` — returns the same kind |
+| Type-changing | `Map[R](func(T) R)` — returns `*ArrayList[R]` |
+| Flattening | `FlatMap[R](func(T) *ArrayList[R])` — returns `*ArrayList[R]` |
+| Folding | `Reduce[R](init, func(R, T) R)` |
+| Observation | `Peek`, `Concat` — returns the same kind |
+
+`ArrayList[T]` and `LinkedList[T]` additionally provide order-dependent operations (`Get`, `Insert`, `RemoveAt`, `First`, `Last`, `Take`, `Drop`, `Distinct`, `SortBy`, `MinBy`, `MaxBy`). `HashMap[K, V]` provides `Get`, `GetOrDefault`, `Put`, `Remove`, `Keys`, `Values`, `Entries`, `Filter`, `MapValues[R]`, and `Concat`. `HashSet[T]` provides `Union`, `Intersect`, `Difference`, `SymmetricDifference`, `IsSubsetOf`, `IsSupersetOf`, plus `MapSet` and `FlatMapSet` that preserve deduplication when the result is `comparable`.
+
+`Map` and `FlatMap` always return `*ArrayList[R]` because the result type `R` can be a slice, map, function, or any other non-comparable type. `HashSet.MapSet` and `HashSet.FlatMapSet` are the deduplicating variants.
+
+## Optional access
+
+`Optional[T]` is the standard return shape for any accessor that can fail by absence:
+
+| Operation | Empty result |
+| --- | --- |
+| `Optional.Get()` (when absent) | panic |
+| `Optional.OrElse(default)` | `default` |
+| `Optional.OrElseGet(f)` | `f()` |
+| `Optional.OrElseThrow(msg)` | `(zero, errors.New(msg))` |
+| `Optional.IsPresent` / `IsEmpty` | bool |
+| `Optional.Map[R](f)` | absent `Optional[R]`; `f` is not called |
+| `Optional.FlatMap[R](f)` | absent `Optional[R]`; `f` is not called |
+| `Optional.Filter(predicate)` | absent if predicate is false |
+| `Optional.IfPresent(f)` / `IfPresentOrElse(p, a)` | no-op or `a()` |
+
+The present / absent flag is stored explicitly, not inferred from a nil check on `T`, so `Optional[int]` works for value types where `(int, bool)` would be the only alternative.
+
+`Result[T]` is the `(T, error)`-shaped companion. `Unwrap` returns the success value and a `nil` error on the happy path, or the zero value and the captured error on failure. `Recover(f func(error) Result[T])` lets callers fall back on a specific error without unwrapping:
+
+```go
+v, err := loadProfile(id).Unwrap()
+if err != nil { return err }
+```
+
+`Result.MapError` transforms the captured error in place; `Recover` builds a fresh `Result[T]` from a fallback.
+
+## Memory model
+
+`ArrayList` stores the live range in `items[head:head+size]` and folds the discarded prefix back to zero once `head >= 64`. The retained capacity of a long-running head-drained list is therefore bounded by the high-water mark of in-flight elements plus 64, not by the all-time maximum the list ever saw. Reference elements popped from the front are eligible for GC as soon as `RemoveFirst` zeros the freed slot. The reference-handling tests in `collections/lists/arraylist_test.go` and `collections/{stack,queue,deque}_test.go` use `runtime.SetFinalizer` to assert that all popped boxes' finalizers run.
+
+`Stack.Pop` is the slice-backed equivalent: it shrinks the backing array and explicitly zeros the popped slot, so a `Stack[T]` of pointers does not leak references through out-of-range slots.
+
+## Concurrency
+
+None of the collection types are safe for concurrent mutation. The standard Go pattern — a single goroutine owns the collection, communication happens over channels — applies unchanged. `Stream` is not parallel by default; ordinary `Map` will not silently become concurrent. The toolkit does not introduce a new concurrency model; it follows Go's explicit one.
+
+## Project structure
+
+```text
+typed/
+├── go.work
+├── collections/
+│   ├── go.mod
+│   ├── mod.go
+│   ├── stack.go, stack_test.go
+│   ├── queue.go, queue_test.go
+│   ├── deque.go, deque_test.go
+│   ├── lists/
+│   │   ├── arraylist.go, arraylist_test.go
+│   │   ├── linkedlist.go
+│   │   └── lists_test.go
+│   ├── maps/
+│   │   └── hashmap.go, hashmap_test.go
+│   ├── sets/
+│   │   └── hashset.go, hashset_test.go
+│   └── stream/
+│       └── mod.go, stream_test.go
+├── utils/
+│   ├── go.mod
+│   ├── option/
+│   ├── result/
+│   └── objects/
+├── control/
+│   ├── go.mod
+│   └── match/
+└── docs/
+    ├── collections/README.md
+    ├── option/README.md
+    ├── result/README.md
+    ├── control/README.md
+    └── reactivex/README.md
+```
+
+## Java / JavaScript mapping
+
+| Java / JavaScript | `typed` |
+| --- | --- |
+| `stream()` | `ArrayListOf(...).Stream()` |
+| `filter` / `where` | `Filter` |
+| `map` / `select` | `Map` |
+| `flatMap` / `selectMany` | `FlatMap` |
 | `distinct` | `Distinct` |
 | `sorted` | `Sort` / `SortBy` |
-| `limit` | `Limit` |
-| `skip` | `Skip` |
-| `findFirst` | `First` |
-| `anyMatch` | `Any` |
-| `allMatch` | `All` |
+| `limit` / `take` | `Take` |
+| `skip` / `drop` | `Drop` |
+| `findFirst` / `find` | `First` / `Find` (returns `Optional[T]`) |
+| `anyMatch` / `some` | `Any` |
+| `allMatch` / `every` | `All` |
+| `noneMatch` | `None` |
 | `reduce` | `Reduce` |
 | `collect(toList())` | `Collect` |
 | `forEach` | `ForEach` |
+| `Optional.of` / `ofNullable` | `option.Of` / `option.OfNullable` |
+| `Optional.orElse` | `OrElse` |
+| `Stream` lazy | `Stream[T]` |
+| `Deque` (Java) | `Deque[T]` (LinkedList-backed) |
 
 The project does not attempt to copy the Java or JavaScript runtime model. It borrows their collection-processing style while preserving Go's static typing, explicit errors, and straightforward control flow.
 
-## Laziness and Execution Boundaries
+## Laziness and execution boundaries
 
-A typical Stream pipeline looks like this:
+A typical `Stream` pipeline looks like:
 
 ```text
-source -> intermediate operation -> intermediate operation -> terminal operation
+source → intermediate operation → intermediate operation → terminal operation
 ```
 
 For example:
 
 ```go
-adults := stream.From(users).
+adults := lists.ArrayListOf(users...).
+    Stream().
     Filter(isAdult).
     Map(toProfile).
     Take(100).
     Collect()
 ```
 
-Before `Collect`, `Filter`, `Map`, and `Take` only describe the pipeline. The terminal operation starts consumption, and `Take(100)` can stop the underlying source as soon as enough values have been produced.
+Before `Collect`, `Filter`, `Map`, and `Take` only describe the pipeline. The terminal operation starts consumption, and `Take(100)` can stop the underlying source as soon as enough values have been produced. `Stream()` creates a snapshot of the source at call time, so later mutations to the source collection do not affect the in-flight pipeline.
 
-## Error Handling
+## Error handling
 
-Go functions commonly return `(value, error)`, so the Stream API should not hide errors. For transformations that may fail, the project plans to support explicit error propagation, for example:
+`Result[T]` is the typed `(T, error)` carrier:
 
 ```go
-profiles, err := stream.From(users).
-    MapE(loadProfile).
-    Collect()
+v, err := result.Success(42).Unwrap()
+if err != nil { return err }
+
+fallback := result.Failure[int](errors.New("missing")).
+    Recover(func(err error) result.Result[int] {
+        if errors.Is(err, ErrMissing) { return result.Success(0) }
+        return result.Failure[int](err)
+    })
 ```
 
-The exact error API is still under design. The priority is to avoid silently dropping errors and to stop the pipeline promptly when an error occurs.
+`Result.MapError` transforms the captured error in place; `Map[R]` / `FlatMap[R]` thread the success value through a transformation while preserving the failure on the error path.
 
-## Concurrency Boundary
+For collection pipelines that need to surface errors, the recommended pattern is to convert the error path into an absent `Optional[T]` (e.g. `OfNullable` on a lookup that returns `(T, error)`) and keep the success path on the regular fluent API.
 
-Streams are not parallel by default. Goroutines, channels, locks, and cancellation signals have explicit concurrency semantics in Go, and automatic parallelization can introduce unpredictable overhead and lifecycle problems.
+## Go version
 
-Explicit concurrent operations may be considered in the future, but ordinary `Map` will not silently become concurrent.
-
-## Go Version
-
-The current module uses Go 1.27:
+The current modules use Go 1.27:
 
 ```text
 go 1.27.1
 ```
 
-The target API will use Go generics and standard iterator capabilities. Go 1.23 introduced `iter.Seq`, `iter.Seq2`, and `for range` support for function iterators. Go 1.27's generic methods make fluent APIs such as `Stream[T].Map[R]` possible.
-
-## Project Structure
-
-```text
-typed/
-└── collections/
-    ├── go.mod
-    ├── arraylist/
-    ├── hashmap/
-    └── stream/
-        └── mod.go
-```
+Go 1.23 introduced `iter.Seq`, `iter.Seq2`, and `for range` support for function iterators. Go 1.27's generic methods make fluent APIs such as `Stream[T].Map[R]`, `Optional[T].Map[R]`, and `Result[T].Map[R]` possible.
 
 ## Roadmap
 
-1. Define `ArrayList[T]` and `HashMap[K, V]` semantics and naming.
-2. Implement eager collection operations such as `Filter`, `Map`, `FlatMap`, and `Collect`.
-3. Add `Stream()` adapters backed by `iter.Seq[T]`.
-4. Add early-terminating stream operations such as `First`, `Any`, `All`, and `Take`.
-5. Design error propagation, including the trade-offs around `MapE` and `FilterE`.
-6. Add sorting, grouping, aggregation, and Map processing.
-7. Add tests and benchmarks for eager collections, lazy streams, empty values, and early termination.
+Done:
+
+- [x] `ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]` with fluent methods.
+- [x] Eager collection operations: `Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`, `Collect`, `ForEach`, `Peek`, `Concat`.
+- [x] Order-dependent operations on lists: `Get`, `Insert`, `RemoveAt`, `First`, `Last`, `Find`, `Take`, `Drop`, `Distinct`, `SortBy`, `MinBy`, `MaxBy`.
+- [x] Optional-based access: `Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` return `Optional[T]`.
+- [x] `Stream[T]` adapter backed by `iter.Seq[T]`, with early-terminating terminals.
+- [x] Linear structures: `Stack[T]`, `Queue[T]`, `Deque[T]`.
+- [x] `Option[T]` / `Result[T]` / `Equaler[T]` / `IsNil[T]` / `Equals[T]` utilities.
+- [x] Bounded memory: head-offset `ArrayList` with periodic compaction, slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
+- [x] Tests with race detector, 100% statement coverage on the actively-developed files.
+
+Open:
+
+- [ ] Error-aware collection operations (`MapE`, `FilterE`, `CollectE`) as a first-class pipeline alternative to `Result[T]`-per-element.
+- [ ] Benchmarks for `ArrayList` head-side ops, `LinkedList` iteration, `HashMap` resize behaviour, and `Stream` pipeline overhead.
+- [ ] Iterators (`iter.Seq[T]`) as a first-class output of the collection types, parallel to `Stream()`.
 
 ## License
 
