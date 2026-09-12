@@ -419,6 +419,7 @@ Open:
 - [ ] Iterators (`iter.Seq[T]`) as a first-class output of the
       collection types, parallel to `Stream()`.
 - [ ] `concurrency` package: `PushCtx` / `TakeCtx` with cancellation.
+      Design discussion lives in [docs/concurrency/README.md § Future work](./docs/concurrency/README.md#future-work-cancellation-support) — short version: it needs a rewrite of the synchronisation core from `sync.Cond` to channel-based signalling so the wait can participate in a `select` with `ctx.Done()`.
 
 ## License
 

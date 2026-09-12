@@ -313,7 +313,8 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [ ] 错误感知的集合操作(`MapE`、`FilterE`、`CollectE`),作为 `Result[T]`-per-element 的一等管道替代品。
 - [ ] 基准测试:`ArrayList` 头部操作、`LinkedList` 迭代、`HashMap` rehash 行为、`Stream` 管道开销。
 - [ ] 迭代器(`iter.Seq[T]`)作为集合类型的一等输出,与 `Stream()` 并列。
-- [ ] `concurrency` 包:`PushCtx` / `TakeCtx` 支持取消。
+- [ ] `concurrency` 包:`PushCtx` / `TakeCtx` 支持取消。设计讨论在
+      [docs/concurrency/README-cn.md § 未来工作](./docs/concurrency/README-cn.md#未来工作-取消支持)——一句话:需要把同步核心从 `sync.Cond` 改成基于 channel 的信号,这样等待能跟 `ctx.Done()` 在同一个 `select` 里。
 
 ## 许可证
 
