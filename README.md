@@ -1,13 +1,19 @@
+<div align="center">
+
+![Typed — a type-safe collection toolkit for Go generics](./docs/assets/typed-logo-gopher-official-light.jpg)
+
 # Typed
 
-> **A type-safe collection toolkit for Go generics.**
->
-> [中文版](./README-cn.md) · [Documentation](./docs/README.md)
+**A type-safe collection toolkit for Go generics.**
+
+[中文版](./README-cn.md) · [Documentation](./docs/README.md)
 
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Module](https://img.shields.io/badge/module-github.com%2Fqianwj%2Ftyped-6f42c1)](#install)
 [![Made with Go](https://img.shields.io/badge/made%20with-Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
+
+</div>
 
 Typed brings Java- and JavaScript-style collection ergonomics to Go without
 giving up static typing. Concrete generic types (`ArrayList[T]`,

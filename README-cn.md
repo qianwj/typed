@@ -1,13 +1,19 @@
+<div align="center">
+
+![Typed — 基于 Go 泛型的类型安全集合工具集](./docs/assets/typed-logo-gopher-official-light.jpg)
+
 # Typed
 
-> **基于 Go 泛型的类型安全集合工具集。**
->
-> [English](./README.md) · [文档索引](./docs/README-cn.md)
+**基于 Go 泛型的类型安全集合工具集。**
+
+[English](./README.md) · [文档索引](./docs/README-cn.md)
 
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Module](https://img.shields.io/badge/module-github.com%2Fqianwj%2Ftyped-6f42c1)](#安装)
 [![Made with Go](https://img.shields.io/badge/made%20with-Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
+
+</div>
 
 Typed 把 Java / JavaScript 风格的集合操作体验带到 Go，但不放弃静态类型。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`），链式 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`），以及支撑一切的抽象（`Optional[T]`、`Result[T]`、`IsNil`、`Equals`）。再加上强类型的异步事件流（`reactivex.Observable[T]`），显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
 
