@@ -1,97 +1,38 @@
-# typed/reactivex 设计说明
+# `github.com/qianwj/typed/reactivex`
 
-## 项目定位
+强类型、显式订阅、按需推送、可配置背压的异步事件流。本包与 [`collections`](../collections/README.md) 的 `Stream` 无关：`Stream` 是同步单消费，`reactivex` 处理订阅生命周期、异步输入与多播。
 
-`typed/reactivex` 是 `typed` 项目中的独立模块，目标是在 Go 1.27 上提供类型安全的异步事件流处理能力。
+需要 Go 1.27+（`Observable.Map[R]` / `Observable.Scan[R]` 等方法自带类型参数）。
 
-它不是旧版 RxGo 的兼容实现，也不是把 `collections/stream` 改造成异步版本。它会参考 ReactiveX 的概念和 RxGo 的实践经验，重新设计自己的类型、生命周期、背压和并发边界。
-
-预计独立发布为：
-
-```text
-github.com/qianwj/typed/reactivex
-```
-
-它不应依赖 `typed/collections`。两个模块可以通过标准库的 `iter.Seq` 进行可选互操作，但应该保持独立的依赖和演进节奏。
-
-## 为什么需要 ReactiveX
-
-Go 已经有 goroutine、channel 和 `context.Context`，简单的异步处理通常不需要额外抽象：
+## 包导入
 
 ```go
-for value := range input {
-    if value.Valid {
-        output <- transform(value)
-    }
+import "github.com/qianwj/typed/reactivex"
+```
+
+## 核心类型
+
+### `Observable[T]`
+
+`Observable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数在 Go 1.27 之前无法放在 `Publisher` 接口上。
+
+`Observable` 的零值没有源、不能订阅。构造必须用 `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval` 等。
+
+```go
+var _ reactivex.Publisher[int] = reactivex.Observable[int]{}
+```
+
+### `Publisher[T]`
+
+只关心"能否订阅"的窄接口。`Observable[T]` 和 `Subject[T]` 都实现了它。组件只消费通知时用 `Publisher`；构建流式算子链用 `Observable`。
+
+```go
+type Publisher[T any] interface {
+    Subscribe(ctx context.Context, sub Subscriber[T]) Subscription
 }
 ```
 
-但当系统包含多个异步数据源和多个处理阶段时，仅使用 channel 会让以下问题分散在业务代码中：
-
-- 多个数据源的合并、拼接和切换
-- 异步操作的错误传播和恢复
-- 订阅取消后的 goroutine 和资源回收
-- 生产速度大于消费速度时的背压策略
-- 多个订阅者共享同一个数据源
-- 定时器、窗口、采样和防抖
-- 并行处理后的顺序恢复
-- 一次性数据源和可重复数据源的区别
-
-ReactiveX 的价值不是替代 channel，而是为这些问题提供统一的组合模型。
-
-## 与 collections 的边界
-
-`typed` 中的集合和流分为三个层次：
-
-```text
-ArrayList[T] / HashMap[K, V]
-    同步、具体集合、通常立即执行
-
-Stream[T]
-    同步、惰性、基于 iter.Seq
-
-Observable[T]
-    异步、推送、订阅、取消和背压
-```
-
-`collections` 适合处理已经存在的数据，`stream` 适合处理同步迭代器，`reactivex` 适合处理持续产生、异步到达或需要订阅生命周期的数据。
-
-ReactiveX 不应被设计成集合操作的另一套别名，它解决的是异步生产和消费之间的协调问题。
-
-## 核心设计原则
-
-### 类型安全
-
-核心数据类型使用泛型具体类型，不使用 `interface{}` 作为数据通道：
-
-```go
-type Observable[T any] struct {
-    // subscription implementation
-}
-```
-
-类型转换通过 Go 1.27 的泛型方法表达：
-
-```go
-func (o Observable[T]) Map[R any](
-    f func(context.Context, T) (R, error),
-) Observable[R]
-```
-
-这样 `Observable[User]` 可以安全地转换为 `Observable[Profile]`，而不需要类型断言。
-
-### 具体类型负责链式操作
-
-Go 支持泛型接口，但接口方法不能声明自己的类型参数。因此不能把 `Map[R]` 放进 `Observable[T]` 接口：
-
-```go
-// 不支持
-type Observable[T any] interface {
-    Map[R any](func(T) R) Observable[R]
-}
-```
-
-`Observable[T]` 应该是具体泛型类型。接口只用于稳定的协作边界：
+### `Subscriber[T]`
 
 ```go
 type Subscriber[T any] interface {
@@ -102,286 +43,178 @@ type Subscriber[T any] interface {
 }
 ```
 
-### 错误不是普通数据
+- `OnSubscribe` 必须在值传递之前拿到 handle；可以同步调 `Request` / `Cancel`。
+- `OnError` / `OnComplete` 不消耗 demand —— 它们是终止信号，不是数据项。
+- 回调可能在生产者 goroutine 上被调用，**不要**依赖具体线程；多个订阅共享状态时自己加锁。
+- **回调 panic 不会被转成 `OnError`**。
 
-不采用旧 RxGo 中的 `Item{V interface{}, E error}`。错误应该通过独立的终止通知传播：
-
-```text
-OnNext(T)       数据
-OnError(error)  异常终止
-OnComplete()    正常完成
-```
-
-转换函数可以显式返回错误：
-
-```go
-Map(func(ctx context.Context, value User) (Profile, error) {
-    return loadProfile(ctx, value)
-})
-```
-
-### 订阅必须有生命周期
-
-每一次订阅都应该有明确的取消和完成路径：
+### `Subscription`
 
 ```go
 type Subscription interface {
-    Request(n uint64)
-    Cancel()
-    Done() <-chan struct{}
+    Request(n uint64)   // 累加需求；n==0 不动；上界 uint64 最大
+    Cancel()            // 幂等；不等回调返回，也不强制打断用户代码
+    Done() <-chan struct{} // 取消或终止时关闭
 }
 ```
 
-任何 source 或 operator 创建的 goroutine，都必须能够通过取消信号退出。订阅者提前停止消费时，底层数据源也必须收到取消通知。
+`Done` 是**生命周期信号**，不是"所有派生工作已完成"的 join。
 
-## 建议的核心 API
+## 订阅与消费
 
-```go
-type Observable[T any] struct {
-    subscribe func(context.Context, Subscriber[T]) Subscription
-}
+| 方法 | 用途 |
+|---|---|
+| `Subscribe(ctx, sub) Subscription` | 同步设置；回调在生产者 goroutine 上发生。返回该订阅的 `Subscription`。 |
+| `ForEach(ctx, onNext, onError, onComplete) Subscription` | 一次性回调；任意回调可为 `nil`；`ForEach` 内部申请 `^uint64` 满需求，所以会拿到所有可用值；**不等终止**。 |
+| `ToSlice(ctx) ([]T, error)` | 收集到 `[]T`；`OnError` 立即返回 `([]T(nil), err)`，否则在 `OnComplete` 后返回整片。 |
 
-func (o Observable[T]) Subscribe(
-    ctx context.Context,
-    subscriber Subscriber[T],
-) Subscription
+`ForEach` / `ToSlice` / `ToSlice` 会申请"无限"需求；想限流请用 `Subscribe` 自己控制 `Request`。
 
-func (o Observable[T]) Map[R any](
-    f func(context.Context, T) (R, error),
-) Observable[R]
-
-func (o Observable[T]) Filter(
-    predicate func(T) bool,
-) Observable[T]
-
-func (o Observable[T]) FlatMap[R any](
-    f func(T) Observable[R],
-) Observable[R]
-```
-
-也可以提供函数式订阅的便利 API：
+## 源
 
 ```go
-func (o Observable[T]) ForEach(
-    ctx context.Context,
-    onNext func(T),
-    onError func(error),
-    onComplete func(),
-) Subscription
+func Just[T any](values ...T) Observable[T]
+func FromSlice[T any](values []T) Observable[T]
+func FromChannel[T any](ch <-chan T) Observable[T]
+func FromChannelWithOptions[T any](ch <-chan T, opts ...BackpressureOption) Observable[T]
+func FromSeq[T any](seq iter.Seq[T]) Observable[T]
+func Create[T any](run func(ctx context.Context, emit func(T) bool, complete func())) Observable[T]
+func Interval(ctx context.Context, period time.Duration) Observable[uint64]
 ```
 
-当前模块已经提供上述核心类型和 API。`Observable[T]` 是具体的 cold publisher，`Publisher[T]` 是稳定的订阅边界：
+| 源 | 关键性质 |
+|---|---|
+| `Just(vs...)` | 委托给 `FromSlice(vs...)`；每次订阅从第一个值开始。 |
+| `FromSlice(vs)` | 每次订阅一个生产者 goroutine；**共享 `vs` 的底层数组**（不复制），并发修改需调用方保证。慢回调会拖慢源。 |
+| `FromChannel(ch)` | 等价 `FromChannelWithOptions(ch)`：默认阻塞、无限缓冲 = 1。多个订阅**竞争**消费同一条 `ch`（要广播请用 `Subject`）。不负责关闭 `ch`。 |
+| `FromChannelWithOptions(ch, opts...)` | 每个订阅独立队列；同一 `ch` 仍然被多个订阅竞争。关闭 `ch` 会让该订阅在排空后正常完成。 |
+| `FromSeq(seq)` | 每次订阅调一次 `seq`；`seq` 的可重入性由调用方负责。`emit` 返回 `false` 停止迭代。 |
+| `Create(run)` | 通用源；`emit` 等待 demand，`complete` 至多一次。 |
+| `Interval(ctx, period)` | 每订阅一个 ticker，从 0 开始发计数器；**第一个值在第一个 tick 之后**；`period <= 0` 时 `time.NewTicker` panic。`ctx` 参数当前未使用，订阅时的 `ctx` 才控制循环。 |
+
+> 不存在 `Empty` / `Error` / `Never` / `Merge` / `Concat` / `Debounce` / `Throttle` / `Sample` 源或算子。
+
+## 算子
+
+| 算子 | 签名 | 语义 |
+|---|---|---|
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Observable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error → 整条链发 `OnError(err)` 并完成。`f` 必须能感知 `context`，与切片风格的 `collections` 不同。 |
+| `Filter` | `Filter(predicate func(T) bool) Observable[T]` | 谓词为 `false` 时跳过。 |
+| `Take` | `Take(n uint64) Observable[T]` | 取前 `n` 个。 |
+| `Skip` | `Skip(n uint64) Observable[T]` | 跳过头 `n` 个。 |
+| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Observable[R]` | 每一步发累加器；初始值在收到第一个值之前**不**发。 |
+| `Reduce` | `Reduce(f func(T, T) T) Observable[T]` | 折成单个值；空流 `OnComplete` 而不补发。 |
+
+`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 都是**包装型**算子 —— 它们用下游 `Subscriber` 包一层，**不**自己开 goroutine、**不**自带队列。
+
+## 背压
+
+需求和缓冲区是**两件不同的事**：
+
+- `Subscription.Request(n)` —— 解锁 `n` 个值，让生产者可以继续送。
+- `Subject` / 通道源上的 `WithBuffer` / `WithOverflow` —— 限制在异步边界上"已到但未投递"的最大挂起值数。
+
+### `OverflowStrategy`
 
 ```go
-type Publisher[T any] interface {
-    Subscribe(context.Context, Subscriber[T]) Subscription
-}
-```
+type OverflowStrategy uint8
 
-终止收集可以使用：
+const (
+    OverflowBlock       OverflowStrategy = iota // 等需求或缓冲位
+    OverflowDropLatest                            // 丢新值，保留旧值
+    OverflowDropOldest                            // 丢最旧，留新值；需要 WithBuffer > 0
+    OverflowKeepLatest                            // 永远只留 1 个最新值，WithBuffer 被忽略
+    OverflowError                                 // 终止该订阅并发 ErrBackpressureOverflow
+)
+```
 
 ```go
-values, err := observable.ToSlice(ctx)
-total, err := reactivex.Collect(ctx, observable, 0,
-    func(sum, value int) int { return sum + value })
+var ErrBackpressureOverflow = errors.New("reactivex: backpressure buffer overflow")
 ```
 
-首批数据源包括 `Just`、`FromSlice`、`FromSeq`、`FromChannel`、`FromChannelWithOptions`、`Create` 和 `Interval`。
+`OverflowError` 只影响**这一个订阅**，`Subject` 与同辈订阅继续。
 
-## 背压模型
-
-channel 的发送阻塞可以提供一种背压，但 channel 容量本身并不等于消费者 demand。设计需要明确区分：阻塞、缓冲、丢弃最新值、丢弃旧值、只保留最新值以及溢出报错。
-
-如果目标是接近 Reactive Streams 规范，应该使用基于需求量的订阅：
+### `BackpressureOption`
 
 ```go
-type Subscription interface {
-    Request(n uint64)
-    Cancel()
-    Done() <-chan struct{}
-}
+type BackpressureOption func(*backpressureConfig)
+
+func WithBuffer(size int) BackpressureOption   // 默认 0；负数 panic
+func WithOverflow(strategy OverflowStrategy) BackpressureOption
 ```
 
-背压配置使用函数式选项，不把配置塞进一个大型参数列表：
+- 选项按顺序生效，后写的覆盖先写的；`nil` 跳过。
+- `OverflowKeepLatest` 永远使用 1 个挂起位，与 `WithBuffer` 无关。
+- `OverflowDropOldest` 与 `WithBuffer(0)` 组合会在构造时 panic。
 
 ```go
 subject := reactivex.NewSubject[int](
     reactivex.WithBuffer(128),
     reactivex.WithOverflow(reactivex.OverflowDropOldest),
 )
+```
 
-source := reactivex.FromChannelWithOptions(
-    input,
+## `Subject[T]`
+
+热多播发布者 + 订阅者。每个订阅独立需求、独立缓冲（构造时配置），**不**回放 —— 没有订阅者时 `OnNext` 丢弃，新订阅只参与之后的发布；终止状态被保留，迟到订阅直接收到终止通知。
+
+默认无缓冲阻塞模式：有需求时同步调回调；缓冲或非阻塞策略异步派发，但单订阅内仍串行；订阅之间可能并发。
+
+```go
+func NewSubject[T any](options ...BackpressureOption) *Subject[T]
+func (s *Subject[T]) Subscribe(ctx context.Context, out Subscriber[T]) Subscription
+func (s *Subject[T]) ForEach(ctx context.Context, onNext func(T), onError func(error), onComplete func()) Subscription
+```
+
+`Subject` 也实现 `Subscriber[T]`，可作为另一个流的桥：
+
+```go
+func (s *Subject[T]) OnSubscribe(sub Subscription)
+func (s *Subject[T]) OnNext(v T)
+func (s *Subject[T]) OnError(err error)
+func (s *Subject[T]) OnComplete()
+```
+
+> `OnSubscribe` 当前**不**自动向上游 `Request`；下游需求也不会被自动汇总到上游。用 `Subject` 当 `Subscriber` 时，记得自己 `Request`。
+
+## 例子
+
+```go
+// 冷的有限流
+values, err := reactivex.Just(1, 2, 3, 4).
+    Filter(func(v int) bool { return v%2 == 0 }).
+    ToSlice(ctx)
+// err == nil 时 values == []int{2, 4}
+```
+
+```go
+// 异步 channel 源，缓冲 + 丢最旧
+src := reactivex.FromChannelWithOptions(ch,
     reactivex.WithBuffer(64),
-    reactivex.WithOverflow(reactivex.OverflowError),
+    reactivex.WithOverflow(reactivex.OverflowDropOldest),
 )
+src.Subscribe(ctx, reactivex.Subscriber[int]{
+    OnSubscribe: func(s reactivex.Subscription) { s.Request(^uint64(0)) },
+    OnNext:      func(v int) { consume(v) },
+    OnError:     func(err error) { log.Println(err) },
+    OnComplete:  func() {},
+})
 ```
-
-支持的溢出策略有：
-
-| 策略 | 行为 |
-| --- | --- |
-| `OverflowBlock` | 等待 demand 或缓冲空间，保留所有值 |
-| `OverflowDropLatest` | 缓冲区满时丢弃刚到达的值 |
-| `OverflowDropOldest` | 缓冲区满时丢弃最早的待处理值 |
-| `OverflowKeepLatest` | 只保留一个最新值 |
-| `OverflowError` | 终止订阅并发送 `ErrBackpressureOverflow` |
-
-`Request(n)` 表示订阅者可以接收的数量，`WithBuffer` 和 `WithOverflow` 只控制异步边界溢出，两者不是同一个概念。默认策略是 `OverflowBlock`，默认缓冲区大小为零。
-
-如果目标是更贴近 RxGo，可以提供阻塞、缓冲和丢弃策略作为高层便利模式，但必须在 API 文档中说明每种策略的语义。
-
-## Hot 与 Cold Observable
-
-Cold Observable 为每个订阅者创建独立的数据生产过程，适合请求、文件读取和数据库查询。Hot Observable 独立于订阅者持续产生事件，适合行情、日志、设备事件和 WebSocket 消息。
-
-建议将多播能力集中在 `Subject`、`Publish`、`Replay`、`Share` 等明确 API 中，而不是让普通 `Observable` 在不同场景下改变行为。
-
-当前的 `Subject[T]` 同时实现 `Publisher[T]` 和 `Subscriber[T]`：
 
 ```go
-subject := reactivex.NewSubject[int]()
-subject.Subscribe(ctx, subscriber)
-subject.OnNext(1)
-subject.OnComplete()
+// 热多播
+subj := reactivex.NewSubject[string]()
+go func() {
+    defer subj.OnComplete()
+    for _, v := range source {
+        subj.OnNext(v)
+    }
+}()
+subj.ForEach(ctx, onMsg, onErr, onDone) // 启动一个订阅
 ```
 
-每个订阅者拥有独立的 demand 和缓冲区。来自同一个 channel 的多个订阅会竞争消费；`Subject` 才是面向多个订阅者的广播入口。
+## 与其他包的关系
 
-## Pull 与 Push 的桥接
-
-`iter.Seq[T]` 是同步 pull 风格的迭代器，`Observable[T]` 是异步 push 风格的数据源：
-
-```text
-iter.Seq[T]       调用者请求下一个值
-Observable[T]     数据源主动推送值
-```
-
-建议提供：
-
-```go
-func FromSeq[T any](seq iter.Seq[T]) Observable[T]
-func (o Observable[T]) ToSeq(ctx context.Context) iter.Seq[T]
-```
-
-`ToSeq` 必须保证停止 `range` 时取消底层订阅，错误不会被静默丢弃，channel 数据源不会因为没有消费者而永久阻塞，并在文档中明确说明它通常是单次消费。
-
-## 操作符实现思路
-
-操作符不应该默认创建一个新的公开 channel 和永久 goroutine。更合理的实现方向是：
-
-1. `Observable` 保存一个订阅函数。
-2. `Map`、`Filter` 等操作返回新的 `Observable`。
-3. 新 Observable 在订阅时包装下游 Subscriber。
-4. 上游事件通过包装的 Subscriber 流向下游。
-5. 取消和错误沿订阅链反向传播。
-6. 只有真正需要异步边界的 source 或 operator 才创建 goroutine。
-
-首批操作符建议包括 `Map`、`Filter`、`Take`、`Skip`、`Scan`、`Reduce`、`Concat`、`Merge`、`Zip`、`FlatMap`、`Retry`、`Catch` 和 `Timeout`。时间窗口、调度器、多播和复杂并发操作放在后续阶段。
-
-## 与旧 RxGo 的关系
-
-旧 RxGo 是重要的参考实现，但 `typed/reactivex` 不以兼容旧 API 为目标。
-
-值得保留的经验包括 context 取消、hot/cold Observable、connectable 和 multicast、pool、serialize、retry，以及 goleak 形式的 goroutine 泄漏测试。
-
-需要重新设计的部分包括：
-
-- 用 `Observable[T]` 替代非泛型 `Observable` 接口
-- 用 `T` 替代 `interface{}` 和类型断言
-- 用独立的 `OnError` / `OnComplete` 替代 `Item` 错误包装
-- 用明确的 `Subscription` 替代分散的 `Option` 生命周期控制
-- 将 source、operator、subject 和 scheduler 分开
-- 将背压策略从普通操作符配置中独立出来
-
-因此，该模块应当是一个新的设计，而不是旧 RxGo 的机械泛型化。
-
-## 与 collections/stream 的关系
-
-| 特性 | `collections/stream` | `reactivex` |
-| --- | --- | --- |
-| 数据模型 | 同步迭代 | 异步事件推送 |
-| 消费方式 | `for range` / collect | subscribe |
-| 错误 | 普通返回值或显式错误 | `OnError` 终止通知 |
-| 生命周期 | 迭代结束 | cancel / error / complete |
-| 背压 | 提前停止迭代 | demand、buffer、drop 等策略 |
-| 多播 | 通常不支持 | Subject、Share、Replay |
-| 典型数据源 | slice、map、iter.Seq | channel、timer、网络和事件源 |
-
-不要为了统一命名而强行统一实现。两个模块应该在边界处互操作，在内部保持各自的模型清晰。
-
-## 非目标
-
-第一阶段不考虑：
-
-- 兼容旧 RxGo 的全部方法和签名
-- 用反射支持任意运行时类型
-- 默认并行执行所有操作符
-- 把 channel 的所有用法都包装成 Observable
-- 同时实现完整的 Java Reactor 调度器体系
-- 在没有明确语义的情况下自动判断 hot/cold
-- 用一个巨大接口列出所有操作符
-
-## 实施路线
-
-### 阶段一：核心协议
-
-- `Observable[T]`
-- `Subscriber[T]`
-- `Subscription`
-- `Just`
-- `FromSlice`
-- `FromSeq`
-- `Map`
-- `Filter`
-- `Take`
-- `ForEach`
-- context 取消
-
-### 阶段二：错误和组合
-
-- `OnError`
-- `OnComplete`
-- `FlatMap`
-- `Concat`
-- `Merge`
-- `Zip`
-- `Retry`
-- `Timeout`
-
-### 阶段三：背压和并发
-
-- `Request(n)`
-- bounded buffer
-- drop/latest 策略
-- 并发 Map
-- 顺序恢复
-- goroutine 生命周期测试
-
-### 阶段四：多播和时间
-
-- `Subject[T]`
-- `Publish`
-- `Replay`
-- `Share`
-- `Debounce`
-- `Throttle`
-- `Buffer`
-- `Window`
-- `Interval`
-
-每个阶段都需要配套测试：正常完成、错误终止、取消、提前停止、慢消费者、多个订阅者和 goroutine 泄漏。
-
-## 待决定问题
-
-以下问题在实现前需要形成明确决策：
-
-1. 是否严格实现 Reactive Streams 的 `Request(n)`，还是先提供阻塞式背压？
-2. `OnNext` 是否允许并发调用，还是默认保证串行通知？
-3. `Subscribe` 是否立即启动 source，还是由 `Request` 启动？
-4. `FromChannel` 的取消是否负责关闭输入 channel？
-5. 错误发生后是否允许恢复为新的 Observable？
-6. `Subject` 是否保证订阅者之间的顺序一致？
-7. 是否提供独立 scheduler，还是优先使用显式 goroutine 和 context？
-
-这些问题会直接影响 API 兼容性和资源安全，因此应当在第一版实现前确定，而不是隐藏在 `Option` 中。
+- 同步、单次消费请用 [`collections`](../collections/README.md) 的 `Stream`。
+- 一次性的成功 / 失败用 [`utils/result`](../result/README.md)；订阅级错误通过 `OnError` 报出。
+- 单值"可能缺席"用 [`utils/option`](../option/README.md)。

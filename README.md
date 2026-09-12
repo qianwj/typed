@@ -78,15 +78,17 @@ result := lists.ArrayListOf(users...).
 | Type | Source | Notes |
 | --- | --- | --- |
 | `option.Optional[T]` | `utils/option` | Present / absent value, no nil check on `T`. |
-| `result.Result[T]` | `utils/result` | Success / failure; `Unwrap` returns `(T, error)`, `Recover` does error-aware fallback. |
-| `objects.Equaler[T]` | `utils/objects` | Static interface `Equal(T) bool`. |
-| `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch (handles typed nil, `Equaler[T]`, `time.Time.Equal`). |
+| `result.Result[T]` | `utils/result` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
+| `json.Encode[T] / Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
+| `objects.Equaler` (interface, optional) | `utils/objects` | Hint interface `Equal(any) bool`; not required for `Equals` to dispatch. |
+| `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch (handles typed nil, `func (T) Equal(T) bool`, `time.Time.Equal`). |
 
 ### Control
 
-| Type | Source | Notes |
+| Type / function | Source | Notes |
 | --- | --- | --- |
-| `match.Case[T, R]` | `control/match` | Pattern matching primitives for Go 1.27 generic methods. |
+| `control.Repeat(times, f)` / `RepeatE(times, f) (int, error)` | `control` | "Do this N times" loops; `RepeatE` stops at the first non-nil error and returns the number of successful iterations. |
+| `match.Pattern[T]`, `match.Value[T]`, `match.Type(any)` | `control/match` | First-match-wins pattern matching: `Pattern[T]` for value tests, `Type` for dynamic-type dispatch. |
 
 ## Quick tour
 
@@ -164,14 +166,18 @@ v := option.Of(7).Map(func(x int) int { return x * 2 }).OrElse(0)  // 14
 
 The present / absent flag is stored explicitly, not inferred from a nil check on `T`, so `Optional[int]` works for value types where `(int, bool)` would be the only alternative.
 
-`Result[T]` is the `(T, error)`-shaped companion. `Unwrap` returns the success value and a `nil` error on the happy path, or the zero value and the captured error on failure. `Recover(f func(error) Result[T])` lets callers fall back on a specific error without unwrapping:
+`Result[T]` is the `(T, error)`-shaped companion. `Unwrap` returns the success value and a `nil` error on the happy path, or the zero value and the captured error on failure. `Recover(f func(error) T) T` takes a fallback function that receives the captured error and produces a replacement value; the chain always returns a `T`, so to surface a new error use `Unwrap`. `Wrap` is the forward bridge from a `(T, error)` return into `Result[T]`.
 
 ```go
 v, err := loadProfile(id).Unwrap()
 if err != nil { return err }
+
+port, _ := result.Wrap(lookupPort()).
+    Recover(func(err error) int { return 8080 }).
+    Unwrap() // err is always nil
 ```
 
-`Result.MapError` transforms the captured error in place; `Recover` builds a fresh `Result[T]` from a fallback.
+`Result.MapError` transforms the captured error in place; `Map[R]` / `FlatMap[R]` thread the success value through a transformation while preserving the failure on the error path.
 
 ## Memory model
 
@@ -208,16 +214,31 @@ typed/
 │   ├── go.mod
 │   ├── option/
 │   ├── result/
-│   └── objects/
+│   ├── objects/
+│   └── json/
 ├── control/
 │   ├── go.mod
-│   └── match/
+│   ├── mod.go             # Repeat / RepeatE
+│   └── match/             # Pattern matching
+├── reactivex/
+│   ├── go.mod
+│   ├── mod.go
+│   ├── interfaces.go      # Publisher / Subscriber / Subscription / Observable
+│   ├── sources.go         # Just / FromSlice / FromChannel / FromSeq / Create / Interval
+│   ├── operators.go       # Map / Filter / Take / Skip / Scan / Reduce
+│   ├── subject.go         # NewSubject + Subscriber-side bridge
+│   ├── options.go         # WithBuffer / WithOverflow / OverflowStrategy
+│   ├── backpressure.go
+│   └── collect.go         # Subscribe / ForEach / ToSlice
 └── docs/
     ├── collections/README.md
     ├── option/README.md
     ├── result/README.md
     ├── control/README.md
-    └── reactivex/README.md
+    ├── reactivex/README.md
+    └── utils/
+        ├── objects/README.md
+        └── json/README.md
 ```
 
 ## Java / JavaScript mapping
@@ -276,12 +297,12 @@ Before `Collect`, `Filter`, `Map`, and `Take` only describe the pipeline. The te
 v, err := result.Success(42).Unwrap()
 if err != nil { return err }
 
-fallback := result.Failure[int](errors.New("missing")).
-    Recover(func(err error) result.Result[int] {
-        if errors.Is(err, ErrMissing) { return result.Success(0) }
-        return result.Failure[int](err)
-    })
+port, _ := result.Wrap(lookupPort()).
+    Recover(func(err error) int { return 8080 }).
+    Unwrap() // err is always nil
 ```
+
+`Recover` always returns a `T`; surface a fresh error by ending the chain with `Unwrap` instead.
 
 `Result.MapError` transforms the captured error in place; `Map[R]` / `FlatMap[R]` thread the success value through a transformation while preserving the failure on the error path.
 
@@ -304,11 +325,14 @@ Done:
 - [x] `ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]` with fluent methods.
 - [x] Eager collection operations: `Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`, `Collect`, `ForEach`, `Peek`, `Concat`.
 - [x] Order-dependent operations on lists: `Get`, `Insert`, `RemoveAt`, `First`, `Last`, `Find`, `Take`, `Drop`, `Distinct`, `SortBy`, `MinBy`, `MaxBy`.
-- [x] Optional-based access: `Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` return `Optional[T]`.
+- [x] Optional-based access: `Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` and `Stack` / `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back` return `Optional[T]`.
 - [x] `Stream[T]` adapter backed by `iter.Seq[T]`, with early-terminating terminals.
 - [x] Linear structures: `Stack[T]`, `Queue[T]`, `Deque[T]`.
 - [x] Parent-package helpers: `Range[T constraints.Integer](start, end T) Stream[T]` for iota-style integer sequences.
-- [x] `Option[T]` / `Result[T]` / `Equaler[T]` / `IsNil[T]` / `Equals[T]` utilities.
+- [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` utilities.
+- [x] `control.Repeat` / `RepeatE` and `control/match` pattern matching.
+- [x] `reactivex` package: `Observable[T]` / `Publisher[T]` / `Subscriber[T]`, `Subject[T]`, `WithBuffer` / `WithOverflow` backpressure, `Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` operators.
+- [x] `utils/json` Result-style codec on top of `encoding/json/v2`.
 - [x] Bounded memory: head-offset `ArrayList` with periodic compaction, slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
 - [x] Tests with race detector, 100% statement coverage on the actively-developed files.
 

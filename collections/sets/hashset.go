@@ -332,9 +332,13 @@ func (s *HashSet[T]) SortBy(less func(x, y T) int) *lists.ArrayList[T] {
 	return lists.ArrayListOf(values...)
 }
 
-// MinBy returns the smallest value under less, or the zero value and false
-// when the set is empty.
-func (s *HashSet[T]) MinBy(less func(x, y T) int) (T, bool) {
+// MinBy returns the smallest value under less wrapped in a present
+// option.Optional[T], or an absent Optional when the set is empty.
+//
+// MinBy uses option.Optional[T] rather than (T, bool) so the
+// "find and get" path is symmetric with Find and chains naturally
+// with option.Map / option.FlatMap.
+func (s *HashSet[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 	var (
 		best  T
 		found bool
@@ -345,12 +349,17 @@ func (s *HashSet[T]) MinBy(less func(x, y T) int) (T, bool) {
 			found = true
 		}
 	})
-	return best, found
+	if !found {
+		return option.Empty[T]()
+	}
+	return option.Of(best)
 }
 
-// MaxBy returns the largest value under less, or the zero value and false
-// when the set is empty.
-func (s *HashSet[T]) MaxBy(less func(x, y T) int) (T, bool) {
+// MaxBy returns the largest value under less wrapped in a present
+// option.Optional[T], or an absent Optional when the set is empty.
+//
+// See MinBy for the rationale.
+func (s *HashSet[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 	var (
 		best  T
 		found bool
@@ -361,7 +370,10 @@ func (s *HashSet[T]) MaxBy(less func(x, y T) int) (T, bool) {
 			found = true
 		}
 	})
-	return best, found
+	if !found {
+		return option.Empty[T]()
+	}
+	return option.Of(best)
 }
 
 // Any reports whether at least one value satisfies p.

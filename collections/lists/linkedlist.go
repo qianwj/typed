@@ -485,7 +485,9 @@ func (l *LinkedList[T]) SortBy(less func(x, y T) int) *LinkedList[T] {
 // option.Optional[T], or an absent Optional if the list is empty.
 //
 // MinBy returns option.Optional[T] rather than (T, bool) so the
-// "find and get" path is symmetric with Find and ArrayList.MinBy.
+// "find and get" path is symmetric with Find and the other
+// MinBy / MaxBy implementations in this package
+// (ArrayList, HashSet, Stream).
 func (l *LinkedList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 	if l.head == nil {
 		return option.Empty[T]()

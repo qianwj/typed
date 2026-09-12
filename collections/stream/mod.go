@@ -358,11 +358,14 @@ func (s Stream[T]) SortBy(less func(x, y T) int) Stream[T] {
 	}}
 }
 
-// MinBy returns the smallest element under less, or the zero value and false
-// if the Stream is empty.
-func (s Stream[T]) MinBy(less func(x, y T) int) (T, bool) {
+// MinBy returns the smallest element under less wrapped in a present
+// option.Optional[T], or an absent Optional when the Stream is empty.
+//
+// MinBy uses option.Optional[T] rather than (T, bool) so the
+// "find and get" path is symmetric with First / Last / Find and
+// chains naturally with option.Map / option.FlatMap.
+func (s Stream[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 	var (
-		zero  T
 		best  T
 		found bool
 	)
@@ -377,16 +380,17 @@ func (s Stream[T]) MinBy(less func(x, y T) int) (T, bool) {
 		}
 	}
 	if !found {
-		return zero, false
+		return option.Empty[T]()
 	}
-	return best, true
+	return option.Of(best)
 }
 
-// MaxBy returns the largest element under less, or the zero value and false
-// if the Stream is empty.
-func (s Stream[T]) MaxBy(less func(x, y T) int) (T, bool) {
+// MaxBy returns the largest element under less wrapped in a present
+// option.Optional[T], or an absent Optional when the Stream is empty.
+//
+// See MinBy for the rationale.
+func (s Stream[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 	var (
-		zero  T
 		best  T
 		found bool
 	)
@@ -401,7 +405,7 @@ func (s Stream[T]) MaxBy(less func(x, y T) int) (T, bool) {
 		}
 	}
 	if !found {
-		return zero, false
+		return option.Empty[T]()
 	}
-	return best, true
+	return option.Of(best)
 }

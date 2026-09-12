@@ -140,14 +140,12 @@ func TestStreamSortByMinByMaxBy(t *testing.T) {
 		t.Fatalf("SortBy: got %v, want %v", sorted, want)
 	}
 
-	min, ok := src.Stream().MinBy(func(a, b int) int { return a - b })
-	if !ok || min != 1 {
-		t.Fatalf("MinBy: got (%v, %v), want (1, true)", min, ok)
+	if min := src.Stream().MinBy(func(a, b int) int { return a - b }).OrElse(0); min != 1 {
+		t.Fatalf("MinBy: got %d, want 1", min)
 	}
 
-	max, ok := src.Stream().MaxBy(func(a, b int) int { return a - b })
-	if !ok || max != 9 {
-		t.Fatalf("MaxBy: got (%v, %v), want (9, true)", max, ok)
+	if max := src.Stream().MaxBy(func(a, b int) int { return a - b }).OrElse(0); max != 9 {
+		t.Fatalf("MaxBy: got %d, want 9", max)
 	}
 }
 

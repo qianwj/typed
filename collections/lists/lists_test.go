@@ -61,11 +61,11 @@ func TestArrayListOptionalReturnsOnEmpty(t *testing.T) {
 	if v := a.RemoveLast(); v.IsPresent() {
 		t.Fatalf("RemoveLast on empty: got present %d, want absent", v.OrElse(0))
 	}
-	if v, ok := a.MinBy(func(x, y int) int { return x - y }); ok {
-		t.Fatalf("MinBy on empty: got present %d, want absent", v)
+	if v := a.MinBy(func(x, y int) int { return x - y }); v.IsPresent() {
+		t.Fatalf("MinBy on empty: got present %d, want absent", v.OrElse(0))
 	}
-	if v, ok := a.MaxBy(func(x, y int) int { return x - y }); ok {
-		t.Fatalf("MaxBy on empty: got present %d, want absent", v)
+	if v := a.MaxBy(func(x, y int) int { return x - y }); v.IsPresent() {
+		t.Fatalf("MaxBy on empty: got present %d, want absent", v.OrElse(0))
 	}
 }
 
@@ -149,11 +149,11 @@ func TestLinkedListGetRemoveFirstLastBounds(t *testing.T) {
 // TestArrayListOptionalReturnsOnEmpty).
 func TestArrayListMinMaxByNonEmpty(t *testing.T) {
 	a := ArrayListOf(3, 1, 4, 1, 5, 9, 2, 6)
-	if v, ok := a.MinBy(func(x, y int) int { return x - y }); !ok || v != 1 {
-		t.Fatalf("MinBy: got (%d, %v), want (1, true)", v, ok)
+	if v := a.MinBy(func(x, y int) int { return x - y }).OrElse(0); v != 1 {
+		t.Fatalf("MinBy: got %d, want 1", v)
 	}
-	if v, ok := a.MaxBy(func(x, y int) int { return x - y }); !ok || v != 9 {
-		t.Fatalf("MaxBy: got (%d, %v), want (9, true)", v, ok)
+	if v := a.MaxBy(func(x, y int) int { return x - y }).OrElse(0); v != 9 {
+		t.Fatalf("MaxBy: got %d, want 9", v)
 	}
 }
 

@@ -78,15 +78,17 @@ result := lists.ArrayListOf(users...).
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
 | `option.Optional[T]` | `utils/option` | 存在 / 缺失的值,不依赖对 `T` 的 nil 检查。 |
-| `result.Result[T]` | `utils/result` | 成功 / 失败;`Unwrap` 返回 `(T, error)`,`Recover` 实现错误感知的 fallback。 |
-| `objects.Equaler[T]` | `utils/objects` | 静态接口 `Equal(T) bool`。 |
-| `objects.IsNil[T]`、`objects.Equals[T]` | `utils/objects` | 基于反射的 nil 检查和相等分派(支持 typed nil、`Equaler[T]`、`time.Time.Equal`)。 |
+| `result.Result[T]` | `utils/result` | 成功 / 失败;`Unwrap` 返回 `(T, error)`,`Wrap` 是从 `(T, error)` 到 `Result[T]` 的正向桥,`Recover` 是错误感知的 fallback,总返回 `T`。 |
+| `json.Encode[T] / Decode[T]` | `utils/json` | 基于 `encoding/json/v2` 的 `Result` 风格编解码。 |
+| `objects.Equaler`(接口,可选用) | `utils/objects` | 提示接口 `Equal(any) bool`;`Equals` 不要求类型实现它。 |
+| `objects.IsNil[T]`、`objects.Equals[T]` | `utils/objects` | 基于反射的 nil 检查和相等分派(支持 typed nil、`func (T) Equal(T) bool`、`time.Time.Equal`)。 |
 
 ### 控制流
 
-| 类型 | 源码 | 说明 |
+| 类型 / 函数 | 源码 | 说明 |
 | --- | --- | --- |
-| `match.Case[T, R]` | `control/match` | Go 1.27 泛型方法下的模式匹配原语。 |
+| `control.Repeat(times, f)` / `RepeatE(times, f) (int, error)` | `control` | "做 N 次"循环;`RepeatE` 在首次非 nil 错误处停,返回已成功次数。 |
+| `match.Pattern[T]`、`match.Value[T]`、`match.Type(any)` | `control/match` | 首个匹配获胜的模式匹配:`Pattern[T]` 测试值,`Type` 按动态类型分派。 |
 
 ## 速览
 
@@ -164,11 +166,15 @@ v := option.Of(7).Map(func(x int) int { return x * 2 }).OrElse(0)  // 14
 
 存在 / 缺失标志是显式存储的,而不是从 `T` 上推断 nil,所以 `Optional[int]` 也能用于值类型,避免了只能用 `(int, bool)` 的处境。
 
-`Result[T]` 是与之配套的 `(T, error)` 形态。`Unwrap` 在成功路径上返回值和 `nil` 错误,在失败路径上返回零值和捕获的错误。`Recover(f func(error) Result[T])` 允许针对特定错误做 fallback,不必先 unwrap:
+`Result[T]` 是与之配套的 `(T, error)` 形态。`Unwrap` 在成功路径上返回值和 `nil` 错误,在失败路径上返回零值和捕获的错误。`Recover(f func(error) T) T` 接受一个把错误映射成回退值的函数;`Recover` 总是返回 `T`,所以想再次失败应当走 `Unwrap`。`Wrap` 是从 `(T, error)` 返回值到 `Result[T]` 的正向桥。
 
 ```go
 v, err := loadProfile(id).Unwrap()
 if err != nil { return err }
+
+port, _ := result.Wrap(lookupPort()).
+    Recover(func(err error) int { return 8080 }).
+    Unwrap() // err 始终为 nil
 ```
 
 `Result.MapError` 就地变换捕获的错误;`Map[R]` / `FlatMap[R]` 在成功路径上传递值,失败路径上的错误保持不变。
@@ -208,16 +214,31 @@ typed/
 │   ├── go.mod
 │   ├── option/
 │   ├── result/
-│   └── objects/
+│   ├── objects/
+│   └── json/
 ├── control/
 │   ├── go.mod
-│   └── match/
+│   ├── mod.go             # Repeat / RepeatE
+│   └── match/             # 模式匹配
+├── reactivex/
+│   ├── go.mod
+│   ├── mod.go
+│   ├── interfaces.go      # Publisher / Subscriber / Subscription / Observable
+│   ├── sources.go         # Just / FromSlice / FromChannel / FromSeq / Create / Interval
+│   ├── operators.go       # Map / Filter / Take / Skip / Scan / Reduce
+│   ├── subject.go         # NewSubject + 作为 Subscriber 的桥
+│   ├── options.go         # WithBuffer / WithOverflow / OverflowStrategy
+│   ├── backpressure.go
+│   └── collect.go         # Subscribe / ForEach / ToSlice
 └── docs/
     ├── collections/README.md
     ├── option/README.md
     ├── result/README.md
     ├── control/README.md
-    └── reactivex/README.md
+    ├── reactivex/README.md
+    └── utils/
+        ├── objects/README.md
+        └── json/README.md
 ```
 
 ## Java / JavaScript 映射
@@ -276,14 +297,12 @@ adults := lists.ArrayListOf(users...).
 v, err := result.Success(42).Unwrap()
 if err != nil { return err }
 
-fallback := result.Failure[int](errors.New("missing")).
-    Recover(func(err error) result.Result[int] {
-        if errors.Is(err, ErrMissing) { return result.Success(0) }
-        return result.Failure[int](err)
-    })
+port, _ := result.Wrap(lookupPort()).
+    Recover(func(err error) int { return 8080 }).
+    Unwrap() // err 始终为 nil
 ```
 
-`Result.MapError` 就地变换捕获的错误;`Map[R]` / `FlatMap[R]` 在成功路径上传递值,失败路径上的错误保持不变。
+`Recover` 总会返回 `T`;需要把新错误往上传,请用 `Unwrap` 收尾而不是 `Recover`。
 
 对于需要暴露错误的集合管道,推荐的做法是把错误路径转成缺失的 `Optional[T]`(例如对返回 `(T, error)` 的查询用 `OfNullable`),并把成功路径留在普通链式 API 上。
 
@@ -304,11 +323,14 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] `ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]` 及它们的链式方法。
 - [x] 立即执行的集合操作:`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Collect`、`ForEach`、`Peek`、`Concat`。
 - [x] 列表的顺序相关操作:`Get`、`Insert`、`RemoveAt`、`First`、`Last`、`Find`、`Take`、`Drop`、`Distinct`、`SortBy`、`MinBy`、`MaxBy`。
-- [x] 基于 Optional 的访问:`Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` 返回 `Optional[T]`。
+- [x] 基于 Optional 的访问:`Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` 以及 `Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back` 都返回 `Optional[T]`。
 - [x] `Stream[T]` 适配器,基于 `iter.Seq[T]`,带可提前停止的终止操作。
 - [x] 线性结构:`Stack[T]`、`Queue[T]`、`Deque[T]`。
 - [x] 父包辅助函数:`Range[T constraints.Integer](start, end T) Stream[T]`,iota 风格的整数序列。
-- [x] `Option[T]` / `Result[T]` / `Equaler[T]` / `IsNil[T]` / `Equals[T]` 工具集。
+- [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` 工具集。
+- [x] `control.Repeat` / `RepeatE` 与 `control/match` 模式匹配。
+- [x] `reactivex` 包:`Observable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
+- [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。
 - [x] 有界内存:head-offset `ArrayList` 加周期性压缩,`Stack.Pop` 与列表的 `Remove*` 路径清零释放的槽位。
 - [x] 启用 race detector 的测试,活跃开发的文件 100% 语句覆盖。
 

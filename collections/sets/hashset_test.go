@@ -162,11 +162,11 @@ func TestHashSetCommonCollectionOperations(t *testing.T) {
 	if got := set.SortBy(func(a, b int) int { return a - b }).Collect(); !equalValues(got, []int{1, 2, 3}) {
 		t.Fatalf("SortBy: got %v", got)
 	}
-	if value, ok := set.MinBy(func(a, b int) int { return a - b }); !ok || value != 1 {
-		t.Fatalf("MinBy: got (%d, %v), want (1, true)", value, ok)
+	if value := set.MinBy(func(a, b int) int { return a - b }).OrElse(0); value != 1 {
+		t.Fatalf("MinBy: got %d, want 1", value)
 	}
-	if value, ok := set.MaxBy(func(a, b int) int { return a - b }); !ok || value != 3 {
-		t.Fatalf("MaxBy: got (%d, %v), want (3, true)", value, ok)
+	if value := set.MaxBy(func(a, b int) int { return a - b }).OrElse(0); value != 3 {
+		t.Fatalf("MaxBy: got %d, want 3", value)
 	}
 }
 

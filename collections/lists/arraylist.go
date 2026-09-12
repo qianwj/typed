@@ -587,12 +587,15 @@ func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
 	return &ArrayList[T]{items: out}
 }
 
-// MinBy returns the smallest element under less, or the zero value and false
-// if the ArrayList is empty.
-func (a *ArrayList[T]) MinBy(less func(x, y T) int) (T, bool) {
+// MinBy returns the smallest element under less wrapped in a present
+// option.Optional[T], or an absent Optional when the ArrayList is empty.
+//
+// MinBy uses option.Optional[T] rather than (T, bool) so the
+// "find and get" path is symmetric with First / Last / Find and
+// chains naturally with option.Map / option.FlatMap.
+func (a *ArrayList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 	if a.size() == 0 {
-		var zero T
-		return zero, false
+		return option.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -600,15 +603,16 @@ func (a *ArrayList[T]) MinBy(less func(x, y T) int) (T, bool) {
 			best = v
 		}
 	}
-	return best, true
+	return option.Of(best)
 }
 
-// MaxBy returns the largest element under less, or the zero value and false
-// if the ArrayList is empty.
-func (a *ArrayList[T]) MaxBy(less func(x, y T) int) (T, bool) {
+// MaxBy returns the largest element under less wrapped in a present
+// option.Optional[T], or an absent Optional when the ArrayList is empty.
+//
+// See MinBy for the rationale.
+func (a *ArrayList[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 	if a.size() == 0 {
-		var zero T
-		return zero, false
+		return option.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -616,5 +620,5 @@ func (a *ArrayList[T]) MaxBy(less func(x, y T) int) (T, bool) {
 			best = v
 		}
 	}
-	return best, true
+	return option.Of(best)
 }

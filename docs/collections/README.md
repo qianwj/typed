@@ -1,429 +1,293 @@
-# typed/collections 使用说明
+# `github.com/qianwj/typed/collections`
 
-`typed/collections` 是一个基于 Go 泛型的集合工具模块，提供有序列表、无序键值表、无序集合，以及基于 `iter.Seq` 的惰性数据流。
+泛型集合与同步数据流。`collections` 分为四类容器和一个惰性流工具：
 
-模块路径：
+- `Stack[T]` / `Queue[T]` / `Deque[T]` — 基本线性容器，返回 `option.Optional[T]` 表示"无值"。
+- `lists.ArrayList[T]` / `lists.LinkedList[T]` — 列表，提供不可变式 transform（`Filter`/`Map`/`Take`/`Drop`/`Concat`/`Distinct`/`SortBy`）。
+- `maps.HashMap[K, V]` — 哈希表，提供 `Keys`/`Values`/`Entries`/`Filter*`/`MapValues`/`Concat`。
+- `sets.HashSet[T]` — 哈希集合，提供集合代数（`Union`/`Intersect`/`Difference`/`SymmetricDifference`）以及同型 transform。
+- `stream.Stream[T]` — `iter.Seq[T]` 之上的惰性流，可链接 `Filter`/`Map`/`FlatMap`/`Take`/`Drop`/`Distinct`/`Concat`/`SortBy`/`Reduce`/`Count`/`Find` 等终结操作。
+- `collections.Range[T]` — 整数半开区间到 `Stream[T]` 的工厂。
 
-```text
-github.com/qianwj/typed/collections
-```
+所有集合都实现了 `MarshalJSON` / `UnmarshalJSON`，元素类型必须满足 `any` 约束即可，JSON 形式是 Go 风格的数组或对象。
 
-当前模块使用 Go 1.27。集合类型是具体的泛型类型，而不是接口，这样 `Map[R]`、`FlatMap[R]` 等类型变换方法可以保留完整的静态类型。`ArrayList`、`LinkedList` 和 `HashSet` 的构造器都返回指针，便于统一使用可变集合。
-
-## 模块结构
-
-```text
-collections/
-├── lists/    ArrayList[T]、LinkedList[T]
-├── maps/     HashMap[K, V]
-├── sets/     HashSet[T]
-└── stream/   Stream[T]
-```
-
-常用导入：
+## 包导入
 
 ```go
 import (
+    "github.com/qianwj/typed/collections"
     "github.com/qianwj/typed/collections/lists"
     "github.com/qianwj/typed/collections/maps"
     "github.com/qianwj/typed/collections/sets"
-)
-```
-
-## 统一 API
-
-`ArrayList`、`LinkedList` 和 `HashSet` 都提供下面这组通用操作；`HashMap` 也使用相同的 `Size()` 数量命名。
-
-| 能力 | API |
-| --- | --- |
-| 构造 | `NewX[T]()`、`XOf(values...)`，返回 `*X[T]` |
-| 数量 | `Size()` |
-| 生命周期 | `IsEmpty()`、`Clear()` |
-| 遍历和导出 | `ForEach`、`Collect`、`Stream` |
-| 条件查询 | `Any`、`All`、`None`、`Find` |
-| 筛选 | `Filter`，返回同一种集合 |
-| 类型变换 | `Map[R](func(T) R)`，返回 `*ArrayList[R]` |
-| 扁平化 | `FlatMap[R](func(T) *ArrayList[R])`，返回 `*ArrayList[R]` |
-| 折叠 | `Reduce[R](init, func(R, T) R)` |
-| 观察和拼接 | `Peek`、`Concat`，返回同一种集合 |
-
-所有容器统一使用 `Size()` 查询元素或条目数量，容器类型不再提供 `Len()` 或 `Count()`。`Stream` 的 `Count()` 是消费流的终止操作，语义独立。
-
-`Map` 和 `FlatMap` 统一返回 `ArrayList`，因为结果类型 `R` 可以是 slice、map、函数等不可比较类型。HashSet 另提供 `MapSet` 和 `FlatMapSet`，在结果满足 `comparable` 时保留去重语义。
-
-列表拥有顺序和索引，因此额外提供 `Get`、`Insert`、`RemoveAt`、`First`、`Last`、`Take`、`Drop`、`Distinct` 和 `SortBy`。HashSet 没有这些依赖稳定顺序的操作，额外提供 `Union`、`Intersect`、`Difference`、`SymmetricDifference`、`IsSubsetOf` 和 `IsSupersetOf`。
-
-## ArrayList 与 LinkedList API 对比
-
-两种列表的通用方法保持相同的命名和主要语义，区别集中在底层存储和操作复杂度。下面的复杂度以当前列表长度 `n`、目标索引 `i` 和另一个列表长度 `m` 表示；`Add` 的 `O(1)` 是 `ArrayList` 的均摊复杂度。
-
-| 能力 | API | `ArrayList` | `LinkedList` | 说明 |
-| --- | --- | --- | --- | --- |
-| 构造空列表 | `NewX[T]()` | `*ArrayList[T]` | `*LinkedList[T]` | 两者都返回指针 |
-| 按值构造 | `XOf(values...)` | `ArrayListOf` | `LinkedListOf` | 保留传入顺序 |
-| 尾部追加 | `Add(value)` | `O(1)` 均摊 | `O(1)` | 原地修改 |
-| 头部插入 | `AddFirst(value)` | `O(1)` 均摊 | `O(1)` | 原地修改；`ArrayList` 通过 head offset 实现，周期性压缩把丢弃前缀归零 |
-| 尾部删除 | `RemoveLast() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
-| 头部删除 | `RemoveFirst() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]`；`ArrayList` head offset + 周期性压缩 |
-| 按索引插入 | `Insert(i, value)` | `O(n)` | 查找 `O(i)`，链接 `O(1)` | 越界时 panic |
-| 按索引删除 | `RemoveAt(i) T` | `O(n)` | 查找 `O(i)`，摘链 `O(1)` | 越界时 panic |
-| 按索引读取 | `Get(i) option.Optional[T]` | `O(1)` | `O(i)`，最坏 `O(n)` | 越界返回 absent `Optional[T]` |
-| 首元素 | `First() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
-| 尾元素 | `Last() option.Optional[T]` | `O(1)` | `O(1)` | 空列表返回 absent `Optional[T]` |
-| 数量 | `Size() int` | `O(1)` | `O(1)` | 所有容器统一使用 `Size()` |
-| 判空/清空 | `IsEmpty()` / `Clear()` | `O(1)` | `O(1)` | `Clear` 原地清空 |
-| 导出 | `Collect() []T` | `O(n)` | `O(n)` | 返回独立副本，保留列表顺序 |
-| 快照流 | `Stream()` | 创建快照 `O(n)` | 创建快照 `O(n)` | 返回单次消费的 `Stream[T]` |
-| 筛选 | `Filter(p)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 返回同一种列表 |
-| 映射 | `Map[R](f)` | `*ArrayList[R]`，`O(n)` | `*ArrayList[R]`，`O(n)` | 结果统一为 `ArrayList`，`R` 可为任意类型 |
-| 扁平化 | `FlatMap[R](f)` | `*ArrayList[R]` | `*ArrayList[R]` | 结果统一为 `ArrayList`，复杂度为遍历和输出总量 |
-| 截取/跳过 | `Take(n)` / `Drop(n)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 返回新列表，不修改原列表 |
-| 去重 | `Distinct(eq)` | `*ArrayList[T]`，`O(n²)` | `*LinkedList[T]`，`O(n²)` | 按相等函数保留第一次出现的元素 |
-| 拼接 | `Concat(other)` | `*ArrayList[T]`，`O(n+m)` | `*LinkedList[T]`，`O(n+m)` | 返回新列表，不修改输入 |
-| 观察 | `Peek(visit)` | `*ArrayList[T]`，`O(n)` | `*LinkedList[T]`，`O(n)` | 调用回调后返回独立副本 |
-| 排序 | `SortBy(less)` | `*ArrayList[T]`，`O(n log n)` | `*LinkedList[T]`，`O(n log n)` | 返回排序后的新列表 |
-| 聚合查询 | `Any` / `All` / `None` / `Find` | `O(n)`，支持提前停止 | `O(n)`，支持提前停止 | `Find` 返回 absent/present `Optional[T]` |
-| 折叠/极值 | `Reduce` / `MinBy` / `MaxBy` | `O(n)` | `O(n)` | `Reduce` 按列表顺序执行；`MinBy`/`MaxBy` 返回 `Optional[T]` |
-
-选择时可以按访问模式判断：需要频繁按索引读取、尾部追加或批量遍历时使用 `ArrayList`；需要频繁在头部增删，且主要按顺序遍历时使用 `LinkedList`。两者的 `Map` 和 `FlatMap` 返回类型已经统一，普通变换可以直接切换实现。
-
-## 设计边界
-
-`ArrayList`、`LinkedList`、`HashMap` 和 `HashSet` 是立即执行的具体集合。`Filter`、`Map`、`FlatMap` 等操作调用后就会生成结果。
-
-`Stream` 是显式的惰性层，底层使用 Go 的 `iter.Seq[T]`。调用 `Collect`、`Count`、`First`、`Any` 等终止操作时，数据才会真正被消费。
-
-集合的 `Stream()` 会在调用时创建快照，因此之后对集合的修改不会影响已经创建的 Stream。Stream 本身是单次消费的，终止操作执行后不应再次使用同一个 Stream。
-
-## ArrayList[T]
-
-`ArrayList[T]` 是有序、可变长度的集合，内部使用私有 slice 保存数据。构造器和返回集合的变换方法都返回 `*ArrayList[T]`。
-
-```go
-users := lists.ArrayListOf(
-    User{Name: "Alice", Age: 17},
-    User{Name: "Bob", Age: 21},
-    User{Name: "Carol", Age: 30},
-)
-
-names := users.
-    Filter(func(u User) bool { return u.Age >= 18 }).
-    Map(func(u User) string { return u.Name }).
-    Collect()
-
-// names == []string{"Bob", "Carol"}
-```
-
-主要方法：
-
-| 方法 | 行为 |
-| --- | --- |
-| `NewArrayList[T]()` | 创建空列表 |
-| `ArrayListOf(values...)` | 按传入顺序创建列表 |
-| `Add(value)` | 追加到列表尾部 |
-| `AddFirst(value)` | 插入到列表头部 |
-| `Insert(index, value)` | 在指定位置插入；使用 `Insert(list.Size(), value)` 追加，越界时 panic |
-| `RemoveFirst` / `RemoveLast` | 删除并返回首/尾元素，没有元素时返回 absent `Optional[T]` |
-| `RemoveAt(index)` | 删除并返回指定位置的元素，越界时 panic |
-| `Get(index)` | 返回 `Optional[T]`，越界时 absent |
-| `Size()` | 返回元素数量 |
-| `IsEmpty` / `Clear` | 查询或清空列表 |
-| `Filter(p)` | 返回满足条件的新列表 |
-| `Map[R](f)` | 映射为任意类型的新列表 |
-| `FlatMap[R](f)` | 拼接每个元素返回的 `ArrayList` |
-| `Take(n)` / `Drop(n)` | 截取或跳过元素 |
-| `Distinct(eq)` | 根据相等函数保留第一次出现的元素 |
-| `SortBy(less)` | 根据比较函数返回排序后的新列表 |
-| `First` / `Last` / `Find` | 查询元素 |
-| `Any` / `All` / `None` | 条件判断 |
-| `ForEach` / `Peek` / `Concat` | 遍历、观察或拼接 |
-| `Reduce[R](init, f)` | 按顺序折叠，可改变结果类型 |
-| `Collect()` | 返回与列表内部存储解耦的 `[]T` |
-| `Stream()` | 创建快照 Stream |
-
-`ArrayListOf` 会直接保存收到的 variadic slice。需要把数据与外部 slice 完全隔离时，可以通过 `Collect` 取出副本后再创建列表。
-
-## LinkedList[T]
-
-`LinkedList[T]` 是双向链表，适合需要频繁在头尾或指定位置插入、删除的场景。它的构造器和返回集合的变换方法都返回指针，方法使用指针接收者：
-
-```go
-numbers := lists.LinkedListOf(1, 2, 3)
-numbers.AddFirst(0)
-numbers.Add(4)
-numbers.RemoveAt(2)
-
-got := numbers.Collect()
-// got == []int{0, 1, 3, 4}
-```
-
-主要方法：
-
-```text
-NewLinkedList[T]、LinkedListOf
-Add、AddFirst、RemoveFirst、RemoveLast
-Insert、RemoveAt、Get
-First、Last、Find
-Filter、Map、FlatMap、Reduce
-Take、Drop、Distinct、SortBy
-Peek、Concat、ForEach、Any、All、None
-Size()、IsEmpty、Clear
-Collect、Stream
-```
-
-`LinkedList` 的 `Collect` 按头到尾顺序返回副本。复制一个已经使用中的 `LinkedList` 值会共享底层节点链，使用时应保留原实例，不要复制结构体值。
-
-`LinkedList.Map` 和 `LinkedList.FlatMap` 返回 `*ArrayList[R]`，这样它们和 `ArrayList`、`HashSet` 的类型变换 API 一致，同时允许 `R` 为任意类型。
-
-## Deque[T]
-
-`Deque[T]` 是双端队列，包装 `lists.LinkedList[T]`。在双向链表之上,`PushFront` / `PushBack` / `PopFront` / `PopBack` / `Front` / `Back` 全部是严格的 O(1),没有任何均摊成本:每次 push 都是一次节点分配 + 指针赋值,每次 pop 都是几次指针赋值,没有类似 `ArrayList` 那种周期性压缩的隐式 O(n) 调用。
-
-```go
-d := collections.NewDeque[int]()
-d.PushBack(1)   // [1]
-d.PushBack(2)   // [1, 2]
-d.PushFront(0)  // [0, 1, 2]
-d.PushBack(3)   // [0, 1, 2, 3]
-
-front := d.Front().OrElse(-1)   // 0
-back  := d.Back().OrElse(-1)    // 3
-left  := d.PopFront().OrElse(-1) // 0
-right := d.PopBack().OrElse(-1)  // 3
-// 现在 d = [1, 2]
-```
-
-主要方法：
-
-```text
-NewDeque[T]()
-PushFront(value) / PushBack(value)
-PopFront() / PopBack()  返回 option.Optional[T],空时 absent
-Front() / Back()        返回 option.Optional[T],空时 absent
-Size() / IsEmpty() / Clear()
-```
-
-API 命名上使用 `Front` / `Back` 限定词,因为 Deque 是双端的,Stack/Queue 的 `Push` / `Pop` / `Peek` 无法表达「从前面 push」「从后面 pop」这种语义。`Optional[T]` 返回值与 `Stack`、`Queue` 和 `lists` 子包保持一致:命中 present,未命中 absent,调用方可直接链式 `OrElse` / `OrElseGet` / `Map`。
-
-选择 backing 时,Queue 仍然使用 `ArrayList`(只操作一端,head offset 正好契合),Deque 选择 `LinkedList`(两端都是严格的 O(1),没有周期性压缩的隐式 O(n))。`LinkedList` 的代价是每节点多两个 `*node[T]` 指针和节点头开销——对 BFS、单调队列、滑动窗口等典型 Deque 用法而言可接受,因为 push/pop 频度远高于迭代。
-
-## Range[T]
-
-`Range[T constraints.Integer](start, end T) stream.Stream[T]` 是父包提供的一个惰性流构造函数,产生从 `start`(含)到 `end`(不含)的连续整数序列,步长固定为 1。区间是半开 `[start, end)`,与 Rust 的 `0..n`、Python 的 `range(0, n)`、Java 的 `IntStream.range` 一致;`start >= end` 不会 panic,而是返回空流。
-
-```go
-indices := collections.Range(0, 10).Collect()                 // [0 1 2 3 4 5 6 7 8 9]
-squares := collections.Range(1, 6).
-    Map(func(x int) int { return x * x }).
-    Collect()                                                  // [1 4 9 16 25]
-negatives := collections.Range(-3, 2).Collect()              // [-3 -2 -1 0 1]
-```
-
-主要特点：
-
-- 惰性：`Range` 本身只包装一个计数器,内存成本与 `end - start` 无关;迭代一个 `Range(0, 1e9)` 只占几个字节,而不是十亿个值。
-- 可组合：返回 `stream.Stream[T]`,所以 `.Map` / `.Filter` / `.Take` / `.Reduce` / `.Concat` 都可以直接挂在后面。
-- 类型约束使用 `golang.org/x/exp/constraints.Integer`,只接受整数类型(避免 `cmp.Ordered` 引入 float / string 这种对 Range 没意义的类型)。
-
-典型用法：
-
-```text
-iota 风格的下标:        Range(0, len(xs)).ForEach(func(i int) { ... })
-"做 n 次" 模式:          Range(0, n).ForEach(func(int) { doWork() })
-平方数 / 立方数:        Range(1, k+1).Map(square)
-时间窗口:              Range(t0, t1).Filter(inBusinessHours)
-```
-
-## HashMap[K, V]
-
-`HashMap[K, V]` 是无序的键值集合，键必须满足 `comparable`，值可以是任意类型。
-
-```go
-scores := maps.HashMapOf(
-    maps.Entry[string, int]{Key: "alice", Value: 88},
-    maps.Entry[string, int]{Key: "bob", Value: 95},
-)
-
-scores.Put("carol", 91)
-if score, ok := scores.Get("bob"); ok {
-    _ = score
-}
-
-top := scores.
-    FilterValues(func(score int) bool { return score >= 90 }).
-    Collect()
-```
-
-主要方法：
-
-| 方法 | 行为 |
-| --- | --- |
-| `NewHashMap[K, V]()` | 创建空 HashMap |
-| `HashMapOf(entries...)` | 创建 HashMap，重复键以后面的值为准 |
-| `HashMapFromMap(src)` | 从普通 map 拷贝 |
-| `Put` / `PutIfAbsent` | 写入或条件写入 |
-| `Get` / `GetOrDefault` | 读取 |
-| `Remove` | 删除并返回 `(value, ok)` |
-| `Contains` / `Size()` / `IsEmpty` / `Clear` | 基础查询和管理 |
-| `ForEach` | 遍历键值对 |
-| `Keys` / `Values` / `Entries` | 投影为 `ArrayList` |
-| `Filter` / `FilterKeys` / `FilterValues` | 筛选并返回新 HashMap |
-| `MapValues[R](f)` | 变换 value 类型，key 保持不变 |
-| `Concat(other)` | 合并两个 HashMap，后者覆盖同键值 |
-| `Collect()` | 返回与内部存储解耦的普通 map |
-| `Stream()` | 返回 `Stream[Entry[K, V]]` 快照 |
-
-HashMap 的遍历顺序没有保证，不要依赖 `Keys`、`Values`、`Entries` 或 `Stream` 的顺序。
-
-## HashSet[T]
-
-`HashSet[T]` 是无序且不重复的集合，因此 `T` 必须满足 `comparable`。
-
-```go
-left := sets.HashSetOf(1, 2, 3)
-right := sets.HashSetOf(3, 4)
-
-union := left.Union(right).Collect()
-intersection := left.Intersect(right).Collect()
-difference := left.Difference(right).Collect()
-```
-
-基础操作包括：
-
-```text
-NewHashSet、HashSetOf
-Add、Remove、Contains
-Size()、IsEmpty、Clear
-ForEach、Collect、Stream、Peek
-Filter
-Reduce、SortBy、MinBy、MaxBy
-Union、Concat、Intersect、Difference、SymmetricDifference
-IsSubsetOf、IsSupersetOf
-Any、All、None、Find
-```
-
-HashSet 的映射操作需要区分结果是否仍然要保持集合语义：
-
-```go
-set := sets.HashSetOf(1, 2, 3)
-
-// R 可以是任意类型，包括 []int、map 或 func。
-listsResult := set.Map(func(v int) []int {
-    return []int{v, v * 10}
-}).Collect()
-
-// FlatMap 的 mapper 返回 *ArrayList[R]，结果保留所有展开后的元素。
-flatResult := set.FlatMap(func(v int) *lists.ArrayList[int] {
-    return lists.ArrayListOf(v, v*10)
-}).Collect()
-
-// 需要映射后继续去重时，使用 MapSet。
-mappedSet := set.MapSet(func(v int) int {
-    return v % 2
-})
-
-// 需要展开后继续去重时，使用 FlatMapSet。
-flatSet := set.FlatMapSet(func(v int) *sets.HashSet[int] {
-    return sets.HashSetOf(v, v%2)
-})
-```
-
-`Map` 和 `FlatMap` 返回 `ArrayList`，所以结果类型不需要可比较；`MapSet` 和 `FlatMapSet` 返回 `HashSet`，要求结果类型满足 `comparable`，并会自动去重。
-
-HashSet 的遍历顺序没有保证。`Find` 在多个值满足条件时返回哪个值是不确定的。
-
-## Stream[T]
-
-`Stream[T]` 是基于 `iter.Seq[T]` 的单次消费、惰性处理流水线。
-
-直接创建 Stream：
-
-```go
-stream.From(seq)             // 从 iter.Seq[T] 创建
-stream.FromSlice(values)     // 从 []T 创建
-stream.Of(value1, value2)    // 从若干值创建
-stream.Empty[T]()            // 创建空 Stream
-```
-
-```go
-import (
-    "fmt"
-
-    "github.com/qianwj/typed/collections/lists"
     "github.com/qianwj/typed/collections/stream"
 )
-
-numbers := lists.ArrayListOf(1, 2, 3, 4, 5)
-
-result := numbers.
-    Stream().
-    Filter(func(n int) bool { return n%2 == 1 }).
-    Map(func(n int) string { return fmt.Sprint(n * 10) }).
-    Take(2).
-    Collect()
-
-// result == []string{"10", "30"}
 ```
 
-可用的中间操作：
+四个子包独立成 `go.mod`，按需引入。
 
-```text
-Filter、Map、FlatMap、Peek
-Take、Drop、Distinct、Concat
-SortBy
-```
+---
 
-可用的终止操作：
+## `Stack[T]` / `Queue[T]` / `Deque[T]`
 
-```text
-Collect、Count、First、Last
-Any、All、None、Find
-Reduce、ForEach
-MinBy、MaxBy
-```
-
-`Any`、`All`、`First` 和 `Take` 会尽早停止消费上游数据，适合处理大型或潜在无限的数据源。
-
-## 组合示例
-
-集合操作默认立即执行，需要提前停止或延迟处理时再切换到 Stream：
+三者都是结构体指针构造，返回 `*Stack[T]` 等。所有"取一个元素"的操作都返回 `option.Optional[T]`，而不是 `(T, bool)`，以便和 `Stream` / `Result` 链路自然拼装。
 
 ```go
-type User struct {
-    Name string
-    Age  int
-}
-
-users := lists.ArrayListOf(
-    User{Name: "Alice", Age: 17},
-    User{Name: "Bob", Age: 21},
-    User{Name: "Carol", Age: 30},
-)
-
-adultNames := users.
-    Stream().
-    Filter(func(u User) bool { return u.Age >= 18 }).
-    Map(func(u User) string { return u.Name }).
-    Collect()
+s := collections.NewStack[int]()
+s.Push(1); s.Push(2)
+v, ok := s.Peek().Get()        // 2, true
+top, _ := s.Pop().Get()        // 2
+_, present := s.Pop().Get()    // 1, true
+s.Pop().IsEmpty()              // false（还有 1）
+s.Pop().IsEmpty()              // true
+s.Pop()                        // option.Empty[int]()，不 panic
 ```
 
-简单的一次性逻辑仍然适合使用普通 `for range`。集合和 Stream 主要用于需要连续变换、筛选、扁平化或提前终止的流程。
+| 类型 | 构造 | 关键方法 |
+|---|---|---|
+| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Optional[T] / PopBack() Optional[T] / Front() Optional[T] / Back() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 
-## 与其他模块的关系
+`Pop*` / `Peek*` 在容器为空时返回 `option.Empty[T]()`，不会 panic，也不会修改容器（`Peek`/`Front`/`Back`），或者按对应规则修改（`Pop*`）。
 
-```text
-ArrayList[T] / LinkedList[T] / HashMap[K, V] / HashSet[T]
-    同步、具体集合、立即执行
+---
 
-Stream[T]
-    同步、惰性、基于 iter.Seq
+## `lists.ArrayList[T]`
 
-reactivex
-    异步、推送、订阅和取消
+`NewArrayList[T any]() *ArrayList[T]` 构造一个空表。`ArrayList` 是单段连续存储的 `[]T`，头部有一个 `head` 偏移；`Take`/`Drop` 只移动 `head` 而不复制元素（`O(1)`），`Collect` 之后才真正复制到新切片。
+
+### 读写
+
+| 方法 | 说明 |
+|---|---|
+| `Add(v)` / `AddFirst(v)` | 追加到末尾 / 插入到头部。 |
+| `Insert(i, v)` | 在下标 `i` 插入 `v`；`i < 0` 或 `i > Size()` 会 panic。 |
+| `Get(i) Optional[T]` | 下标越界返回 `Empty`，不 panic。 |
+| `First() Optional[T]` / `Last() Optional[T]` | 空表返回 `Empty`。 |
+| `RemoveAt(i) T` | 删除下标 `i` 的元素并返回它；越界 panic。 |
+| `RemoveFirst() Optional[T]` / `RemoveLast() Optional[T]` | 空表返回 `Empty`。 |
+| `Size() / IsEmpty() / Clear() / Collect() []T` | 基础量与导出。 |
+| `Stream() stream.Stream[T]` | 转成惰性 `Stream[T]`（不复制数据）。 |
+| `MarshalJSON / UnmarshalJSON` | JSON 数组。 |
+
+### 不可变 transform（返回新表，原表不变）
+
+| 方法 | 说明 |
+|---|---|
+| `Filter(p func(T) bool) *ArrayList[T]` | 保留满足 `p` 的元素。 |
+| `Map[R](f func(T) R) *ArrayList[R]` | 元素类型 `T → R`。 |
+| `FlatMap[R](f func(T) *ArrayList[R]) *ArrayList[R]` | `f` 返回的子表按顺序拼接。 |
+| `Take(n) / Drop(n)` | 前缀 / 后缀，复杂度 `O(1)`。 |
+| `Distinct(eq func(T, T) bool)` | 按 `eq` 去重。 |
+| `Concat(other)` | 末尾拼接。 |
+| `Peek(visit func(T))` | 不改表地遍历；返回值仍是原表，用于链式调试。 |
+| `SortBy(less func(x, y T) int) *ArrayList[T]` | 按 `less` 排序，返回新表。 |
+| `MinBy(less func(x, y T) int) option.Optional[T]` | 空表返回 `option.Empty[T]()`；否则返回最小元素（出席）。 |
+| `MaxBy(less func(x, y T) int) option.Optional[T]` | 同上，返回最大元素。 |
+
+### 谓词
+
+`Any(p) / All(p) / None(p) / Find(p) Optional[T]` — 短路的全称 / 存在量词；`Find` 返回首个匹配元素。
+
+### 例子
+
+```go
+xs := lists.NewArrayList[int]()
+xs.Add(3).Add(1).Add(4).Add(1).Add(5) // 注：Add 返回 *ArrayList 是设计待定；以源码为准
+_ = xs
 ```
 
-`collections` 处理已经存在的数据和同步迭代；异步事件、订阅生命周期、背压和多播属于 `reactivex` 的职责。
+> 上面这行 `Add` 链式调用仅为示意；当前实现里 `Add` 不返回 `*ArrayList[T]`，如需链式请改用 `Peek` 或 `stream.Stream`。
 
-## 许可
+```go
+even := lists.NewArrayList[int]()
+even.Add(2); even.Add(4); even.Add(6)
+sorted := even.SortBy(func(a, b int) int { return a - b })
+max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
+```
 
-本模块使用 [MIT License](../../LICENSE)。
+---
+
+## `lists.LinkedList[T]`
+
+双向链表 + 哨兵节点。`NewLinkedList[T any]() *LinkedList[T]` 构造。
+
+### 读写
+
+| 方法 | 说明 |
+|---|---|
+| `Add(v)` / `AddFirst(v)` | 追加到末尾 / 插入到头部。 |
+| `Insert(i, v)` | 在下标 `i` 插入；越界 panic。 |
+| `Get(i) Optional[T]` | 越界返回 `Empty`。 |
+| `First() / Last() Optional[T]` | 空表返回 `Empty`。 |
+| `RemoveAt(i) T` | 越界 panic。 |
+| `RemoveFirst() / RemoveLast() Optional[T]` | 空表返回 `Empty`。 |
+| `Size() / IsEmpty() / Clear() / Collect() []T` | 基础量与导出。 |
+| `Stream() stream.Stream[T]` | 惰性 `Stream[T]`。 |
+| `MarshalJSON / UnmarshalJSON` | JSON 数组。 |
+
+### 不可变 transform
+
+`Filter(p) *LinkedList[T]` / `Map[R](f) *ArrayList[R]` / `FlatMap[R](f) *ArrayList[R]` / `Take(n) / Drop(n) / Distinct(eq) / Concat(other) / Peek(visit) / SortBy(less) *LinkedList[T]`。
+
+注意 `Map` / `FlatMap` 从链表到数组是顺序遍历，复杂度 `O(n)`，但结果类型是 `*ArrayList[R]`，因为下游多半要按下标或切片处理。
+
+`MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` — 空表返回 `Empty`，否则返回极值。
+
+### 谓词
+
+`Any / All / None / Find(p) Optional[T]`，以及 `Reduce[U](init U, f func(U, T) U) U`。
+
+---
+
+## `maps.HashMap[K, V]`
+
+`K` 必须 `comparable`，`V` 任意。`NewHashMap[K, V]() *HashMap[K, V]` 构造。
+
+### 基础
+
+| 方法 | 说明 |
+|---|---|
+| `Put(k, v) V` | 设值并返回旧值（不存在时返回零值）。 |
+| `PutIfAbsent(k, v)` | 仅在不存在时设值。 |
+| `Get(k) (V, bool)` | 取值；不存在返回零值 + `false`。 |
+| `GetOrDefault(k, defaultV) V` | 取值或回退。 |
+| `Remove(k) (V, bool)` | 删除并返回旧值。 |
+| `Contains(k) bool` | 键存在性。 |
+| `Size() / IsEmpty() / Clear()` | 基础量。 |
+
+### 视图
+
+| 方法 | 说明 |
+|---|---|
+| `Keys() *ArrayList[K]` | 键集合（无序）。 |
+| `Values() *ArrayList[V]` | 值集合（无序）。 |
+| `Entries() *ArrayList[Entry[K, V]]` | `Entry` 是 `{K, V}` 结构体，`MarshalJSON` 产出 `{"k": v}`。 |
+| `ForEach(func(K, V))` | 不改表遍历。 |
+| `Stream() stream.Stream[Entry[K, V]]` | 惰性流。 |
+| `Collect() map[K]V` | 导出为 Go 内置 `map`。 |
+| `MarshalJSON / UnmarshalJSON` | `{"k": v, ...}` 形式。 |
+
+### 不可变 transform
+
+`Filter(p) / FilterKeys(p) / FilterValues(p) *HashMap[K, V]` — 返回新表。
+`MapValues[R](f func(K, V) R) *HashMap[K, R]` — 值类型变换。
+`Concat(other) *HashMap[K, V]` — 同键时 `other` 覆盖当前表。
+
+---
+
+## `sets.HashSet[T]`
+
+`T` 必须 `comparable`。`NewHashSet[T any]() *HashSet[T]` 构造。
+
+### 基础
+
+`Add(v) / Remove(v) / Contains(v) bool / Size() / IsEmpty() / Clear()` 与 Go `map[T]struct{}` 语义一致；`Add` 对已存在元素无副作用。
+
+### 视图与流
+
+`ForEach(func(T)) / Collect() []T / Stream() stream.Stream[T] / Peek(visit) *HashSet[T] / MarshalJSON / UnmarshalJSON`（JSON 数组，去重后输出）。
+
+### 不可变 transform
+
+| 方法 | 说明 |
+|---|---|
+| `Filter(p) *HashSet[T]` | 保谓词元素。 |
+| `Map[R](f) *ArrayList[R]` | 元素类型变换（结果不再去重，类型为列表）。 |
+| `FlatMap[R](f) *ArrayList[R]` | 同上但子结果也是列表。 |
+| `MapSet[R comparable](f) *HashSet[R]` | 元素类型变换并去重。 |
+| `FlatMapSet[R comparable](f) *HashSet[R]` | 子结果为集合，平铺去重。 |
+| `Concat(other) *HashSet[T]` | 并集（去重），原表不变。 |
+| `Reduce[R](init R, f func(R, T) R) R` | 折叠。 |
+| `SortBy(less) *ArrayList[T]` | 排序后导出为列表。 |
+| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | 空集返回 `option.Empty[T]()`。 |
+
+### 集合代数
+
+`Concat / Union / Intersect / Difference / SymmetricDifference` 都返回新的 `*HashSet[T]`，原表不变：
+
+| 方法 | 等价集合记号 |
+|---|---|
+| `Concat(other)` | `s ∪ other` |
+| `Union(other)` | `s ∪ other`（与 `Concat` 行为一致） |
+| `Intersect(other)` | `s ∩ other` |
+| `Difference(other)` | `s \ other` |
+| `SymmetricDifference(other)` | `(s ∪ other) \ (s ∩ other)` |
+| `IsSubsetOf(other) / IsSupersetOf(other)` | 集合包含关系。 |
+
+### 谓词
+
+`Any / All / None / Find(p) option.Optional[T]`。
+
+---
+
+## `stream.Stream[T]`
+
+惰性同步流。`Stream[T]` 是 `iter.Seq[T]` 之上的薄包装，所有 transform 都返回新 `Stream`，**不**在 transform 中消费原流。`Collect` / `Count` / `First` / `Last` / `Any` / `All` / `None` / `Find` / `Reduce` / `ForEach` / `MinBy` / `MaxBy` / `SortBy` 是终结操作。
+
+### 构造
+
+| 函数 | 说明 |
+|---|---|
+| `From[T](seq iter.Seq[T]) Stream[T]` | 直接包装 `iter.Seq[T]`。 |
+| `FromSlice[T](s []T) Stream[T]` | 在 `s` 上做惰性遍历（`s` 会被持有但不会复制）。 |
+| `Of[T](values ...T) Stream[T]` | 变参 → `Stream[T]`，`FromSlice` 的语法糖。 |
+| `Empty[T]() Stream[T]` | 立刻结束的流。 |
+
+> 任何集合（`ArrayList` / `LinkedList` / `HashSet` / `HashMap.Entries`）都可以通过自身的 `Stream()` 方法直接转 `Stream[T]`，这是推荐的入口。
+
+### 链式 transform
+
+`Filter(p) / Map[R](f) / FlatMap[R](f) / Peek(visit) / Take(n) / Drop(n) / Distinct(eq) / Concat(other) / SortBy(less)` — 全部返回 `Stream[...]`，可继续链式。
+
+### 终结
+
+| 方法 | 返回 |
+|---|---|
+| `Collect() []T` | 物化为切片。 |
+| `Count() int` | 计数（短路不过滤后元素）。 |
+| `First() / Last() option.Optional[T]` | 第一个 / 最后一个元素。 |
+| `Any(p) / All(p) / None(p) bool` | 短路存在 / 全称量词。 |
+| `Find(p) option.Optional[T]` | 首个匹配元素。 |
+| `Reduce(init T, f func(acc, v T) T) T` | 折叠。 |
+| `ForEach(visit func(T))` | 纯消费。 |
+| `Associate[K, V](f func(T) (K, V)) map[K]V` | 折叠为 `map`，同键后者覆盖前者。 |
+| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | 极值；空流返回 `option.Empty[T]()`。 |
+| `SortBy(less) Stream[T]` | 终结式：先物化排序再返回新流。 |
+
+> `SortBy` 在 `Stream` 上是终结操作（会一次性遍历），与 `ArrayList` / `LinkedList` / `HashSet` 上"transform 风格"的 `SortBy` 不一样。
+
+### 例子
+
+```go
+out := stream.Of(1, 2, 3, 4, 5).
+    Filter(func(v int) bool { return v%2 == 1 }).
+    Map(func(v int) int { return v * v }).
+    Collect() // [1, 9, 25]
+
+first, ok := stream.Of[int]().First().Get() // 0, false
+```
+
+---
+
+## `collections.Range[T]`
+
+`Range[T constraints.Integer](start, end T) stream.Stream[T]` —— 整数半开区间 `[start, end)` 转 `Stream[T]`。
+
+- 当 `start >= end` 时是空流；不会 panic。
+- 流是惰性的：迭代 `Range(0, 1_000_000_000)` 只占常数级内存。
+- 类型约束是 `constraints.Integer`（`int` / `uint` / `int32` / …），不接受浮点或字符串。
+
+```go
+collections.Range[int](1, 4).Collect() // [1, 2, 3]
+collections.Range[int](0, 5).
+    Map(func(i int) int { return i * i }).
+    Take(3).
+    Collect() // [0, 1, 4]
+```
+
+## 与其他包的关系
+
+- 返回值大量用 `option.Optional[T]`，见 [`docs/option/README.md`](../option/README.md)。
+- 错误流请用 `result.Result[T]`，见 [`docs/result/README.md`](../result/README.md)。
+- 异步 / 多订阅请用 `reactivex.Observable[T]`，见 [`docs/reactivex/README.md`](../reactivex/README.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。
