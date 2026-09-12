@@ -1,63 +1,63 @@
 # `github.com/qianwj/typed/utils/option`
 
-`Optional[T]`，显式的"可能为 `T`"容器。结构体而非接口，因此方法可以声明自己的类型参数（`Map[R]`、`FlatMap[R]`），是 Go 1.27+ 的泛型方法。
+`Optional[T]`, an explicit container for a value of `T` that may be absent. It is a struct, not an interface, so its methods can declare their own type parameters (`Map[R]`, `FlatMap[R]`) — a Go 1.27+ generic-method feature.
 
-## 包导入
+> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Import
 
 ```go
 import "github.com/qianwj/typed/utils/option"
 ```
 
-## 设计动机
+## Why not `(T, bool)`?
 
-为什么不直接用 `(T, bool)`？
+- The call site is self-documenting; combinators chain without scattering `if ok { ... }` blocks at every step.
+- `Optional` treats value types (`int` / `string` / `struct{}`) and pointer-like types uniformly — it carries an explicit `present` flag instead of relying on a nil check on the value. There is no "is it zero or is it absent" ambiguity for `int`.
+- It keeps `result.Result[T]` and other `(T, error)`-shaped combinators decoupled from "is it absent?".
 
-- 调用点自我解释；组合子可以链式拼装，不用每一步散落 `if ok { ... }`。
-- `Optional` 对值类型（`int` / `string` / `struct{}`）与指针类型一视同仁 —— 它携带独立的 `present` 标志位，而不是依赖"对值做 nil 检查"。`int` 不存在"零值还是缺省"的歧义。
-- 不会让 `result.Result[T]` 之类需要 `(T, error)` 形态的组合子和"是否缺席"耦合到一起。
+## Construction
 
-## 构造
-
-| 工厂 | 语义 |
+| Factory | Semantics |
 |---|---|
-| `Empty[T any]() Optional[T]` | 不携带值；零值 `Optional[T]{}` 等价。 |
-| `Of[T any](value T) Optional[T]` | 携带 `value`；**对 typed nil（如 `nil *Foo` 作为指针型 `T`）会 panic**。 |
-| `OfNullable[T any](value T) Optional[T]` | 用 Go 的 nil 语义判断：对指针 / map / slice / chan / func / interface 的 nil 返回 `Empty`，否则 `Of(value)`。 |
+| `Empty[T any]() Optional[T]` | Carries no value. The zero value `Optional[T]{}` is equivalent. |
+| `Of[T any](value T) Optional[T]` | Carries `value`. **Panics on a typed nil** (e.g. a `nil *Foo` passed as a pointer-typed `T`). |
+| `OfNullable[T any](value T) Optional[T]` | Applies Go's nil semantics: a nil pointer / map / slice / chan / func / interface becomes `Empty`; anything else is treated as `Of(value)`. |
 
-> 选 `Of` 还是 `OfNullable` 取决于 `T` 的语义：值类型用 `Of`；指针型 / 接口型用 `OfNullable`。
+> Pick `Of` vs `OfNullable` based on `T`: value types use `Of`; pointer-like and interface types use `OfNullable`.
 
-## 状态查询
+## State queries
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `IsPresent() bool` | 携带值。 |
-| `IsEmpty() bool` | `!IsPresent()`。 |
+| `IsPresent() bool` | Carries a value. |
+| `IsEmpty() bool` | `!IsPresent()`. |
 
-## 取值
+## Value access
 
-| 方法 | 缺席时行为 |
+| Method | Behavior when absent |
 |---|---|
-| `Get() T` | **panic**（无消息）。 |
-| `OrElse(default T) T` | 返回 `default`；`default` 总是被求值。 |
-| `OrElseGet(f func() T) T` | 返回 `f()`；仅缺席时调用。 |
-| `OrElseThrow(errMsg string) (T, error)` | 缺席时返回 `(零值, errors.New(errMsg))`；出席时返回 `(value, nil)`。**不 panic**，名字沿用 Java `Optional.orElseThrow` 的约定，但遵循 Go 显式 `(T, error)`。 |
+| `Get() T` | **Panics** (no message). |
+| `OrElse(default T) T` | Returns `default`. `default` is always evaluated. |
+| `OrElseGet(f func() T) T` | Returns `f()`. `f` runs only when absent. |
+| `OrElseThrow(errMsg string) (T, error)` | Returns `(zero, errors.New(errMsg))` when absent; `(value, nil)` when present. **Does not panic** — the name follows Java's `Optional.orElseThrow` convention, adapted to Go's explicit `(T, error)`. |
 
-## 副作用
+## Side effects
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `IfPresent(f func(T))` | 出席时调 `f`；缺席时不动。 |
-| `IfPresentOrElse(present func(T), absent func())` | 二选一，恰好一个会被调。 |
+| `IfPresent(f func(T))` | Calls `f` when present; does nothing when absent. |
+| `IfPresentOrElse(present func(T), absent func())` | Exactly one of the two callbacks runs. |
 
-## 链式 transform
+## Chained transforms
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `Filter(predicate func(T) bool) Optional[T]` | 出席且 `predicate(value) == true` 时返回自身；否则返回 `Empty`。缺席时不会调用 `predicate`。 |
-| `Map[R](f func(T) R) Optional[R]` | 缺席返回 `Empty[R]`，**不会调用** `f`。 |
-| `FlatMap[R](f func(T) Optional[R]) Optional[R]` | 缺席时**不会调用** `f`；`f` 自身返回 `Optional[R]` 时直接采用。 |
+| `Filter(predicate func(T) bool) Optional[T]` | Returns this `Optional` when present and `predicate(value) == true`; otherwise `Empty`. `predicate` is not called when the receiver is absent. |
+| `Map[R](f func(T) R) Optional[R]` | Returns `Empty[R]` when absent; **does not call** `f`. |
+| `FlatMap[R](f func(T) Optional[R]) Optional[R]` | **Does not call** `f` when absent. When called, the `Optional[R]` returned by `f` is taken as the result. |
 
-## 例子
+## Examples
 
 ```go
 import "github.com/qianwj/typed/utils/option"
@@ -76,10 +76,10 @@ opt := option.Of(42)
 opt.IfPresent(func(v int) { fmt.Println(v) }) // 42
 
 empty := option.Empty[int]()
-v := empty.OrElseGet(func() int { return compute() }) // 仅此处调用 compute
+v := empty.OrElseGet(func() int { return compute() }) // compute runs only here
 ```
 
-## 与其他包的关系
+## See also
 
-- `collections` 里所有"可能缺席"的访问器（`ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`，`Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back`，`Stream.First` / `Last` / `Find`）都返回 `option.Optional[T]`，详见 [`collections`](../collections/README.md)。
-- `Result[T]` 通过 `Optional()` 桥到 `Optional[T]`，见 [`result`](../result/README.md)。
+- Every "may be absent" accessor in `collections` returns `option.Optional[T]`: `ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`, the `Stack` / `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back`, and `Stream.First` / `Last` / `Find`. See [`collections`](../collections/README.md).
+- `Result[T]` bridges to `Optional[T]` through `Optional()`. See [`result`](../result/README.md).

@@ -1,5 +1,7 @@
 # typed
 
+> [English README](./README.md)
+
 `typed` 是一个基于 Go 泛型的类型安全集合工具集。它提供具体的、立即执行的集合类型(`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`),一个轻量的惰性 `Stream[T]` 层,以及专门的线性数据结构(`Stack[T]`、`Queue[T]`、`Deque[T]`),和支撑这些集合的抽象(`Option[T]`、`Result[T]`、`Equaler[T]`)。
 
 集合的设计参考 Java / JavaScript:具体泛型类型,带链式方法如 `Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`。所有可能"缺失"的访问器(`Get`、`First`、`Last`、`Find`、`MinBy`、`MaxBy`、`Pop`、`Peek`、`Front`、`Back`)返回 `Option[T]` 而不是 `(T, bool)`,调用方可以在结果上直接链式 `OrElse` / `OrElseGet` / `Map`。
@@ -230,16 +232,17 @@ typed/
 │   ├── options.go         # WithBuffer / WithOverflow / OverflowStrategy
 │   ├── backpressure.go
 │   └── collect.go         # Subscribe / ForEach / ToSlice
-└── docs/
-    ├── README.md            # 索引
-    ├── collections/README.md
-    ├── option/README.md
-    ├── result/README.md
-    ├── control/README.md
-    ├── reactivex/README.md
+└── docs/                     # 每篇都有英文 README.md 与中文 README-cn.md
+    ├── README.md            # 英文索引
+    ├── README-cn.md         # 中文索引
+    ├── collections/{README.md, README-cn.md}
+    ├── option/{README.md, README-cn.md}
+    ├── result/{README.md, README-cn.md}
+    ├── control/{README.md, README-cn.md}
+    ├── reactivex/{README.md, README-cn.md}
     └── utils/
-        ├── objects/README.md
-        └── json/README.md
+        ├── objects/{README.md, README-cn.md}
+        └── json/{README.md, README-cn.md}
 ```
 
 ## Java / JavaScript 映射

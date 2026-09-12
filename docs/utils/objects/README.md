@@ -1,8 +1,10 @@
 # `github.com/qianwj/typed/utils/objects`
 
-对动态类型 Go 值的工具函数。
+Helpers for working with dynamically typed Go values.
 
-## 包导入
+> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Import
 
 ```go
 import "github.com/qianwj/typed/utils/objects"
@@ -10,11 +12,11 @@ import "github.com/qianwj/typed/utils/objects"
 
 ## `IsNil[T any](value T) bool`
 
-按 Go 的 nil 语义报告 `value` 是否为 nil：
+Reports whether `value` is nil in the Go sense:
 
-- untyped nil 接口。
-- typed nil：指针 / map / slice / channel / function / interface。
-- `int` / `string` / 结构体 / 数组 —— 永不为 nil，返回 `false`。
+- An untyped nil interface.
+- A typed nil: pointer / map / slice / channel / function / interface.
+- `int` / `string` / struct / array — never nil; returns `false`.
 
 ```go
 var p *Foo
@@ -27,28 +29,28 @@ objects.IsNil(0)             // false
 
 ## `Equals[T any](a, b T) bool`
 
-比 `reflect.DeepEqual` 更人性化的"深度相等"。在三个有意为之的地方不同：
+A more humane "deep equality" than `reflect.DeepEqual`. Three intentional differences:
 
-1. **自定义 `Equal` 方法分派。** 如果任一侧的动态类型定义了 `func (T) Equal(T) bool`，会调用该方法，**不走结构递归**。`time.Time` 之类没有声明接口但方法签名匹配的类型也能被识别 —— 反射按"形"找，不按"名"找。如果一侧有 `Equal`、另一侧没有，仍然调用有 `Equal` 的那一侧（两侧都检查，所以 `Equals(a, b) == Equals(b, a)` 在单边实现时仍然成立）。
+1. **Custom `Equal` method dispatch.** If either operand's dynamic type defines a method with signature `func (T) Equal(T) bool`, that method is called **instead of** a recursive walk. The operand whose dynamic type has the `Equal` method is treated as the authoritative source. Both sides are checked, so `Equals(a, b) == Equals(b, a)` when only one side has a custom `Equal` method: that side's method is consulted in both orderings. Types like `time.Time` that do not declare any `Equaler` interface still get picked up — the lookup is by signature shape, not by interface name.
 
-2. **nil 与空集合的归一化（递归）。** nil 切片与空非 nil 切片在每一层都被视为相等；map 同理。`reflect.DeepEqual` 在这些对上返回 `false`。
+2. **Nil-vs-empty collection normalisation, recursively.** A nil slice and an empty non-nil slice are considered equal at every level (not just the top). The same rule applies to maps. `reflect.DeepEqual` returns `false` for these pairs, which is rarely what callers want.
 
-3. **typed nil 上的 `Equal` 不会触发 panic。** 若 `Equal` 是指针接收者且任一操作数是 typed nil 指针，两边都 nil 返回 `true`，否则 `false`，**绝不**调用 nil 接收者的方法。
+3. **Nil-safe custom `Equal` methods.** If `Equal` is defined on a pointer receiver and either operand is a typed nil pointer, both-nil returns `true` and exactly-one-nil returns `false` — **without ever calling the nil-receiver method**. This avoids the panic a naive "call `Equal` first, then check nil" implementation would produce.
 
-其它方面沿用 `reflect.DeepEqual`：解引用指针、字段逐个比（含未导出字段）、数组逐元素比、循环结构不爆栈。
+All other aspects mirror `reflect.DeepEqual`: pointers are followed, structs are compared field by field (including unexported fields), arrays element by element, cyclic structures do not blow the stack.
 
-### 启用自定义 `Equal`
+### Opting in to a custom `Equal`
 
-只要你的类型有签名严格为 `func (T) Equal(T) bool` 的方法即可，**不需要**实现 `objects.Equaler`（该接口已保留用于文档/类型提示，但 `Equals` 不会要求）。签名不匹配（例如 `Equal(Interface) bool`）时 `Equals` 不会采用，会回退到结构递归。
+Add a method with the exact signature `func (T) Equal(T) bool`. You do **not** need to implement the `objects.Equaler` interface (it is kept for documentation and as a type hint; `Equals` does not require it). Mismatched signatures such as `Equal(Interface) bool` are ignored — `Equals` falls back to the structural walk.
 
 ```go
 type Vec2 struct{ X, Y int }
 func (a Vec2) Equal(b Vec2) bool { return a.X == b.X && a.Y == b.Y }
 
-objects.Equals(Vec2{1, 2}, Vec2{1, 2}) // true（走 Equal）
-objects.Equals([]int(nil), []int{})    // true（nil/空归一化）
+objects.Equals(Vec2{1, 2}, Vec2{1, 2}) // true (via Equal)
+objects.Equals([]int(nil), []int{})    // true (nil-vs-empty normalisation)
 ```
 
-## 与其他包的关系
+## See also
 
-- `control/match.Eq` 用 `objects.Equals` 作为"等于"语义，所以 `match.Eq(v).Match(x)` 享有同样的 `Equal(T) bool` 分派、nil/空归一化和 typed nil 安全，见 [`control/match`](../../control/README.md)。
+- `control/match.Eq` uses `objects.Equals` as its "equal to" semantics, so `match.Eq(v).Match(x)` enjoys the same `Equal(T) bool` dispatch, nil-vs-empty normalisation, and typed-nil safety. See [`control/match`](../../control/README.md).

@@ -1,13 +1,15 @@
 # `github.com/qianwj/typed/control`
 
-控制流辅助。两个子包：
+Control-flow helpers. Two sub-packages:
 
-- [`control`](#control) — `Repeat` / `RepeatE`，简洁的"做 N 次"循环原语。
-- [`control/match`](#controlmatch) — 类型安全、首个匹配获胜的模式匹配（`Pattern[T]` + 链式 `Case` / `Type`）。
+- [`control`](#control) — `Repeat` / `RepeatE`, concise "do this N times" loop primitives.
+- [`control/match`](#controlmatch) — type-safe, first-match-wins pattern matching (`Pattern[T]` plus chained `Case` / `Type`).
 
-需要 Go 1.27+（链式方法带自己的类型参数）。
+Go 1.27+ is required because the fluent chain methods declare their own type parameters.
 
-## 包导入
+> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Import
 
 ```go
 import (
@@ -27,7 +29,7 @@ func RepeatE(times int, f func() error) (int, error)
 
 ### `Repeat(times, f)`
 
-调用 `f` 恰好 `times` 次，不返回值。`times <= 0` 是空操作（body 不会执行，`f` 也不会被调用）。等价于 `for i := 0; i < times; i++ { f() }`，但更显式。
+Calls `f` exactly `times` times and discards the result. `times <= 0` is a no-op (the body is never entered and `f` is not called). It is equivalent to `for i := 0; i < times; i++ { f() }`, just more explicit.
 
 ```go
 control.Repeat(3, func() { fmt.Println("tick") })
@@ -35,13 +37,13 @@ control.Repeat(3, func() { fmt.Println("tick") })
 
 ### `RepeatE(times, f) (int, error)`
 
-错误感知的变体。`f` 返回非 nil 错误时立即停掉循环，返回 `(i, err)` —— 其中 `i` 是**已经成功完成**的迭代次数（错误是第 `i+1` 次调用的结果）。
+The error-aware variant. When `f` returns a non-nil error the loop stops immediately and returns `(i, err)` — where `i` is the count of **successfully completed** iterations (the error came from the `i+1`-th call).
 
-- 全部成功 → `(times, nil)`。
-- 第 `i+1` 次出错（0 索引 `i`）→ `(i, err)`，循环停在该次。
-- `times <= 0` → `(0, nil)`（body 不进）；`times < 0` 时返回 `(times, nil)`，这是为了和入参对称而非有效计数。
+- All success → `(times, nil)`.
+- Failure on the `i+1`-th call (zero-indexed `i`) → `(i, err)`; the loop stops at that call.
+- `times <= 0` → `(0, nil)` (the body is not entered). For `times < 0` the return is `(times, nil)` — that is symmetric with the input rather than a meaningful count. Negative `times` is a caller error; the function does not panic so it stays safe to call with computed counts, but treat a negative return as a signal to fix the input, not as a real count.
 
-适用场景：重试循环、批处理"遇到第一个失败就停"。
+Use it for retry loops, batch operations that should stop on the first failure, and any "do this N times unless something goes wrong" workflow. A nil error from `f` is treated as success; only a non-nil error short-circuits the loop.
 
 ```go
 n, err := control.RepeatE(5, func() error {
@@ -52,20 +54,20 @@ if err != nil {
 }
 ```
 
-### 与 `collections.Range` 的关系
+### Relationship to `collections.Range`
 
-`collections.Range(0, n).ForEach(f)` 会先构造一个 `Stream`，再迭代它。`control.Repeat(n, f)` 是省掉 `Stream` 分配的等价命令式写法。选 `Repeat` 用于一次性副作用；选 `Stream` 用于"链式 pipeline 的起点"。
+`collections.Range(0, n).ForEach(f)` constructs a `Stream` and then iterates it. `control.Repeat(n, f)` is the imperative equivalent that skips the `Stream` allocation. Pick `Repeat` for one-off side effects; pick `Stream` when the iteration is the start of a larger fluent pipeline (`Map`, `Filter`, `Take`, ...).
 
 ---
 
 ## `control/match`
 
-首个匹配获胜的链式模式匹配。两种模式：
+First-match-wins chained pattern matching. Two modes:
 
-1. **值匹配** `Match(v)` / `Value(v)` —— 按 `Pattern[T]` 测试输入值。
-2. **类型匹配** `Type(v)` —— 测试一个 `any` 的动态类型 / 类型守卫。
+1. **Value matching** — `Match(v)` / `Value(v)`, testing the input value against `Pattern[T]`.
+2. **Type matching** — `Type(v)`, testing the dynamic type of an `any`.
 
-API 是显式的：所有 `Case` 必须返回相同的 `R`，按声明顺序求值，第一个匹配的 `Case` 之后的所有 `Pattern` / handler 都不会被执行。
+The API is deliberately explicit: every `Case` must return the same `R`, cases are evaluated in declaration order, and once a case matches, later patterns and handlers are **not** evaluated.
 
 ### `Pattern[T]`
 
@@ -77,60 +79,60 @@ type PatternFunc[T any] func(T) bool
 func (p PatternFunc[T]) Match(value T) bool
 ```
 
-### 工厂函数
+### Factories
 
-| 工厂 | 语义 |
+| Factory | Semantics |
 |---|---|
-| `Predicate[T](p func(T) bool) Pattern[T]` | 任意谓词。 |
-| `Any[T]() Pattern[T]` | 匹配任何值。 |
-| `Eq[T](want T) Pattern[T]` | 按 `objects.Equals` 深度比较；带 `Equal(T) bool` 的类型会被特化调用。 |
-| `In[T comparable](values ...T) Pattern[T]` | 命中给定集合之一。 |
-| `Between[T cmp.Ordered](min, max T) Pattern[T]` | 闭区间 `[min, max]`。 |
-| `Not[T](pattern Pattern[T]) Pattern[T]` | 否定。 |
-| `And[T](patterns ...Pattern[T]) Pattern[T]` | 全配；无参时匹配任何值。 |
-| `Or[T](patterns ...Pattern[T]) Pattern[T]` | 至少一配；无参时永假。 |
+| `Predicate[T](p func(T) bool) Pattern[T]` | Arbitrary predicate. |
+| `Any[T]() Pattern[T]` | Matches every value. |
+| `Eq[T](want T) Pattern[T]` | Deep compare with `want` per `objects.Equals`; types with an `Equal(T) bool` method are dispatched specially. |
+| `In[T comparable](values ...T) Pattern[T]` | Matches any value in the given set. |
+| `Between[T cmp.Ordered](min, max T) Pattern[T]` | Closed interval `[min, max]`. |
+| `Not[T](pattern Pattern[T]) Pattern[T]` | Negation. |
+| `And[T](patterns ...Pattern[T]) Pattern[T]` | All match. With no arguments, matches every value. |
+| `Or[T](patterns ...Pattern[T]) Pattern[T]` | At least one matches. With no arguments, matches nothing. |
 
-### 值匹配入口
+### Value matching entry
 
 ```go
-func Value[T any](value T) Matcher[T]   // 入口
-func Match[T any](value T) Matcher[T]   // Value 的别名
+func Value[T any](value T) Matcher[T]   // entry
+func Match[T any](value T) Matcher[T]   // alias for Value
 ```
 
-`Matcher[T]` / `Chain[T, R]` 上的方法：
+Methods on `Matcher[T]` / `Chain[T, R]`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `Case[R](pattern Pattern[T], then func(T) R) Chain[T, R]` | 模式匹配时执行 `then` 并进入下一链节。 |
-| `When[R](predicate func(T) bool, then func(T) R) Chain[T, R]` | `Case(Predicate(predicate), then)` 的简写。 |
-| `Default[R](then func(T) R) R` | 没有 case 匹配时执行 `then`，终结。 |
-| `OrElse[R](fallback R) R` | 没有 case 匹配时返回字面量。 |
-| `OrElseGet[R](fallback func(T) R) R` | 没有 case 匹配时调用 `fallback`。 |
+| `Case[R](pattern Pattern[T], then func(T) R) Chain[T, R]` | Run `then` when the pattern matches and advance the chain. |
+| `When[R](predicate func(T) bool, then func(T) R) Chain[T, R]` | Shorthand for `Case(Predicate(predicate), then)`. |
+| `Default[R](then func(T) R) R` | Terminal: run `then` when no case matched. |
+| `OrElse[R](fallback R) R` | Terminal: return a literal when no case matched. |
+| `OrElseGet[R](fallback func(T) R) R` | Terminal: call `fallback` when no case matched. |
 
-`Chain[T, R]` 重复以上 API（除 `Case`/`When` 之外，因为已经链式起来了），外加：
+`Chain[T, R]` repeats the same API (except the first `Case` / `When`, because the chain is already started), and additionally:
 
-- `Matched() bool` —— 是否已有 case 匹配。
-- `Unwrap() (R, bool)` —— 已匹配返回 `(R, true)`，未匹配返回 `(R 零值, false)`。
+- `Matched() bool` — whether any case has matched.
+- `Unwrap() (R, bool)` — `(R, true)` on match, `(zero R, false)` on miss.
 
-### 类型匹配入口
+### Type matching entry
 
 ```go
 func Type(value any) TypeMatcher
 ```
 
-`TypeMatcher` / `TypeChain[R]` 上的方法：
+Methods on `TypeMatcher` / `TypeChain[R]`:
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `Case[T, R](then func(T) R) TypeChain[R]` | 动态类型为 `T` 时执行 `then`（`T` 为接口时表示"实现 `T`"）。 |
-| `CaseWhen[T, R](guard func(T) bool, then func(T) R) TypeChain[R]` | 类型 + 守卫。 |
-| `Nil[R](then func() R) TypeChain[R]` | 匹配 untyped nil 或 typed nil 指针 / map / slice / chan / func / interface。 |
-| `When[R](predicate func(any) bool, then func(any) R) TypeChain[R]` | 对原始 `any` 自定义谓词。 |
-| `Default[R](then func(any) R) R` / `OrElse[R](fallback R) R` / `OrElseGet[R](fallback func(any) R) R` | 终结。 |
+| `Case[T, R](then func(T) R) TypeChain[R]` | Run `then` when the dynamic type is `T` (or, if `T` is an interface, when the dynamic type implements `T`). |
+| `CaseWhen[T, R](guard func(T) bool, then func(T) R) TypeChain[R]` | Type plus a guard. |
+| `Nil[R](then func() R) TypeChain[R]` | Matches untyped nil or typed nil pointer / map / slice / chan / func / interface. |
+| `When[R](predicate func(any) bool, then func(any) R) TypeChain[R]` | Arbitrary predicate on the raw `any`. |
+| `Default[R](then func(any) R) R` / `OrElse[R](fallback R) R` / `OrElseGet[R](fallback func(any) R) R` | Terminals. |
 
-`TypeChain` 也提供 `Matched() bool` / `Unwrap() (R, bool)`。
+`TypeChain` also provides `Matched() bool` / `Unwrap() (R, bool)`.
 
-### 例子
+### Examples
 
 ```go
 import "github.com/qianwj/typed/control/match"
@@ -152,9 +154,9 @@ kind := match.Type(payload).
     Default(func(v any) string { return fmt.Sprintf("%T", v) })
 ```
 
-> 类型匹配的 `Case[T]` 用 `func(T) R` 而不是直接传 `T`，是因为 `T` 在编译期是泛型参数、运行时是反射的动态类型 —— 用 handler 函数让 Go 编译器在每个分支都内联一次断言。
+> The `Case[T]` of type matching takes `func(T) R` rather than a bare `T` because `T` is a generic parameter at compile time but a reflective dynamic type at run time — having each branch receive a typed handler function lets the Go compiler inline a type assertion per branch.
 
-## 与其他包的关系
+## See also
 
-- `control.Repeat(n, f)` 是 `collections.Range(0, n).ForEach(f)` 的命令式等价（少一次 `Stream` 分配），见 [`collections`](../collections/README.md)。
-- `match.Case` 与 `Option` / `Result` 互补：拿不准"到底命中什么"用模式匹配，单纯"值可能是 X"用 `Optional`，"操作可能失败"用 `Result`，见 [`option`](../option/README.md) / [`result`](../result/README.md)。
+- `control.Repeat(n, f)` is the imperative equivalent of `collections.Range(0, n).ForEach(f)` (one fewer `Stream` allocation). See [`collections`](../collections/README.md).
+- `match.Case` complements `Option` and `Result`: use pattern matching when "what exactly did I match?" is the question, `Optional` when "the value may be X", and `Result` when "the operation may fail". See [`option`](../option/README.md) and [`result`](../result/README.md).

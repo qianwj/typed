@@ -1,22 +1,24 @@
 # `github.com/qianwj/typed/reactivex`
 
-强类型、显式订阅、按需推送、可配置背压的异步事件流。本包与 [`collections`](../collections/README.md) 的 `Stream` 无关：`Stream` 是同步单消费，`reactivex` 处理订阅生命周期、异步输入与多播。
+Typed, subscription-explicit, demand-driven, configurable-backpressure asynchronous event streams. This package is unrelated to the `Stream` in [`collections`](../collections/README.md): `Stream` is synchronous, single-consumer; `reactivex` handles subscription lifetimes, asynchronous inputs, and multicast.
 
-需要 Go 1.27+（`Observable.Map[R]` / `Observable.Scan[R]` 等方法自带类型参数）。
+Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan[R]` declare their own type parameters.
 
-## 包导入
+> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Import
 
 ```go
 import "github.com/qianwj/typed/reactivex"
 ```
 
-## 核心类型
+## Core types
 
 ### `Observable[T]`
 
-`Observable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数在 Go 1.27 之前无法放在 `Publisher` 接口上。
+`Observable[T]` is a concrete type, not an interface — that lets transform operators (`Map[R]`, `Scan[R]`, ...) declare their own result type `R`. Method-level type parameters like these do not fit on the `Publisher` interface under Go 1.27.
 
-`Observable` 的零值没有源、不能订阅。构造必须用 `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval` 等。
+The zero value of `Observable` has no source and cannot be subscribed to. Always construct via `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval`.
 
 ```go
 var _ reactivex.Publisher[int] = reactivex.Observable[int]{}
@@ -24,7 +26,7 @@ var _ reactivex.Publisher[int] = reactivex.Observable[int]{}
 
 ### `Publisher[T]`
 
-只关心"能否订阅"的窄接口。`Observable[T]` 和 `Subject[T]` 都实现了它。组件只消费通知时用 `Publisher`；构建流式算子链用 `Observable`。
+A narrow interface for components that only care about "can I subscribe?". Both `Observable[T]` and `Subject[T]` implement it. Use `Publisher` when the consumer only wants notifications; use `Observable` when building a fluent operator chain.
 
 ```go
 type Publisher[T any] interface {
@@ -43,34 +45,34 @@ type Subscriber[T any] interface {
 }
 ```
 
-- `OnSubscribe` 必须在值传递之前拿到 handle；可以同步调 `Request` / `Cancel`。
-- `OnError` / `OnComplete` 不消耗 demand —— 它们是终止信号，不是数据项。
-- 回调可能在生产者 goroutine 上被调用，**不要**依赖具体线程；多个订阅共享状态时自己加锁。
-- **回调 panic 不会被转成 `OnError`**。
+- `OnSubscribe` is called with the subscription handle before any value is delivered. The subscriber may call `Request` or `Cancel` from inside it. Retain the handle if you will replenish demand as processing finishes.
+- `OnError` and `OnComplete` are terminal signals — they do **not** consume demand and must not be reinterpreted as a data item to request again.
+- Callbacks may run on a producer goroutine or directly on a caller's goroutine; subscribers must not depend on a particular execution thread. State shared by multiple subscriptions needs its own synchronisation.
+- **Callback panics are not converted into `OnError` notifications.**
 
 ### `Subscription`
 
 ```go
 type Subscription interface {
-    Request(n uint64)   // 累加需求；n==0 不动；上界 uint64 最大
-    Cancel()            // 幂等；不等回调返回，也不强制打断用户代码
-    Done() <-chan struct{} // 取消或终止时关闭
+    Request(n uint64)   // accumulate demand; n==0 is a no-op; saturates at uint64 max
+    Cancel()            // idempotent; does not wait for an in-flight callback; does not interrupt user code
+    Done() <-chan struct{} // closes on cancellation or termination
 }
 ```
 
-`Done` 是**生命周期信号**，不是"所有派生工作已完成"的 join。
+`Done` is a **lifecycle signal**, not a join on every piece of work started by a producer or callback.
 
-## 订阅与消费
+## Subscribing and consuming
 
-| 方法 | 用途 |
+| Method | Use |
 |---|---|
-| `Subscribe(ctx, sub) Subscription` | 同步设置；回调在生产者 goroutine 上发生。返回该订阅的 `Subscription`。 |
-| `ForEach(ctx, onNext, onError, onComplete) Subscription` | 一次性回调；任意回调可为 `nil`；`ForEach` 内部申请 `^uint64` 满需求，所以会拿到所有可用值；**不等终止**。 |
-| `ToSlice(ctx) ([]T, error)` | 收集到 `[]T`；`OnError` 立即返回 `([]T(nil), err)`，否则在 `OnComplete` 后返回整片。 |
+| `Subscribe(ctx, sub) Subscription` | Synchronous setup; callbacks run on the producer goroutine. Returns that subscription's `Subscription`. |
+| `ForEach(ctx, onNext, onError, onComplete) Subscription` | One-shot callback; any callback may be `nil`; `ForEach` requests `^uint64` (effectively unbounded) demand, so it receives all available values; **does not wait for termination**. |
+| `ToSlice(ctx) ([]T, error)` | Collects into a `[]T`; `OnError` returns `([]T(nil), err)` immediately, otherwise returns the slice after `OnComplete`. |
 
-`ForEach` / `ToSlice` / `ToSlice` 会申请"无限"需求；想限流请用 `Subscribe` 自己控制 `Request`。
+`ForEach` / `ToSlice` request "unbounded" demand; if you want backpressure, use `Subscribe` and control `Request` yourself.
 
-## 源
+## Sources
 
 ```go
 func Just[T any](values ...T) Observable[T]
@@ -82,37 +84,37 @@ func Create[T any](run func(ctx context.Context, emit func(T) bool, complete fun
 func Interval(ctx context.Context, period time.Duration) Observable[uint64]
 ```
 
-| 源 | 关键性质 |
+| Source | Key properties |
 |---|---|
-| `Just(vs...)` | 委托给 `FromSlice(vs...)`；每次订阅从第一个值开始。 |
-| `FromSlice(vs)` | 每次订阅一个生产者 goroutine；**共享 `vs` 的底层数组**（不复制），并发修改需调用方保证。慢回调会拖慢源。 |
-| `FromChannel(ch)` | 等价 `FromChannelWithOptions(ch)`：默认阻塞、无限缓冲 = 1。多个订阅**竞争**消费同一条 `ch`（要广播请用 `Subject`）。不负责关闭 `ch`。 |
-| `FromChannelWithOptions(ch, opts...)` | 每个订阅独立队列；同一 `ch` 仍然被多个订阅竞争。关闭 `ch` 会让该订阅在排空后正常完成。 |
-| `FromSeq(seq)` | 每次订阅调一次 `seq`；`seq` 的可重入性由调用方负责。`emit` 返回 `false` 停止迭代。 |
-| `Create(run)` | 通用源；`emit` 等待 demand，`complete` 至多一次。 |
-| `Interval(ctx, period)` | 每订阅一个 ticker，从 0 开始发计数器；**第一个值在第一个 tick 之后**；`period <= 0` 时 `time.NewTicker` panic。`ctx` 参数当前未使用，订阅时的 `ctx` 才控制循环。 |
+| `Just(vs...)` | Delegates to `FromSlice(vs...)`; every subscription starts at the first value. |
+| `FromSlice(vs)` | One producer goroutine per subscription. **Shares the backing array of `vs`** (no copy). Mutating the backing array concurrently with an active subscription is the caller's responsibility. A slow callback slows the source. |
+| `FromChannel(ch)` | Equivalent to `FromChannelWithOptions(ch)`: default blocking, no queueing. Multiple subscriptions **compete** for values from the same `ch` (use a `Subject` for broadcast). The source does not own or close `ch`. |
+| `FromChannelWithOptions(ch, opts...)` | Each subscription gets its own per-subscription queue; subscriptions still compete for the same `ch`. Closing `ch` schedules normal completion after queued values drain; draining requires demand. |
+| `FromSeq(seq)` | `seq` is invoked once per subscription. Reentrancy / concurrent validity is the caller's responsibility. Returning `false` from the emit callback stops iteration. |
+| `Create(run)` | General-purpose source. `emit` waits for demand; `complete` runs at most once. |
+| `Interval(ctx, period)` | One ticker per subscription, emitting counters starting at zero. The first value follows the first tick, not subscription setup. `period <= 0` makes `time.NewTicker` panic. The constructor's `ctx` argument is currently unused; the `ctx` supplied to `Subscribe` / `ForEach` controls the loop. |
 
-> 不存在 `Empty` / `Error` / `Never` / `Merge` / `Concat` / `Debounce` / `Throttle` / `Sample` 源或算子。
+> There is no `Empty` / `Error` / `Never` / `Merge` / `Concat` / `Debounce` / `Throttle` / `Sample` source or operator in this package.
 
-## 算子
+## Operators
 
-| 算子 | 签名 | 语义 |
+| Operator | Signature | Semantics |
 |---|---|---|
-| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Observable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error → 整条链发 `OnError(err)` 并完成。`f` 必须能感知 `context`，与切片风格的 `collections` 不同。 |
-| `Filter` | `Filter(predicate func(T) bool) Observable[T]` | 谓词为 `false` 时跳过。 |
-| `Take` | `Take(n uint64) Observable[T]` | 取前 `n` 个。 |
-| `Skip` | `Skip(n uint64) Observable[T]` | 跳过头 `n` 个。 |
-| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Observable[R]` | 每一步发累加器；初始值在收到第一个值之前**不**发。 |
-| `Reduce` | `Reduce(f func(T, T) T) Observable[T]` | 折成单个值；空流 `OnComplete` 而不补发。 |
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Observable[R]` | Calls `f` on each `OnNext`. If `f` returns an error, the chain emits `OnError(err)` and completes. `f` receives the `context`, which differs from the slicing-style `collections` API. |
+| `Filter` | `Filter(predicate func(T) bool) Observable[T]` | Drops values for which the predicate returns `false`. |
+| `Take` | `Take(n uint64) Observable[T]` | Take the first `n` values. |
+| `Skip` | `Skip(n uint64) Observable[T]` | Skip the first `n` values. |
+| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Observable[R]` | Emits the accumulator at each step; the initial value is **not** emitted before the first input. |
+| `Reduce` | `Reduce(f func(T, T) T) Observable[T]` | Folds to a single value; an empty stream finishes with `OnComplete` and does not emit a substitute. |
 
-`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 都是**包装型**算子 —— 它们用下游 `Subscriber` 包一层，**不**自己开 goroutine、**不**自带队列。
+`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` are all **wrapping** operators: they layer over the downstream `Subscriber` and do **not** start their own goroutine or maintain their own queue.
 
-## 背压
+## Backpressure
 
-需求和缓冲区是**两件不同的事**：
+Demand and buffering are **two different things**:
 
-- `Subscription.Request(n)` —— 解锁 `n` 个值，让生产者可以继续送。
-- `Subject` / 通道源上的 `WithBuffer` / `WithOverflow` —— 限制在异步边界上"已到但未投递"的最大挂起值数。
+- `Subscription.Request(n)` — unlock `n` values, letting the producer continue sending.
+- `WithBuffer` / `WithOverflow` on a `Subject` or channel source — cap the number of "arrived but not yet delivered" values pending at the asynchronous boundary.
 
 ### `OverflowStrategy`
 
@@ -120,11 +122,11 @@ func Interval(ctx context.Context, period time.Duration) Observable[uint64]
 type OverflowStrategy uint8
 
 const (
-    OverflowBlock       OverflowStrategy = iota // 等需求或缓冲位
-    OverflowDropLatest                            // 丢新值，保留旧值
-    OverflowDropOldest                            // 丢最旧，留新值；需要 WithBuffer > 0
-    OverflowKeepLatest                            // 永远只留 1 个最新值，WithBuffer 被忽略
-    OverflowError                                 // 终止该订阅并发 ErrBackpressureOverflow
+    OverflowBlock       OverflowStrategy = iota // wait for demand or buffer room
+    OverflowDropLatest                            // drop the incoming value, keep the older ones
+    OverflowDropOldest                            // drop the oldest, keep the incoming one; requires WithBuffer > 0
+    OverflowKeepLatest                            // keep exactly one pending value, replaced by newer ones; WithBuffer is ignored
+    OverflowError                                 // terminate that subscription and emit ErrBackpressureOverflow
 )
 ```
 
@@ -132,20 +134,20 @@ const (
 var ErrBackpressureOverflow = errors.New("reactivex: backpressure buffer overflow")
 ```
 
-`OverflowError` 只影响**这一个订阅**，`Subject` 与同辈订阅继续。
+`OverflowError` affects **only that one subscription**; the `Subject` and sibling subscriptions continue.
 
 ### `BackpressureOption`
 
 ```go
 type BackpressureOption func(*backpressureConfig)
 
-func WithBuffer(size int) BackpressureOption   // 默认 0；负数 panic
+func WithBuffer(size int) BackpressureOption   // default 0; negative panics
 func WithOverflow(strategy OverflowStrategy) BackpressureOption
 ```
 
-- 选项按顺序生效，后写的覆盖先写的；`nil` 跳过。
-- `OverflowKeepLatest` 永远使用 1 个挂起位，与 `WithBuffer` 无关。
-- `OverflowDropOldest` 与 `WithBuffer(0)` 组合会在构造时 panic。
+- Options apply in order; later options override earlier ones; `nil` is skipped.
+- `OverflowKeepLatest` always uses one pending slot, regardless of `WithBuffer`.
+- `OverflowDropOldest` combined with `WithBuffer(0)` panics at construction.
 
 ```go
 subject := reactivex.NewSubject[int](
@@ -156,9 +158,9 @@ subject := reactivex.NewSubject[int](
 
 ## `Subject[T]`
 
-热多播发布者 + 订阅者。每个订阅独立需求、独立缓冲（构造时配置），**不**回放 —— 没有订阅者时 `OnNext` 丢弃，新订阅只参与之后的发布；终止状态被保留，迟到订阅直接收到终止通知。
+A hot multicast publisher and subscriber. Each subscription has its own demand and a buffer configured at construction time. **No replay** — `OnNext` with no subscribers discards the value, and a new subscriber only participates in later publications. The terminal state is retained, so late subscribers receive completion or the stored error directly.
 
-默认无缓冲阻塞模式：有需求时同步调回调；缓冲或非阻塞策略异步派发，但单订阅内仍串行；订阅之间可能并发。
+The default unbuffered blocking mode invokes callbacks synchronously when demand is available. A buffer or a non-blocking overflow strategy dispatches notifications asynchronously, but callbacks are still serialised per subscription. Across different subscriptions callbacks may run concurrently. Construct a `Subject` with `NewSubject` and do not copy it after use.
 
 ```go
 func NewSubject[T any](options ...BackpressureOption) *Subject[T]
@@ -166,7 +168,7 @@ func (s *Subject[T]) Subscribe(ctx context.Context, out Subscriber[T]) Subscript
 func (s *Subject[T]) ForEach(ctx context.Context, onNext func(T), onError func(error), onComplete func()) Subscription
 ```
 
-`Subject` 也实现 `Subscriber[T]`，可作为另一个流的桥：
+`Subject` also implements `Subscriber[T]` and can be used as a bridge from another stream:
 
 ```go
 func (s *Subject[T]) OnSubscribe(sub Subscription)
@@ -175,20 +177,20 @@ func (s *Subject[T]) OnError(err error)
 func (s *Subject[T]) OnComplete()
 ```
 
-> `OnSubscribe` 当前**不**自动向上游 `Request`；下游需求也不会被自动汇总到上游。用 `Subject` 当 `Subscriber` 时，记得自己 `Request`。
+> `OnSubscribe` currently does **not** automatically request from upstream, and downstream demand is not aggregated into upstream requests. When using `Subject` as a `Subscriber`, call `Request` on the returned upstream subscription explicitly. Only the most recently supplied upstream handle is retained.
 
-## 例子
+## Examples
 
 ```go
-// 冷的有限流
+// A cold, finite stream
 values, err := reactivex.Just(1, 2, 3, 4).
     Filter(func(v int) bool { return v%2 == 0 }).
     ToSlice(ctx)
-// err == nil 时 values == []int{2, 4}
+// err == nil ⇒ values == []int{2, 4}
 ```
 
 ```go
-// 异步 channel 源，缓冲 + 丢最旧
+// Asynchronous channel source, buffered with drop-oldest
 src := reactivex.FromChannelWithOptions(ch,
     reactivex.WithBuffer(64),
     reactivex.WithOverflow(reactivex.OverflowDropOldest),
@@ -202,7 +204,7 @@ src.Subscribe(ctx, reactivex.Subscriber[int]{
 ```
 
 ```go
-// 热多播
+// Hot multicast
 subj := reactivex.NewSubject[string]()
 go func() {
     defer subj.OnComplete()
@@ -210,11 +212,11 @@ go func() {
         subj.OnNext(v)
     }
 }()
-subj.ForEach(ctx, onMsg, onErr, onDone) // 启动一个订阅
+subj.ForEach(ctx, onMsg, onErr, onDone) // start one subscription
 ```
 
-## 与其他包的关系
+## See also
 
-- 同步、单次消费请用 [`collections`](../collections/README.md) 的 `Stream`。
-- 一次性的成功 / 失败用 [`result`](../result/README.md)；订阅级错误通过 `OnError` 报出。
-- 单值"可能缺席"用 [`option`](../option/README.md)。
+- For synchronous, single-consumer iteration use the `Stream` in [`collections`](../collections/README.md).
+- For one-shot success / failure use [`utils/result`](../result/README.md); subscription-level errors are reported through `OnError`.
+- For "single value that may be absent" use [`utils/option`](../option/README.md).

@@ -1,5 +1,7 @@
 # typed
 
+> [中文版 README](./README-cn.md)
+
 `typed` is a type-safe collection toolkit built with Go generics. It provides concrete, eager collection types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`), a small lazy `Stream[T]` layer, dedicated linear data structures (`Stack[T]`, `Queue[T]`, `Deque[T]`), and the supporting abstractions (`Option[T]`, `Result[T]`, `Equaler[T]`) that the collections are built on.
 
 The collections are Java / JavaScript-style: concrete generic types with fluent methods such as `Filter`, `Map[R]`, `FlatMap[R]`, and `Reduce[R]`. Optional accessors (`Get`, `First`, `Last`, `Find`, `MinBy`, `MaxBy`, `Pop`, `Peek`, `Front`, `Back`) return `Option[T]` rather than `(T, bool)` so callers can chain `OrElse` / `OrElseGet` / `Map` on the result.
@@ -193,7 +195,6 @@ None of the collection types are safe for concurrent mutation. The standard Go p
 
 ```text
 typed/
-├── go.work
 ├── collections/
 │   ├── go.mod
 │   ├── mod.go
@@ -230,16 +231,17 @@ typed/
 │   ├── options.go         # WithBuffer / WithOverflow / OverflowStrategy
 │   ├── backpressure.go
 │   └── collect.go         # Subscribe / ForEach / ToSlice
-└── docs/
-    ├── README.md            # 索引
-    ├── collections/README.md
-    ├── option/README.md
-    ├── result/README.md
-    ├── control/README.md
-    ├── reactivex/README.md
+└── docs/                     # 英文 README.md + 中文 README-cn.md 每篇都存在
+    ├── README.md            # 英文索引
+    ├── README-cn.md         # 中文索引
+    ├── collections/{README.md, README-cn.md}
+    ├── option/{README.md, README-cn.md}
+    ├── result/{README.md, README-cn.md}
+    ├── control/{README.md, README-cn.md}
+    ├── reactivex/{README.md, README-cn.md}
     └── utils/
-        ├── objects/README.md
-        └── json/README.md
+        ├── objects/{README.md, README-cn.md}
+        └── json/{README.md, README-cn.md}
 ```
 
 ## Java / JavaScript mapping
