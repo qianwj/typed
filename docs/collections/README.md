@@ -288,6 +288,6 @@ collections.Range[int](0, 5).
 
 ## 与其他包的关系
 
-- 返回值大量用 `option.Optional[T]`，见 [`docs/option/README.md`](../option/README.md)。
-- 错误流请用 `result.Result[T]`，见 [`docs/result/README.md`](../result/README.md)。
-- 异步 / 多订阅请用 `reactivex.Observable[T]`，见 [`docs/reactivex/README.md`](../reactivex/README.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。
+- 返回值大量用 `option.Optional[T]`，见 [`option`](../option/README.md)。
+- 错误流请用 `result.Result[T]`，见 [`result`](../result/README.md)。
+- 异步 / 多订阅请用 `reactivex.Observable[T]`，见 [`reactivex`](../reactivex/README.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。

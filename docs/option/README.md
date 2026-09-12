@@ -78,3 +78,8 @@ opt.IfPresent(func(v int) { fmt.Println(v) }) // 42
 empty := option.Empty[int]()
 v := empty.OrElseGet(func() int { return compute() }) // 仅此处调用 compute
 ```
+
+## 与其他包的关系
+
+- `collections` 里所有"可能缺席"的访问器（`ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`，`Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back`，`Stream.First` / `Last` / `Find`）都返回 `option.Optional[T]`，详见 [`collections`](../collections/README.md)。
+- `Result[T]` 通过 `Optional()` 桥到 `Optional[T]`，见 [`result`](../result/README.md)。

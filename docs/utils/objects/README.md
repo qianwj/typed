@@ -48,3 +48,7 @@ func (a Vec2) Equal(b Vec2) bool { return a.X == b.X && a.Y == b.Y }
 objects.Equals(Vec2{1, 2}, Vec2{1, 2}) // true（走 Equal）
 objects.Equals([]int(nil), []int{})    // true（nil/空归一化）
 ```
+
+## 与其他包的关系
+
+- `control/match.Eq` 用 `objects.Equals` 作为"等于"语义，所以 `match.Eq(v).Match(x)` 享有同样的 `Equal(T) bool` 分派、nil/空归一化和 typed nil 安全，见 [`control/match`](../../control/README.md)。

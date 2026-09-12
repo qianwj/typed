@@ -92,3 +92,9 @@ port, err := result.Wrap(lookupPort()).
     Unwrap() // err 始终是 nil
 _ = port
 ```
+
+## 与其他包的关系
+
+- `Result[T]` 通过 `Optional()` 桥到 `option.Optional[T]`，见 [`option`](../option/README.md)。
+- `utils/json` 的 `Encode` / `Decode` 都返回 `Result[...]`，把 `(T, error)` 风格的标准库调用适配进 `Result` 链，见 [`utils/json`](../utils/json/README.md)。
+- `reactivex` 的订阅级错误通过 `OnError` 通知，与 `Result` 是不同的错误通道，见 [`reactivex`](../reactivex/README.md)。

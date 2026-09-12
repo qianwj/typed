@@ -231,6 +231,7 @@ typed/
 │   ├── backpressure.go
 │   └── collect.go         # Subscribe / ForEach / ToSlice
 └── docs/
+    ├── README.md            # 索引
     ├── collections/README.md
     ├── option/README.md
     ├── result/README.md

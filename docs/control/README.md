@@ -153,3 +153,8 @@ kind := match.Type(payload).
 ```
 
 > 类型匹配的 `Case[T]` 用 `func(T) R` 而不是直接传 `T`，是因为 `T` 在编译期是泛型参数、运行时是反射的动态类型 —— 用 handler 函数让 Go 编译器在每个分支都内联一次断言。
+
+## 与其他包的关系
+
+- `control.Repeat(n, f)` 是 `collections.Range(0, n).ForEach(f)` 的命令式等价（少一次 `Stream` 分配），见 [`collections`](../collections/README.md)。
+- `match.Case` 与 `Option` / `Result` 互补：拿不准"到底命中什么"用模式匹配，单纯"值可能是 X"用 `Optional`，"操作可能失败"用 `Result`，见 [`option`](../option/README.md) / [`result`](../result/README.md)。

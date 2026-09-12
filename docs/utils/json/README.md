@@ -82,4 +82,4 @@ name := decoded.Map(func(u User) string { return u.Name }).
 
 ## 与其他包的关系
 
-- 错误与成功流用 [`utils/result`](../result/README.md)；本包只通过 `Result[T]` 与外界交互。
+- 错误与成功流用 [`utils/result`](../../result/README.md)；本包只通过 `Result[T]` 与外界交互。
