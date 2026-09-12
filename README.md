@@ -1,6 +1,6 @@
 <div align="center">
 
-![Typed — a type-safe collection toolkit for Go generics](./docs/assets/typed-logo-gopher-official-light.jpg)
+![Typed — a type-safe collection toolkit for Go generics](./docs/assets/typed-logo-gopher-official-light.png)
 
 # Typed
 
@@ -135,7 +135,6 @@ use(v)
 
 - [Design principles](#design-principles)
 - [What ships today](#what-ships-today)
-- [Project structure](#project-structure)
 - [Documentation](#documentation)
 - [Java / JavaScript mapping](#java--javascript-mapping)
 - [Laziness and execution boundaries](#laziness-and-execution-boundaries)
@@ -239,58 +238,6 @@ Per-package API reference and examples, in English and Chinese:
 - [utils/result](./docs/result/README.md) — `Result[T]`
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
 - [utils/json](./docs/utils/json/README.md) — `Encode` / `Decode` on `encoding/json/v2`
-
-## Project structure
-
-```text
-typed/
-├── README.md
-├── README-cn.md
-├── LICENSE
-├── collections/                 # go.mod
-│   ├── mod.go
-│   ├── stack.go, stack_test.go
-│   ├── queue.go, queue_test.go
-│   ├── deque.go, deque_test.go
-│   ├── lists/
-│   │   ├── arraylist.go, arraylist_test.go
-│   │   ├── linkedlist.go
-│   │   └── lists_test.go
-│   ├── maps/
-│   │   └── hashmap.go, hashmap_test.go
-│   ├── sets/
-│   │   └── hashset.go, hashset_test.go
-│   └── stream/
-│       └── mod.go, stream_test.go
-├── utils/                       # go.mod
-│   ├── option/
-│   ├── result/
-│   ├── objects/
-│   └── json/
-├── control/                     # go.mod
-│   ├── mod.go                   # Repeat / RepeatE
-│   └── match/                   # Pattern matching
-├── reactivex/                   # go.mod
-│   ├── mod.go
-│   ├── interfaces.go            # Publisher / Subscriber / Subscription / Observable
-│   ├── sources.go               # Just / FromSlice / FromChannel / FromSeq / Create / Interval
-│   ├── operators.go             # Map / Filter / Take / Skip / Scan / Reduce
-│   ├── subject.go               # NewSubject + Subscriber-side bridge
-│   ├── options.go               # WithBuffer / WithOverflow / OverflowStrategy
-│   ├── backpressure.go
-│   └── collect.go               # Subscribe / ForEach / ToSlice
-└── docs/                        # 英文 README.md + 中文 README-cn.md 每篇都存在
-    ├── README.md                # 英文索引
-    ├── README-cn.md             # 中文索引
-    ├── collections/{README.md, README-cn.md}
-    ├── option/{README.md, README-cn.md}
-    ├── result/{README.md, README-cn.md}
-    ├── control/{README.md, README-cn.md}
-    ├── reactivex/{README.md, README-cn.md}
-    └── utils/
-        ├── objects/{README.md, README-cn.md}
-        └── json/{README.md, README-cn.md}
-```
 
 ## Java / JavaScript mapping
 
