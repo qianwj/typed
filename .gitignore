@@ -8,6 +8,12 @@
 # Test binary, built with `go test -c`
 *.test
 
+# Go workspace files: each developer keeps their own local module
+# selection. CI / release builds rely on the per-module go.mod files
+# alone, so go.work and go.work.sum are intentionally not committed.
+go.work
+go.work.sum
+
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
