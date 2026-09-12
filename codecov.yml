@@ -1,0 +1,55 @@
+codecov:
+  require_ci_to_pass: true
+  notify:
+    wait_for_ci: true
+
+coverage:
+  precision: 1
+  round: down
+  range: "60...100"
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%
+        if_ci_failed: error
+        only_pulls: false
+    patch:
+      default:
+        target: 80%
+        if_ci_failed: error
+
+# Each sub-module uploads its own coverage.out under a matching flag.
+# The flag_management block below wires those flags into the badge and
+# the per-project status checks.
+flag_management:
+  default_rules:
+    carryforward: true
+    statuses:
+      - type: project
+        target: auto
+        threshold: 5%
+        if_ci_failed: error
+      - type: patch
+        target: 80%
+
+flags:
+  collections:
+    paths:
+      - collections/
+  utils:
+    paths:
+      - utils/
+  control:
+    paths:
+      - control/
+  reactivex:
+    paths:
+      - reactivex/
+
+comment:
+  layout: "header, diff, flags, components, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true

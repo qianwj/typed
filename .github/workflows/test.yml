@@ -1,0 +1,55 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test / ${{ matrix.module }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - collections
+          - utils
+          - control
+          - reactivex
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+
+      - name: Run tests with coverage
+        working-directory: ${{ matrix.module }}
+        run: |
+          set -euo pipefail
+          go test -race -count=1 \
+            -coverprofile=coverage.out \
+            -covermode=atomic \
+            ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ${{ matrix.module }}/coverage.out
+          flags: ${{ matrix.module }}
+          # Public repos on github.com do not need a token; the GitHub
+          # App integration on codecov.io authenticates the upload.
+          # If you later flip the repo to private, set the
+          # CODECOV_TOKEN secret and uncomment the line below.
+          # token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+          verbose: false

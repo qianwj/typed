@@ -1,6 +1,6 @@
 <div align="center">
 
-![Typed — 基于 Go 泛型的类型安全集合工具集](./docs/assets/typed-logo-gopher-official-light.jpg)
+<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — 基于 Go 泛型的类型安全集合工具集" width="180" />
 
 # Typed
 
@@ -10,6 +10,7 @@
 
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=root)](https://codecov.io/gh/qianwj/typed)
 [![Module](https://img.shields.io/badge/module-github.com%2Fqianwj%2Ftyped-6f42c1)](#安装)
 [![Made with Go](https://img.shields.io/badge/made%20with-Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
 
@@ -58,6 +59,7 @@ profiles := lists.ArrayListOf(users...).
 - 📡 **强类型异步流** —— `reactivex.Observable[T]`,显式需求(`Request(n)`)、按订阅配置背压(`WithBuffer`、`OverflowStrategy`),以及热多播的 `Subject[T]`。
 - 🧠 **更智能的相等** —— `objects.Equals[T]` 理解 `func (T) Equal(T) bool`、对 nil/空集合做归一化,对 typed nil 指针 nil 安全。
 - 🪶 **有界内存** —— `ArrayList` 用 head-offset 布局并周期性压缩,`Stack.Pop` 和 `Remove*` 路径把释放的槽位清零,被弹出的引用不会因底层数组残留。
+- 🧵 **有界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Take` 阻塞,`TryPush` / `TryTake` 不阻塞,底层是单个环形缓冲区。
 
 ## 安装
 
@@ -67,6 +69,7 @@ go get github.com/qianwj/typed/utils/option
 go get github.com/qianwj/typed/utils/result
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
+go get github.com/qianwj/typed/concurrency
 go get github.com/qianwj/typed/utils/objects
 go get github.com/qianwj/typed/utils/json
 ```
@@ -179,6 +182,12 @@ use(v)
 | 源:`Just` / `FromSlice` / `FromChannel` / `FromChannelWithOptions` / `FromSeq` / `Create` / `Interval` | `reactivex` | 冷、热源构造器。 |
 | 算子:`Map[R]`、`Filter`、`Take`、`Skip`、`Scan[R]`、`Reduce` | `reactivex` | 全部为包装型,自身不启 goroutine、不带队列。 |
 
+### 并发原语
+
+| 类型 | 源码 | 说明 |
+| --- | --- | --- |
+| `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Take` 阻塞,`TryPush` / `TryTake` / `DrainTo` 不阻塞;`TryTake` 返回 `option.Optional[T]`;基于 `[]T` 的环形缓冲区,单 `sync.Mutex` + `*sync.Cond`。热路径上 `0 B/op`、`0 allocs/op`。 |
+
 ## 文档导航
 
 按包组织的 API 参考与示例,中英双语:
@@ -187,6 +196,7 @@ use(v)
 - [collections](./docs/collections/README-cn.md) —— `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stack` / `Queue` / `Deque` / `Stream` / `Range`
 - [control](./docs/control/README-cn.md) —— `Repeat` / `RepeatE` 与 `control/match`
 - [reactivex](./docs/reactivex/README-cn.md) —— `Observable` / `Subject` / 背压 / 算子
+- [concurrency](./docs/concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`(阻塞 + 非阻塞,固定容量)
 - [utils/option](./docs/option/README-cn.md) —— `Optional[T]`
 - [utils/result](./docs/result/README-cn.md) —— `Result[T]`
 - [utils/objects](./docs/utils/objects/README-cn.md) —— `IsNil` / `Equals`
@@ -250,6 +260,8 @@ adults := lists.ArrayListOf(users...).
 
 任何集合类型都不支持并发修改。Go 的标准做法 —— 单 goroutine 持有集合,通信走 channel —— 继续适用。`Stream` 默认不并行;普通的 `Map` 不会悄悄变成并发的。Typed 不引入新的并发模型,沿用 Go 显式并发的路子。
 
+少数场景下,工具集自己的 API 比 `chan T` 更顺手:非阻塞探测(`TryPush` / `TryTake`)、与下一次操作一致的 `Size()`、或者一个泛型签名就能讲清“固定容量的阻塞队列”。这时 [`concurrency` 包](./docs/concurrency/README-cn.md) 提供了 [`BoundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#boundedblockingqueuet)。原生的 `chan` 在裸吞吐上仍然快约 5–7×,只有额外的 API 表达力能换回这部分成本时,再选 `BoundedBlockingQueue`。
+
 ## 错误处理
 
 `Result[T]` 是类型化的 `(T, error)` 载体:
@@ -291,15 +303,17 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` 工具集。
 - [x] `control.Repeat` / `RepeatE` 与 `control/match` 模式匹配。
 - [x] `reactivex` 包:`Observable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
+- [x] `concurrency` 包:`BoundedBlockingQueue[T]`(数组环形缓冲,阻塞 + 非阻塞双 API,通过 race 测试)。
 - [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。
 - [x] 有界内存:head-offset `ArrayList` 加周期性压缩,`Stack.Pop` 与列表的 `Remove*` 路径清零释放的槽位。
-- [x] 启用 race detector 的测试,活跃开发的文件 100% 语句覆盖。
+- [x] 启用 race detector 的测试,覆盖每个子包。各模块的实时覆盖率通过 Codecov 报告 —— 见上方 badge。
 
 待完成:
 
 - [ ] 错误感知的集合操作(`MapE`、`FilterE`、`CollectE`),作为 `Result[T]`-per-element 的一等管道替代品。
 - [ ] 基准测试:`ArrayList` 头部操作、`LinkedList` 迭代、`HashMap` rehash 行为、`Stream` 管道开销。
 - [ ] 迭代器(`iter.Seq[T]`)作为集合类型的一等输出,与 `Stream()` 并列。
+- [ ] `concurrency` 包:`PushCtx` / `TakeCtx` 支持取消。
 
 ## 许可证
 

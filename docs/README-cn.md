@@ -17,6 +17,10 @@
 
 - 🔁 [`control`](./control/README-cn.md) —— `Repeat` / `RepeatE` 与 `control/match` 模式匹配(`Pattern[T]` + 链式 `Case` / `Type`)。
 
+### 并发原语
+
+- 🧵 [`concurrency`](./concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`,固定容量的 FIFO 队列,提供阻塞与非阻塞两套 API。
+
 ### 抽象
 
 - 🟢 [`utils/option`](./option/README-cn.md) —— `Optional[T]`,可能缺席的值。
@@ -29,3 +33,4 @@
 - 🆕 **第一次接触 Typed** —— 从 [`collections`](./collections/README-cn.md) 看 `ArrayList` / `LinkedList` / `Stream` 的不可变 transform 风格,再到 [`utils/option`](./option/README-cn.md) / [`utils/result`](./result/README-cn.md) 看缺席 / 失败的表达。
 - ⚡ **需要异步或多订阅** —— 跳到 [`reactivex`](./reactivex/README-cn.md)。
 - 🧭 **需要按值或类型做 dispatch** —— 跳到 [`control`](./control/README-cn.md)。
+- 🚦 **需要带背压的有界生产/消费队列** —— 跳到 [`concurrency`](./concurrency/README-cn.md)。

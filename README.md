@@ -1,6 +1,6 @@
 <div align="center">
 
-![Typed — a type-safe collection toolkit for Go generics](./docs/assets/typed-logo-gopher-official-light.png)
+<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — a type-safe collection toolkit for Go generics" width="180" />
 
 # Typed
 
@@ -10,6 +10,7 @@
 
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=root)](https://codecov.io/gh/qianwj/typed)
 [![Module](https://img.shields.io/badge/module-github.com%2Fqianwj%2Ftyped-6f42c1)](#install)
 [![Made with Go](https://img.shields.io/badge/made%20with-Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
 
@@ -82,6 +83,9 @@ profiles := lists.ArrayListOf(users...).
 - 🪶 **Bounded memory** — head-offset `ArrayList` with periodic
   compaction, slot zeroing on `Stack.Pop` and `Remove*`, so popped
   references do not leak through the backing array.
+- 🧵 **Bounded blocking queue** — `concurrency.BoundedBlockingQueue[T]`
+  is a fixed-capacity FIFO with `Push` / `Take` (blocking) and
+  `TryPush` / `TryTake` (non-blocking), backed by a single ring buffer.
 
 ## Install
 
@@ -91,6 +95,7 @@ go get github.com/qianwj/typed/utils/option
 go get github.com/qianwj/typed/utils/result
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
+go get github.com/qianwj/typed/concurrency
 go get github.com/qianwj/typed/utils/objects
 go get github.com/qianwj/typed/utils/json
 ```
@@ -226,6 +231,12 @@ use(v)
 | Sources: `Just`, `FromSlice`, `FromChannel`, `FromChannelWithOptions`, `FromSeq`, `Create`, `Interval` | `reactivex` | Cold and hot source constructors. |
 | Operators: `Map[R]`, `Filter`, `Take`, `Skip`, `Scan[R]`, `Reduce` | `reactivex` | All wrapping-style; no goroutines or queues of their own. |
 
+### Concurrency primitives
+
+| Type | Source | Notes |
+| --- | --- | --- |
+| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Take` block, `TryPush` / `TryTake` / `DrainTo` do not; `TryTake` returns `option.Optional[T]`; single ring buffer over `[]T`, single `sync.Mutex` + `*sync.Cond`. `0 B/op`, `0 allocs/op` on the hot path. |
+
 ## Documentation
 
 Per-package API reference and examples, in English and Chinese:
@@ -234,6 +245,7 @@ Per-package API reference and examples, in English and Chinese:
 - [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `Stream`, `Range`
 - [control](./docs/control/README.md) — `Repeat` / `RepeatE` and `control/match`
 - [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
+- [concurrency](./docs/concurrency/README.md) — `BoundedBlockingQueue[T]` (blocking + non-blocking, fixed capacity)
 - [utils/option](./docs/option/README.md) — `Optional[T]`
 - [utils/result](./docs/result/README.md) — `Result[T]`
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
@@ -319,6 +331,15 @@ not parallel by default; ordinary `Map` will not silently become
 concurrent. The toolkit does not introduce a new concurrency model; it
 follows Go's explicit one.
 
+For the rare case where the toolkit's own surface area is a better fit
+than `chan T` — non-blocking probes (`TryPush` / `TryTake`), a `Size()`
+that is consistent with the next operation, or a single generic type
+to express "a fixed-capacity blocking queue" — the [`concurrency`
+package](./docs/concurrency/README.md) ships
+[`BoundedBlockingQueue[T]`](./docs/concurrency/README.md#boundedblockingqueuet).
+Native channels are still ~5–7× faster on raw throughput; reach for
+`BoundedBlockingQueue` when the extra API surface earns back the cost.
+
 ## Error handling
 
 `Result[T]` is the typed `(T, error)` carrier:
@@ -380,11 +401,13 @@ Done:
       `Subscriber[T]`, `Subject[T]`, `WithBuffer` / `WithOverflow`
       backpressure, `Map` / `Filter` / `Take` / `Skip` / `Scan` /
       `Reduce` operators.
+- [x] `concurrency` package: `BoundedBlockingQueue[T]` (array-backed
+      ring buffer, blocking + non-blocking variants, race-tested).
 - [x] `utils/json` Result-style codec on top of `encoding/json/v2`.
 - [x] Bounded memory: head-offset `ArrayList` with periodic compaction,
       slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
-- [x] Tests with race detector, 100% statement coverage on the
-      actively-developed files.
+- [x] Tests with the race detector on every module. Live coverage is
+      reported per module via Codecov — see the badge above.
 
 Open:
 
@@ -395,6 +418,7 @@ Open:
       overhead.
 - [ ] Iterators (`iter.Seq[T]`) as a first-class output of the
       collection types, parallel to `Stream()`.
+- [ ] `concurrency` package: `PushCtx` / `TakeCtx` with cancellation.
 
 ## License
 

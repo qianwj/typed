@@ -17,6 +17,10 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 
 - 🔁 [`control`](./control/README.md) — `Repeat` / `RepeatE` and `control/match` pattern matching (`Pattern[T]` plus chained `Case` / `Type`).
 
+### Concurrency primitives
+
+- 🧵 [`concurrency`](./concurrency/README.md) — `BoundedBlockingQueue[T]`, a fixed-capacity FIFO queue with blocking and non-blocking variants.
+
 ### Abstractions
 
 - 🟢 [`utils/option`](./option/README.md) — `Optional[T]`, a value that may be absent.
@@ -29,3 +33,4 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 - 🆕 **New to Typed** — start with [`collections`](./collections/README.md) to see the immutable-transform style of `ArrayList` / `LinkedList` / `Stream`, then read [`utils/option`](./option/README.md) and [`utils/result`](./result/README.md) for the absent / failure story.
 - ⚡ **Asynchronous or multi-subscriber behavior** — jump to [`reactivex`](./reactivex/README.md).
 - 🧭 **Value- or type-based dispatch** — jump to [`control`](./control/README.md).
+- 🚦 **Bounded producer / consumer queue with backpressure** — jump to [`concurrency`](./concurrency/README.md).
