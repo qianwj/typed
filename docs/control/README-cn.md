@@ -1,4 +1,4 @@
-# `github.com/qianwj/typed/control`
+# `typed/control` — Typed
 
 控制流辅助。两个子包：
 
@@ -6,6 +6,23 @@
 - [`control/match`](#controlmatch) — 类型安全、首个匹配获胜的模式匹配（`Pattern[T]` + 链式 `Case` / `Type`）。
 
 需要 Go 1.27+（链式方法带自己的类型参数）。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [`control`](#control)
+  - [`Repeat(times, f)`](#repeattimes-f)
+  - [`RepeatE(times, f) (int, error)`](#repeateetimes-f-int-error)
+  - [与 `collections.Range` 的关系](#与-collectionsrange-的关系)
+- [`control/match`](#controlmatch)
+  - [`Pattern[T]`](#patternt)
+  - [工厂函数](#工厂函数)
+  - [值匹配入口](#值匹配入口)
+  - [类型匹配入口](#类型匹配入口)
+  - [例子](#例子)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

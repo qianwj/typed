@@ -1,4 +1,4 @@
-# `github.com/qianwj/typed/collections`
+# `typed/collections` — Typed
 
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
@@ -11,7 +11,19 @@ Generic collections and a synchronous data-flow layer. `collections` ships four 
 
 Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type only needs to satisfy `any`; the JSON form is Go-style arrays or objects.
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
+- [`lists.ArrayList[T]`](#listsarraylistt)
+- [`lists.LinkedList[T]`](#listslinkedlistt)
+- [`maps.HashMap[K, V]`](#mapshashmapk-v)
+- [`sets.HashSet[T]`](#setshashsett)
+- [`stream.Stream[T]`](#streamstreamt)
+- [`collections.Range[T]`](#collectionsranget)
+- [See also](#see-also)
 
 ## Import
 

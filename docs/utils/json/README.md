@@ -1,8 +1,16 @@
-# `github.com/qianwj/typed/utils/json`
+# `typed/utils/json` — Typed
 
 `Result`-style JSON codec backed by [`encoding/json/v2`](https://pkg.go.dev/encoding/json/v2).
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [`Encode[T]`](#encodet-t-t-opts-jsonoptions-resultresultbyte)
+- [`Decode[T]`](#decodet-data-byte-resultresultt)
+- [Example](#example)
+- [See also](#see-also)
 
 ## Import
 

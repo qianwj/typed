@@ -1,6 +1,16 @@
-# `github.com/qianwj/typed/utils/json`
+# `typed/utils/json` — Typed
 
 基于 [`encoding/json/v2`](https://pkg.go.dev/encoding/json/v2) 的 `Result` 风格编解码。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [`Encode[T]`](#encodet-t-opts-jsonoptions-resultbyte)
+- [`Decode[T]`](#decodetdata-byte-resultt)
+- [例子](#例子)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

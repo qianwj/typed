@@ -1,8 +1,20 @@
-# `github.com/qianwj/typed/utils/result`
+# `typed/utils/result` — Typed
 
 `Result[T]`, an explicit container for the outcome of an operation that may fail: a success carrying a value of type `T`, or a failure carrying a non-nil `error`. It is a struct, not an interface — that lets `Map[R]` / `FlatMap[R]` declare their own type parameters (Go 1.27+ generic methods).
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [Why not `(T, error)`?](#why-not-t-error)
+- [Three bridges](#three-bridges)
+- [Construction](#construction)
+- [State queries](#state-queries)
+- [Value access](#value-access)
+- [Chained transforms](#chained-transforms)
+- [Examples](#examples)
+- [See also](#see-also)
 
 ## Import
 

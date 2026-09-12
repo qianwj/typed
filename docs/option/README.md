@@ -1,8 +1,20 @@
-# `github.com/qianwj/typed/utils/option`
+# `typed/utils/option` — Typed
 
 `Optional[T]`, an explicit container for a value of `T` that may be absent. It is a struct, not an interface, so its methods can declare their own type parameters (`Map[R]`, `FlatMap[R]`) — a Go 1.27+ generic-method feature.
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [Why not `(T, bool)`?](#why-not-t-bool)
+- [Construction](#construction)
+- [State queries](#state-queries)
+- [Value access](#value-access)
+- [Side effects](#side-effects)
+- [Chained transforms](#chained-transforms)
+- [Examples](#examples)
+- [See also](#see-also)
 
 ## Import
 

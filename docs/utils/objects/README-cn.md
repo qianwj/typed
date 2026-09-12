@@ -1,6 +1,15 @@
-# `github.com/qianwj/typed/utils/objects`
+# `typed/utils/objects` — Typed
 
 对动态类型 Go 值的工具函数。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [`IsNil[T]`](#isnilt-value-t-bool)
+- [`Equals[T]`](#equalst-a-b-t-bool)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

@@ -1,4 +1,4 @@
-# `github.com/qianwj/typed/control`
+# `typed/control` — Typed
 
 Control-flow helpers. Two sub-packages:
 
@@ -7,7 +7,22 @@ Control-flow helpers. Two sub-packages:
 
 Go 1.27+ is required because the fluent chain methods declare their own type parameters.
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [`control`](#control)
+  - [`Repeat(times, f)`](#repeattimes-f)
+  - [`RepeatE(times, f) (int, error)`](#repeateetimes-f-int-error)
+  - [Relationship to `collections.Range`](#relationship-to-collectionsrange)
+- [`control/match`](#controlmatch)
+  - [`Pattern[T]`](#patternt)
+  - [Factories](#factories)
+  - [Value matching entry](#value-matching-entry)
+  - [Type matching entry](#type-matching-entry)
+  - [Examples](#examples)
+- [See also](#see-also)
 
 ## Import
 

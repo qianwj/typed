@@ -1,8 +1,15 @@
-# `github.com/qianwj/typed/utils/objects`
+# `typed/utils/objects` — Typed
 
 Helpers for working with dynamically typed Go values.
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [`IsNil[T]`](#isnilt-value-t-bool)
+- [`Equals[T]`](#equalst-a-b-t-bool)
+- [See also](#see-also)
 
 ## Import
 

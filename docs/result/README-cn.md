@@ -1,6 +1,20 @@
-# `github.com/qianwj/typed/utils/result`
+# `typed/utils/result` — Typed
 
 `Result[T]`，显式的"成功携带 `T` 或失败携带 `error`"容器。结构体而非接口 —— 这让 `Map[R]` / `FlatMap[R]` 等方法可以声明自己的类型参数（Go 1.27+ 泛型方法）。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [设计动机](#设计动机)
+- [三个桥](#三个桥)
+- [构造](#构造)
+- [状态查询](#状态查询)
+- [取值](#取值)
+- [链式 transform](#链式-transform)
+- [例子](#例子)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

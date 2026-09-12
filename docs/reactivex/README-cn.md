@@ -1,8 +1,28 @@
-# `github.com/qianwj/typed/reactivex`
+# `typed/reactivex` — Typed
 
 强类型、显式订阅、按需推送、可配置背压的异步事件流。本包与 [`collections`](../collections/README-cn.md) 的 `Stream` 无关：`Stream` 是同步单消费，`reactivex` 处理订阅生命周期、异步输入与多播。
 
 需要 Go 1.27+（`Observable.Map[R]` / `Observable.Scan[R]` 等方法自带类型参数）。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [核心类型](#核心类型)
+  - [`Observable[T]`](#observablet)
+  - [`Publisher[T]`](#publishert)
+  - [`Subscriber[T]`](#subscribert)
+  - [`Subscription`](#subscription)
+- [订阅与消费](#订阅与消费)
+- [源](#源)
+- [算子](#算子)
+- [背压](#背压)
+  - [`OverflowStrategy`](#overflowstrategy)
+  - [`BackpressureOption`](#backpressureoption)
+- [`Subject[T]`](#subjectt)
+- [例子](#例子)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

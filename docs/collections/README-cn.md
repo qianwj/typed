@@ -1,4 +1,4 @@
-# `github.com/qianwj/typed/collections`
+# `typed/collections` — Typed
 
 泛型集合与同步数据流。`collections` 分为四类容器和一个惰性流工具：
 
@@ -10,6 +10,20 @@
 - `collections.Range[T]` — 整数半开区间到 `Stream[T]` 的工厂。
 
 所有集合都实现了 `MarshalJSON` / `UnmarshalJSON`，元素类型必须满足 `any` 约束即可，JSON 形式是 Go 风格的数组或对象。
+
+> **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
+
+## 目录
+
+- [包导入](#包导入)
+- [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
+- [`lists.ArrayList[T]`](#listsarraylistt)
+- [`lists.LinkedList[T]`](#listslinkedlistt)
+- [`maps.HashMap[K, V]`](#mapshashmapk-v)
+- [`sets.HashSet[T]`](#setshashsett)
+- [`stream.Stream[T]`](#streamstreamt)
+- [`collections.Range[T]`](#collectionsranget)
+- [与其他包的关系](#与其他包的关系)
 
 ## 包导入
 

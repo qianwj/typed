@@ -1,10 +1,28 @@
-# `github.com/qianwj/typed/reactivex`
+# `typed/reactivex` — Typed
 
 Typed, subscription-explicit, demand-driven, configurable-backpressure asynchronous event streams. This package is unrelated to the `Stream` in [`collections`](../collections/README.md): `Stream` is synchronous, single-consumer; `reactivex` handles subscription lifetimes, asynchronous inputs, and multicast.
 
 Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan[R]` declare their own type parameters.
 
-> Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+
+## Contents
+
+- [Import](#import)
+- [Core types](#core-types)
+  - [`Observable[T]`](#observablet)
+  - [`Publisher[T]`](#publishert)
+  - [`Subscriber[T]`](#subscribert)
+  - [`Subscription`](#subscription)
+- [Subscribing and consuming](#subscribing-and-consuming)
+- [Sources](#sources)
+- [Operators](#operators)
+- [Backpressure](#backpressure)
+  - [`OverflowStrategy`](#overflowstrategy)
+  - [`BackpressureOption`](#backpressureoption)
+- [`Subject[T]`](#subjectt)
+- [Examples](#examples)
+- [See also](#see-also)
 
 ## Import
 
