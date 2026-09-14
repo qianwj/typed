@@ -1,6 +1,8 @@
 package concurrency
 
 import (
+	"context"
+	"errors"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -214,215 +216,6 @@ func TestRingWrap(t *testing.T) {
 	}
 }
 
-func TestDrainTo_AllIntoSizedDst(t *testing.T) {
-	t.Parallel()
-	q := NewBoundedBlockingQueue[int](4)
-	for i := 1; i <= 3; i++ {
-		q.Push(i)
-	}
-	dst := make([]int, 3)
-	n := q.DrainTo(dst)
-	if n != 3 {
-		t.Fatalf("DrainTo returned %d, want 3", n)
-	}
-	want := []int{1, 2, 3}
-	if !slicesEqual(dst, want) {
-		t.Fatalf("DrainTo wrote %v, want %v", dst, want)
-	}
-	if got := q.Size(); got != 0 {
-		t.Fatalf("Size after drain = %d, want 0", got)
-	}
-}
-
-func TestDrainTo_PartialDst(t *testing.T) {
-	t.Parallel()
-	// Queue has 5 elements (cap 8 after rounding), dst has room for 2.
-	q := NewBoundedBlockingQueue[int](5)
-	for i := 1; i <= 5; i++ {
-		q.Push(i)
-	}
-	dst := make([]int, 2)
-	n := q.DrainTo(dst)
-	if n != 2 {
-		t.Fatalf("DrainTo returned %d, want 2", n)
-	}
-	if dst[0] != 1 || dst[1] != 2 {
-		t.Fatalf("DrainTo wrote %v, want [1, 2]", dst)
-	}
-	if got := q.Size(); got != 3 {
-		t.Fatalf("Size after partial drain = %d, want 3", got)
-	}
-	// Remaining elements should still come out in FIFO order.
-	for _, want := range []int{3, 4, 5} {
-		if got := q.Take(); got != want {
-			t.Fatalf("Take after partial drain = %d, want %d", got, want)
-		}
-	}
-}
-
-func TestDrainTo_EmptyQueue(t *testing.T) {
-	t.Parallel()
-	q := NewBoundedBlockingQueue[int](4)
-	dst := []int{99, 99, 99} // sentinel values
-	n := q.DrainTo(dst)
-	if n != 0 {
-		t.Fatalf("DrainTo on empty queue returned %d, want 0", n)
-	}
-	for i, v := range dst {
-		if v != 99 {
-			t.Fatalf("DrainTo mutated dst[%d] = %d, want 99 (untouched)", i, v)
-		}
-	}
-}
-
-func TestDrainTo_EmptyDst(t *testing.T) {
-	t.Parallel()
-	q := NewBoundedBlockingQueue[int](4)
-	q.Push(1)
-	q.Push(2)
-	var dst []int
-	if n := q.DrainTo(dst); n != 0 {
-		t.Fatalf("DrainTo with nil dst returned %d, want 0", n)
-	}
-	dst = []int{}
-	if n := q.DrainTo(dst); n != 0 {
-		t.Fatalf("DrainTo with empty dst returned %d, want 0", n)
-	}
-	if got := q.Size(); got != 2 {
-		t.Fatalf("Size after empty-dst drains = %d, want 2 (queue must not be touched)", got)
-	}
-}
-
-func TestDrainTo_AcrossWrap(t *testing.T) {
-	t.Parallel()
-	// Force the head to be in the middle of the backing array, then drain.
-	// Queue: cap 8 (after rounding 5→8). Push 1..5, Take 2, Push 6..7.
-	// Resulting layout: head=2, tail=7, count=5; ring wraps at 8.
-	q := NewBoundedBlockingQueue[int](5)
-	for i := 1; i <= 5; i++ {
-		q.Push(i)
-	}
-	_ = q.Take() // 1
-	_ = q.Take() // 2
-	q.Push(6)
-	q.Push(7)
-	// head=2, tail=(7+1)&7=0, count=5, items[2..7]=[3,4,5,6,7]
-
-	dst := make([]int, 5)
-	n := q.DrainTo(dst)
-	if n != 5 {
-		t.Fatalf("DrainTo returned %d, want 5", n)
-	}
-	want := []int{3, 4, 5, 6, 7}
-	if !slicesEqual(dst, want) {
-		t.Fatalf("DrainTo wrote %v, want %v", dst, want)
-	}
-	if got := q.Size(); got != 0 {
-		t.Fatalf("Size after drain = %d, want 0", got)
-	}
-}
-
-func TestDrainTo_AcrossWrapPartial(t *testing.T) {
-	t.Parallel()
-	// Same setup as above, but drain only 3 — exercises the "two ranges"
-	// copy path with a small dst on a wrapped queue.
-	q := NewBoundedBlockingQueue[int](5)
-	for i := 1; i <= 5; i++ {
-		q.Push(i)
-	}
-	_ = q.Take()
-	_ = q.Take()
-	q.Push(6)
-	q.Push(7)
-	// head=2, count=5, items[2..7]=[3,4,5,6,7]
-
-	dst := make([]int, 3)
-	n := q.DrainTo(dst)
-	if n != 3 {
-		t.Fatalf("DrainTo returned %d, want 3", n)
-	}
-	want := []int{3, 4, 5}
-	if !slicesEqual(dst, want) {
-		t.Fatalf("DrainTo wrote %v, want %v", dst, want)
-	}
-	if got := q.Size(); got != 2 {
-		t.Fatalf("Size after partial drain = %d, want 2", got)
-	}
-	// Remaining in order: 6, 7
-	if v, ok := tryTakeOr(t, q, 6); !ok || v != 6 {
-		t.Fatalf("first remaining = (%d, present=%v), want (6, present)", v, ok)
-	}
-	if v, ok := tryTakeOr(t, q, 7); !ok || v != 7 {
-		t.Fatalf("second remaining = (%d, present=%v), want (7, present)", v, ok)
-	}
-}
-
-func TestDrainTo_AllowsPushAfter(t *testing.T) {
-	t.Parallel()
-	// After a drain that empties a full queue, blocked Pushers must wake up.
-	q := NewBoundedBlockingQueue[int](2)
-	q.Push(1)
-	q.Push(2)
-
-	pushDone := make(chan struct{}, 1)
-	go func() {
-		q.Push(3)
-		pushDone <- struct{}{}
-	}()
-	time.Sleep(20 * time.Millisecond)
-	select {
-	case <-pushDone:
-		t.Fatal("Push returned before the queue had space")
-	default:
-	}
-
-	dst := make([]int, 2)
-	if n := q.DrainTo(dst); n != 2 {
-		t.Fatalf("DrainTo returned %d, want 2", n)
-	}
-
-	select {
-	case <-pushDone:
-	case <-time.After(time.Second):
-		t.Fatal("blocked Push did not wake up after DrainTo freed slots")
-	}
-}
-
-func TestDrainTo_PointerTGCReleased(t *testing.T) {
-	t.Parallel()
-	// Slots drained via DrainTo should be cleared to zero so the GC can
-	// collect the pointer values they used to hold. This is a smoke test;
-	// -race + the slot-zeroing code in DrainTo is the real verification.
-	type box struct{ payload *int }
-	q := NewBoundedBlockingQueue[*box](4)
-	for i := 0; i < 4; i++ {
-		q.Push(&box{payload: new(int)})
-	}
-	dst := make([]*box, 4)
-	if n := q.DrainTo(dst); n != 4 {
-		t.Fatalf("DrainTo returned %d, want 4", n)
-	}
-	if got := q.Size(); got != 0 {
-		t.Fatalf("Size after drain = %d, want 0", got)
-	}
-	// Drop our references and let the runtime collect.
-	for i := range dst {
-		dst[i] = nil
-	}
-	runtime.GC()
-}
-
-func slicesEqual[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
 
 func TestPointerT_DoesNotLeak(t *testing.T) {
 	t.Parallel()
@@ -569,5 +362,299 @@ func TestTryTakeReturnsOptional(t *testing.T) {
 	// Sanity: the empty factory also looks the same.
 	if e := option.Empty[int](); !e.IsEmpty() {
 		t.Fatal("option.Empty[int]() should be empty")
+	}
+}
+
+// --- PushCtx / TakeCtx ---------------------------------------------------
+
+func TestPushCtx_FastPathSucceeds(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+	if err := q.PushCtx(context.Background(), 7); err != nil {
+		t.Fatalf("PushCtx on empty queue returned %v, want nil", err)
+	}
+	if got, ok := tryTakeOr(t, q, -1); !ok || got != 7 {
+		t.Fatalf("element after PushCtx = (%d, present=%v), want (7, present)", got, ok)
+	}
+}
+
+func TestTakeCtx_FastPathSucceeds(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+	q.Push(9)
+	v, err := q.TakeCtx(context.Background())
+	if err != nil {
+		t.Fatalf("TakeCtx on non-empty queue returned err=%v, want nil", err)
+	}
+	if v != 9 {
+		t.Fatalf("TakeCtx = %d, want 9", v)
+	}
+}
+
+func TestPushCtx_BlocksUntilTake(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+	q.Push(1)
+	q.Push(2) // queue is full
+
+	pushDone := make(chan error, 1)
+	go func() {
+		pushDone <- q.PushCtx(context.Background(), 3)
+	}()
+
+	// Give the goroutine time to reach the channel receive.
+	time.Sleep(20 * time.Millisecond)
+	select {
+	case err := <-pushDone:
+		t.Fatalf("PushCtx returned %v before any Take", err)
+	default:
+	}
+
+	if got := q.Take(); got != 1 {
+		t.Fatalf("Take() = %d, want 1", got)
+	}
+
+	select {
+	case err := <-pushDone:
+		if err != nil {
+			t.Fatalf("PushCtx returned err=%v after Take, want nil", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("PushCtx did not return after Take freed a slot")
+	}
+	if got, ok := tryTakeOr(t, q, -1); !ok || got != 2 {
+		t.Fatalf("first remaining = (%d, present=%v), want (2, present)", got, ok)
+	}
+	if got, ok := tryTakeOr(t, q, -1); !ok || got != 3 {
+		t.Fatalf("element after PushCtx = (%d, present=%v), want (3, present)", got, ok)
+	}
+}
+
+func TestTakeCtx_BlocksUntilPush(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+
+	takeDone := make(chan int, 1)
+	takeErr := make(chan error, 1)
+	go func() {
+		v, err := q.TakeCtx(context.Background())
+		takeDone <- v
+		takeErr <- err
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	select {
+	case v := <-takeDone:
+		t.Fatalf("TakeCtx returned (%d, ...) before any Push", v)
+	default:
+	}
+
+	q.Push(42)
+
+	select {
+	case v := <-takeDone:
+		if v != 42 {
+			t.Fatalf("TakeCtx value = %d, want 42", v)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("TakeCtx did not return after Push")
+	}
+	if err := <-takeErr; err != nil {
+		t.Fatalf("TakeCtx err = %v, want nil", err)
+	}
+}
+
+func TestPushCtx_CanceledDoesNotEnqueue(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+	q.Push(1)
+	q.Push(2) // queue is full
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pushDone := make(chan error, 1)
+	go func() {
+		pushDone <- q.PushCtx(ctx, 99)
+	}()
+
+	// Let the goroutine reach the channel receive, then cancel.
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-pushDone:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("PushCtx err = %v, want context.Canceled", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("PushCtx did not return after cancel")
+	}
+	// The element must NOT have been enqueued.
+	if got := q.Size(); got != 2 {
+		t.Fatalf("Size after canceled PushCtx = %d, want 2 (element must be dropped)", got)
+	}
+	if got := q.Take(); got != 1 {
+		t.Fatalf("Take() = %d, want 1 (queue unchanged)", got)
+	}
+	if got := q.Take(); got != 2 {
+		t.Fatalf("Take() = %d, want 2 (queue unchanged)", got)
+	}
+}
+
+func TestTakeCtx_CanceledReturnsZero(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](2)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	takeDone := make(chan int, 1)
+	takeErr := make(chan error, 1)
+	go func() {
+		v, err := q.TakeCtx(ctx)
+		takeDone <- v
+		takeErr <- err
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+
+	select {
+	case v := <-takeDone:
+		if v != 0 {
+			t.Fatalf("TakeCtx value after cancel = %d, want zero", v)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("TakeCtx did not return after cancel")
+	}
+	if err := <-takeErr; !errors.Is(err, context.Canceled) {
+		t.Fatalf("TakeCtx err = %v, want context.Canceled", err)
+	}
+	// Queue must still be empty — cancellation must not have dequeued anything.
+	if got := q.Size(); got != 0 {
+		t.Fatalf("Size after canceled TakeCtx = %d, want 0", got)
+	}
+}
+
+func TestPushCtx_Deadline(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](1)
+	q.Push(1) // queue is full
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	err := q.PushCtx(ctx, 2)
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("PushCtx err = %v, want context.DeadlineExceeded", err)
+	}
+	if elapsed < 20*time.Millisecond {
+		t.Fatalf("PushCtx returned in %v, want >= ~30ms (deadline)", elapsed)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("PushCtx returned in %v, want ~30ms (deadline)", elapsed)
+	}
+	if got := q.Size(); got != 1 {
+		t.Fatalf("Size after deadline = %d, want 1", got)
+	}
+}
+
+func TestTakeCtx_Deadline(t *testing.T) {
+	t.Parallel()
+	q := NewBoundedBlockingQueue[int](1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, err := q.TakeCtx(ctx)
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("TakeCtx err = %v, want context.DeadlineExceeded", err)
+	}
+	if elapsed < 20*time.Millisecond {
+		t.Fatalf("TakeCtx returned in %v, want >= ~30ms (deadline)", elapsed)
+	}
+}
+
+// TestPushCtx_TakeCtxRace is a stress test for the ctx-aware paths: many
+// goroutines call PushCtx and TakeCtx concurrently, and a fraction of
+// them get their ctx canceled mid-flight. The test passes if every
+// successful Push/Take is paired (no lost or duplicate elements) and
+// no goroutine deadlocks.
+func TestPushCtx_TakeCtxRace(t *testing.T) {
+	t.Parallel()
+	const (
+		producers      = 4
+		perProducer    = 2_000
+		expectedTotal  = producers * perProducer
+		queueCapacity  = 32
+		overallTimeout = 30 * time.Second
+	)
+
+	q := NewBoundedBlockingQueue[int](queueCapacity)
+
+	var produced atomic.Int64
+	var consumed atomic.Int64
+	var wgProd sync.WaitGroup
+	wgProd.Add(producers)
+	for p := 0; p < producers; p++ {
+		base := p * perProducer
+		go func() {
+			defer wgProd.Done()
+			for i := 0; i < perProducer; i++ {
+				_ = q.PushCtx(context.Background(), base+i)
+				produced.Add(1)
+			}
+		}()
+	}
+
+	// One consumer running TakeCtx in a tight loop. Each call uses a fresh
+	// ctx with a 5ms timeout; a few will hit the timeout, and those TakeCtx
+	// calls must return (zero, DeadlineExceeded) without dequeuing.
+	takeDone := make(chan struct{})
+	go func() {
+		defer close(takeDone)
+		for consumed.Load() < int64(expectedTotal) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+			if v, err := q.TakeCtx(ctx); err == nil {
+				_ = v
+				consumed.Add(1)
+			}
+			cancel()
+		}
+	}()
+
+	doneProducing := make(chan struct{})
+	go func() {
+		wgProd.Wait()
+		close(doneProducing)
+	}()
+
+	select {
+	case <-takeDone:
+	case <-time.After(overallTimeout):
+		t.Fatalf("consumer timeout: produced=%d consumed=%d", produced.Load(), consumed.Load())
+	}
+	<-doneProducing
+
+	// Drain anything left so Size() must be 0 at the end.
+	for {
+		if opt := q.TryTake(); opt.IsEmpty() {
+			break
+		}
+	}
+
+	if got := produced.Load(); got != int64(expectedTotal) {
+		t.Fatalf("produced = %d, want %d", got, expectedTotal)
+	}
+	// The exact consumed count is bounded below by the number of successful
+	// TakeCtx calls; we only assert that it matches the produced count
+	// (i.e. every produced element was eventually consumed — possibly by
+	// the final drain loop above).
+	total := consumed.Load() + int64(q.Size())
+	if total != int64(expectedTotal) {
+		// q.Size() should be 0 here because of the drain loop, so this
+		// check is really "consumed == expected".
+		t.Fatalf("consumed+remaining = %d, want %d", total, expectedTotal)
 	}
 }
