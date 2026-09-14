@@ -1,2 +1,4 @@
+github.com/qianwj/typed/utils v0.0.1 h1:rzmDu3yIOFUOk160QuCpfauX+GHzzIygkjs7mQ+ySwA=
+github.com/qianwj/typed/utils v0.0.1/go.mod h1:U1d+T1HkQi2ko38IJUGtj92iTB3kQix5pzB0TTq5130=
 golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba h1:Ck8QetSgk912qxWLMCKxd0in+aiyBQyDSMae6e/xmpU=
 golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba/go.mod h1:50RgIsmK7OwqzTTeqcSXQW8SswW0o8fRcDxmqGluJ8E=
