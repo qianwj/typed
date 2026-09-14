@@ -16,7 +16,7 @@
 
 </div>
 
-Typed 把 Java / JavaScript 风格的集合操作体验带到 Go，但不放弃静态类型。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`），链式 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`），以及支撑一切的抽象（`Optional[T]`、`Result[T]`、`IsNil`、`Equals`）。再加上强类型的异步事件流（`reactivex.Observable[T]`），显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
+Typed 是一个**面向 Go 泛型的、类型安全的链式集合工具集**。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`）通过从左到右、可一路链下去的 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`）组合而成，背后是支撑整个工具集的抽象（`Optional[T]`、`Result[T]`、`IsNil`、`Equals`）。操作符的命名是有意沿用业界通用词汇，对熟悉 Java Streams、.NET LINQ 或 JavaScript 数组管道的工程师会很顺手，但**不沿用它们各自的运行时模型**。异步一侧，`reactivex.Observable[T]` 提供了强类型的事件流：显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
 
 ## 为什么选 Typed
 
@@ -114,7 +114,7 @@ use(v)
 - [设计原则](#设计原则)
 - [当前已经发布的能力](#当前已经发布的能力)
 - [文档导航](#文档导航)
-- [Java / JavaScript 对照表](#java--javascript-对照表)
+- [操作符参考](#操作符参考)
 - [惰性与执行边界](#惰性与执行边界)
 - [内存模型](#内存模型)
 - [并发模型](#并发模型)
@@ -132,7 +132,7 @@ use(v)
 - **可选惰性。** 集合操作是立即执行的;`Stream[T]` 是显式的惰性层,基于 Go 的 `iter.Seq[T]` 实现。
 - **可组合性。** 集合、迭代器和 `Stream` 可以组合成新的数据源;`Stream()` 的快照契约保证源集合的后续变更不会泄漏到进行中的管道。
 - **提前结束。** `First`、`Any`、`All`、`Find`、`Take` 以及返回 `Optional` 的访问器一旦得到答案就立刻停下。
-- **保持 Go 风格。** 不照搬 Java Stream 的全部语义;简单逻辑仍应能用 `for range` 轻松写出来。Typed 是可选的:仍然偏好内置 slice 和 map 的代码不受影响。
+- **可选,不替代。** Typed 是建立在 Go 惯用法之上的链式层;简单逻辑仍应能用 `for range` 配合 slice、map 轻松写出来。仍然偏好内置 slice、map 和 `chan T` 的代码完全不受影响。
 
 ## 当前已经发布的能力
 
@@ -202,9 +202,11 @@ use(v)
 - [utils/objects](./docs/utils/objects/README-cn.md) —— `IsNil` / `Equals`
 - [utils/json](./docs/utils/json/README-cn.md) —— `Encode` / `Decode`,基于 `encoding/json/v2`
 
-## Java / JavaScript 对照表
+## 操作符参考
 
-| Java / JavaScript | Typed |
+操作符的命名沿用 Java Streams、.NET LINQ 与 JavaScript 数组方法之间共通的"业界通用词汇",所以只要用过其中任意一套,这套 API 读起来就很自然。下表把常见的别称映射到 Typed 对应的接口。
+
+| 操作 | Typed |
 | --- | --- |
 | `stream()` | `ArrayListOf(...).Stream()` |
 | `filter` / `where` | `Filter` |
@@ -227,7 +229,7 @@ use(v)
 | `IntStream.range` | `Range(start, end) Stream[T]` |
 | `Deque` (Java) | `Deque[T]`(LinkedList-backed) |
 
-Typed 不复制 Java 或 JavaScript 的运行时模型,只借鉴它们的集合处理风格,保留 Go 的静态类型、显式错误和直观的控制流。
+Typed 不是任何一个库的移植品。链式 API 直接构建在 Go 自带的泛型、`iter.Seq[T]` 与显式 `error` 返回之上;操作符的名字之所以眼熟,只是因为沿用了工程师们本来就会的那套"业界通用词汇"。
 
 ## 惰性与执行边界
 

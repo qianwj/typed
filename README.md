@@ -16,15 +16,18 @@
 
 </div>
 
-Typed brings Java- and JavaScript-style collection ergonomics to Go without
-giving up static typing. Concrete generic types (`ArrayList[T]`,
-`LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`, `Stream[T]`, `Subject[T]`),
-fluent transforms (`Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
-`Take`, `Drop`, `SortBy`, `Distinct`, `Concat`), and the supporting
+Typed is a **fluent, type-safe collection toolkit for Go generics**.
+Concrete generic types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`,
+`HashSet[T]`, `Stream[T]`, `Subject[T]`) compose through left-to-right
+chainable transforms (`Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
+`Take`, `Drop`, `SortBy`, `Distinct`, `Concat`), backed by the supporting
 abstractions (`Optional[T]`, `Result[T]`, `IsNil`, `Equals`) that the rest
-of the toolkit is built on. Plus a typed async event stream
-(`reactivex.Observable[T]`) with explicit demand, configurable backpressure,
-and a first-class multicast `Subject[T]`.
+of the toolkit is built on. The operator vocabulary is intentionally
+familiar to anyone who has used Java Streams, .NET LINQ, or JavaScript
+array pipelines — without inheriting their runtime model. On the async
+side, `reactivex.Observable[T]` adds a typed event stream with explicit
+demand, configurable backpressure, and a first-class multicast
+`Subject[T]`.
 
 ## Why Typed
 
@@ -141,7 +144,7 @@ use(v)
 - [Design principles](#design-principles)
 - [What ships today](#what-ships-today)
 - [Documentation](#documentation)
-- [Java / JavaScript mapping](#java--javascript-mapping)
+- [Operator reference](#operator-reference)
 - [Laziness and execution boundaries](#laziness-and-execution-boundaries)
 - [Memory model](#memory-model)
 - [Concurrency](#concurrency)
@@ -179,9 +182,10 @@ use(v)
 - **Early termination.** `First`, `Any`, `All`, `Find`, `Take`, and
   the `Optional`-returning accessors stop as soon as the answer is
   known.
-- **Go style.** Do not copy every Java Stream semantic blindly; simple
-  logic should remain easy to write with `for range`. Typed is
-  opt-in: existing code that prefers slices and maps is unaffected.
+- **Opt-in, not a replacement.** Typed is a fluent layer on top of
+  idiomatic Go; simple logic should remain easy to write with
+  `for range` over a slice or map. Existing code that prefers plain
+  slices, maps, and `chan T` is unaffected.
 
 ## What ships today
 
@@ -251,9 +255,14 @@ Per-package API reference and examples, in English and Chinese:
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
 - [utils/json](./docs/utils/json/README.md) — `Encode` / `Decode` on `encoding/json/v2`
 
-## Java / JavaScript mapping
+## Operator reference
 
-| Java / JavaScript | Typed |
+Operator names follow the de facto vocabulary shared by Java Streams,
+.NET LINQ, and JavaScript array methods, so the API reads naturally
+if you've used any of them. The table below maps the common aliases
+to their Typed counterpart.
+
+| Operation | Typed |
 | --- | --- |
 | `stream()` | `ArrayListOf(...).Stream()` |
 | `filter` / `where` | `Filter` |
@@ -276,9 +285,10 @@ Per-package API reference and examples, in English and Chinese:
 | `IntStream.range` | `Range(start, end) Stream[T]` |
 | `Deque` (Java) | `Deque[T]` (LinkedList-backed) |
 
-Typed does not copy the Java or JavaScript runtime model. It borrows
-their collection-processing style while preserving Go's static typing,
-explicit errors, and straightforward control flow.
+Typed is not a port of any one library. The fluent API is built on
+top of Go's own generics, `iter.Seq[T]`, and explicit `error` returns;
+the operator names are simply the de facto vocabulary engineers
+already know.
 
 ## Laziness and execution boundaries
 
