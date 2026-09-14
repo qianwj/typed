@@ -29,7 +29,6 @@ func tryTakeOr[T any](t *testing.T, q *BoundedBlockingQueue[T], wantZeroForRepor
 func TestNew_PanicsOnNonPositiveCapacity(t *testing.T) {
 	t.Parallel()
 	for _, c := range []int{0, -1, -1000} {
-		c := c
 		t.Run("", func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
@@ -72,7 +71,6 @@ func TestNew_RoundsCapacityUpToPowerOfTwo(t *testing.T) {
 		{(1 << 14) + 1, 1 << 15},
 	}
 	for _, c := range cases {
-		c := c
 		t.Run("", func(t *testing.T) {
 			q := NewBoundedBlockingQueue[int](c.requested)
 			if got := q.Capacity(); got != c.want {
@@ -215,7 +213,6 @@ func TestRingWrap(t *testing.T) {
 		}
 	}
 }
-
 
 func TestPointerT_DoesNotLeak(t *testing.T) {
 	t.Parallel()

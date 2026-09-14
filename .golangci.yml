@@ -1,0 +1,97 @@
+version: "2"
+
+# Local CI lint policy. The Go-version, module list, and overall
+# correctness gates live in .github/workflows/test.yml; this file
+# only adds the static checks that `go vet` does not cover.
+#
+# Adjust when the project moves off Go 1.27's generic methods: a
+# few linters (gocritic hugeParam, rangeValCopy) are noisy on
+# generic receivers and are explicitly disabled below.
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    # Correctness
+    - errcheck         # unchecked error returns
+    - govet            # go vet (with all checks)
+    - ineffassign      # unused assignments
+    - staticcheck      # SA* correctness checks
+    - unused           # unused identifiers (replaces deadcode / unused)
+    - nilerr           # returning nil after handling error
+    - errorlint        # error wrapping/wrapping-as-%v
+    - bodyclose        # HTTP response body close
+
+    # Style / readability
+    - revive           # successor to golint
+    - misspell         # English typos in comments / strings
+    - nolintlint       # ensure nolint directives are valid
+    - gocritic         # diagnostics + performance + style
+
+    # Performance hints
+    - prealloc         # slice pre-allocation
+    - copyloopvar      # Go 1.22+ per-iter loop vars
+
+  settings:
+    govet:
+      enable-all: true
+      disable:
+        - shadow # too noisy for a fluent-API surface; revisit per-file
+    revive:
+      rules:
+        - name: exported
+          severity: warning
+        - name: package-comments
+          severity: warning
+        - name: var-naming
+        - name: error-strings
+        - name: error-naming
+        - name: errorf
+        - name: indent-error-flow
+    gocritic:
+      enabled-tags: [diagnostic, performance, style]
+      disabled-checks:
+        - hugeParam      # noisy on generic receivers
+        - rangeValCopy   # noisy on generic receivers
+        - ifElseChain
+        - wrapperFunc
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: false
+
+issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
+  exclude-dirs:
+    - docs
+    - .github
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gocritic
+        - prealloc
+    - path: examples/
+      linters:
+        - gocritic
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/qianwj/typed
+
+output:
+  formats:
+    colored-line-number: stdout
+  print-issued-lines: true
+  print-linter-name: true

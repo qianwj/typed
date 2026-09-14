@@ -21,6 +21,7 @@ jobs:
           - utils
           - control
           - reactivex
+          - concurrency
     steps:
       - name: Check out source
         uses: actions/checkout@v4

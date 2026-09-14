@@ -90,10 +90,10 @@ func NewBoundedBlockingQueue[T any](capacity int) *BoundedBlockingQueue[T] {
 	if capacity <= 0 {
 		panic("concurrency: BoundedBlockingQueue capacity must be positive")
 	}
-	cap := nextPowerOfTwo(capacity)
+	n := nextPowerOfTwo(capacity)
 	return &BoundedBlockingQueue[T]{
-		ch:  make(chan T, cap),
-		cap: cap,
+		ch:  make(chan T, n),
+		cap: n,
 	}
 }
 

@@ -225,3 +225,153 @@ func equalValues[T comparable](got, want []T) bool {
 	}
 	return true
 }
+
+// TestNone covers the previously 0%-covered HashSet.None: true on no match,
+// false when at least one value matches, true on an empty set.
+func TestNone(t *testing.T) {
+	t.Parallel()
+
+	empty := NewHashSet[int]()
+	if !empty.None(func(int) bool { return true }) {
+		t.Fatal("empty set: None should return true")
+	}
+
+	s := NewHashSet[int]()
+	s.Add(1); s.Add(2); s.Add(3); s.Add(4); s.Add(5)
+	if !s.None(func(v int) bool { return v > 10 }) {
+		t.Fatal("no values > 10: None should return true")
+	}
+	if s.None(func(v int) bool { return v%2 == 0 }) {
+		t.Fatal("even values exist: None should return false")
+	}
+}
+
+// TestFind covers the previously 0%-covered HashSet.Find: present Optional
+// on a hit, absent Optional on a miss.
+func TestFind(t *testing.T) {
+	t.Parallel()
+
+	empty := NewHashSet[int]()
+	if got := empty.Find(func(int) bool { return true }); !got.IsEmpty() {
+		t.Fatalf("empty set: Find should return absent; got %v", got)
+	}
+
+	s := NewHashSet[int]()
+	s.Add(1); s.Add(2); s.Add(3); s.Add(4); s.Add(5)
+	if got := s.Find(func(v int) bool { return v == 3 }); got.IsEmpty() || got.Get() != 3 {
+		t.Fatalf("hit: got %v, want Optional{3}", got)
+	}
+	if got := s.Find(func(v int) bool { return v > 100 }); !got.IsEmpty() {
+		t.Fatalf("miss: got %v, want absent", got)
+	}
+}
+
+// TestSimpleMethodBranches exercises the previously-low-covered basic
+// accessors (Add, Remove, Contains, Size, Clear, ForEach) with both the
+// "found" and "not found" branches.
+func TestSimpleMethodBranches(t *testing.T) {
+	t.Parallel()
+
+	s := NewHashSet[int]()
+	s.Add(1)
+	s.Add(2)
+	s.Add(1) // duplicate, no return value to inspect
+	s.Add(3)
+	if s.Size() != 3 {
+		t.Fatalf("Size = %d, want 3", s.Size())
+	}
+	if !s.Contains(2) {
+		t.Fatal("Contains(2) should be true")
+	}
+	if s.Contains(99) {
+		t.Fatal("Contains(99) should be false")
+	}
+	s.Remove(2)
+	if s.Contains(2) {
+		t.Fatal("Contains(2) after Remove should be false")
+	}
+	s.Remove(99) // not present, must not panic
+
+	count := 0
+	s.ForEach(func(int) { count++ })
+	if count != 2 {
+		t.Fatalf("ForEach visited %d, want 2", count)
+	}
+
+	s.Clear()
+	if !s.IsEmpty() {
+		t.Fatal("Clear should leave set empty")
+	}
+	if s.Size() != 0 {
+		t.Fatalf("Size after Clear = %d, want 0", s.Size())
+	}
+}
+
+// TestSetAlgebra covers the IsSubsetOf / IsSupersetOf branches that were
+// partially uncovered: self-comparison, equal sets, and the partial
+// overlap that produces a strict (non-) subset.
+func TestSetAlgebra(t *testing.T) {
+	t.Parallel()
+
+	mkSet := func(vs ...int) *HashSet[int] {
+		s := NewHashSet[int]()
+		for _, v := range vs {
+			s.Add(v)
+		}
+		return s
+	}
+	a := mkSet(1, 2, 3)
+	b := mkSet(1, 2, 3, 4, 5)
+
+	if !a.IsSubsetOf(b) {
+		t.Fatal("a should be a subset of b")
+	}
+	if b.IsSubsetOf(a) {
+		t.Fatal("b should not be a subset of a")
+	}
+	if !a.IsSubsetOf(a) {
+		t.Fatal("a should be a subset of itself")
+	}
+	if !b.IsSupersetOf(a) {
+		t.Fatal("b should be a superset of a")
+	}
+	if a.IsSupersetOf(b) {
+		t.Fatal("a should not be a superset of b")
+	}
+
+	// Symmetric difference: items in one but not both.
+	diff := a.SymmetricDifference(b)
+	if diff.Size() != 2 {
+		t.Fatalf("SymmetricDifference size = %d, want 2", diff.Size())
+	}
+
+	// Intersect: items in both.
+	both := a.Intersect(mkSet(2, 3, 4))
+	if both.Size() != 2 {
+		t.Fatalf("Intersect size = %d, want 2", both.Size())
+	}
+}
+
+// TestMinMaxBy covers the MinBy / MaxBy branches that compare values.
+func TestMinMaxBy(t *testing.T) {
+	t.Parallel()
+
+	empty := NewHashSet[int]()
+	if !empty.MinBy(func(a, b int) int { return a - b }).IsEmpty() {
+		t.Fatal("MinBy on empty set should return absent")
+	}
+	if !empty.MaxBy(func(a, b int) int { return a - b }).IsEmpty() {
+		t.Fatal("MaxBy on empty set should return absent")
+	}
+
+	s := NewHashSet[int]()
+	for _, v := range []int{3, 1, 4, 1, 5, 9, 2, 6} { // duplicates collapse
+		s.Add(v)
+	}
+	if got := s.MinBy(func(a, b int) int { return a - b }).Get(); got != 1 {
+		t.Fatalf("MinBy = %d, want 1", got)
+	}
+	if got := s.MaxBy(func(a, b int) int { return a - b }).Get(); got != 9 {
+		t.Fatalf("MaxBy = %d, want 9", got)
+	}
+}

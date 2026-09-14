@@ -12,8 +12,8 @@ import (
 // The "items per second" number is dominated by the queue's per-operation
 // cost.
 func BenchmarkBoundedQueue_1P1C(b *testing.B) {
-	const cap = 1024
-	q := NewBoundedBlockingQueue[int](cap)
+	const capacity = 1024
+	q := NewBoundedBlockingQueue[int](capacity)
 
 	var done atomic.Bool
 	var consumedCount atomic.Int64
@@ -40,10 +40,7 @@ func BenchmarkBoundedQueue_1P1C(b *testing.B) {
 	// Wait for the consumer to drain. The TryTake loop above is bounded by
 	// both `done` and `q.Size()`, so it will exit as soon as it observes
 	// both, but we give it a moment in case it is mid-iteration.
-	for {
-		if q.Size() == 0 && consumedCount.Load() >= int64(b.N) {
-			break
-		}
+	for q.Size() > 0 || consumedCount.Load() < int64(b.N) {
 		runtime.Gosched()
 	}
 	// One more nudge: signal done again and let the consumer exit on its own.
@@ -63,7 +60,6 @@ func BenchmarkBoundedQueue_MPMC(b *testing.B) {
 	wg.Add(workers)
 	perWorker := b.N / workers
 	for w := range workers {
-		w := w
 		go func() {
 			defer wg.Done()
 			if w%2 == 0 {

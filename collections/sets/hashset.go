@@ -1,3 +1,13 @@
+// Package sets provides HashSet[T], an unordered collection of unique
+// comparable values.
+//
+// HashSet is the set companion to [github.com/qianwj/typed/collections/maps.HashMap]:
+// it is a thin wrapper over HashMap[T, struct{}], sharing the same
+// open-addressed hash-table machinery and the same rule that T must be
+// comparable. Iteration order is the underlying hash table's bucket order
+// and is not stable across mutations; HashSet is intended for membership
+// tests, set algebra, and the fluent combinators below, not for ordered
+// traversal.
 package sets
 
 import (
