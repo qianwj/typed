@@ -42,32 +42,56 @@ func (o Observable[T]) ForEach(ctx context.Context, onNext func(T), onError func
 // or cancellation of ctx. It requests maximum demand and appends received
 // values in delivery order. Empty input returns a non-nil empty slice.
 //
-// On normal completion the returned error is nil. An upstream error returns
-// the values collected before that error together with the error. Context
-// cancellation calls Cancel and returns the partial result with ctx.Err().
-// If termination and context cancellation race, either outcome may be selected.
+// The returned slice is always a snapshot — the library never mutates a
+// slice it has handed back. On normal completion the returned error is nil
+// and the slice holds every value delivered before completion. An upstream
+// error returns the values collected before that error together with the
+// error. Context cancellation calls Cancel and returns a snapshot of the
+// values received so far together with ctx.Err(); if termination and context
+// cancellation race, either outcome may be selected.
 //
 // Collection retains every value in memory and cannot complete normally for
 // an infinite source. Bound such sources before collecting. A nil ctx means
-// context.Background. Cancellation is not a wait for an already running callback.
+// context.Background.
 func (o Observable[T]) ToSlice(ctx context.Context) ([]T, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	values := make([]T, 0)
+	var (
+		mu     sync.Mutex
+		values = make([]T, 0)
+	)
 	result := make(chan error, 1)
 	var once sync.Once
-	sub := o.ForEach(ctx, func(value T) { values = append(values, value) }, func(err error) {
+	sub := o.ForEach(ctx, func(value T) {
+		mu.Lock()
+		values = append(values, value)
+		mu.Unlock()
+	}, func(err error) {
 		once.Do(func() { result <- err })
 	}, func() {
 		once.Do(func() { result <- nil })
 	})
 	select {
 	case err := <-result:
+		// Success path: the source has signalled terminal, so no OnNext
+		// can be in flight. The live slice is stable and safe to return
+		// without copying — the source's terminal callback is a sequence
+		// point that comes after the last OnNext.
 		return values, err
 	case <-ctx.Done():
+		// Cancel path: the producer's in-flight OnNext may still be
+		// appending. Cancel signals the source to stop, then take a
+		// snapshot under the same mutex so the copy is atomic with
+		// respect to any concurrent append. An in-flight append either
+		// completes before the snapshot (its value is in the snapshot)
+		// or after (its value is in the internal buffer but not in the
+		// returned slice); either is acceptable.
 		sub.Cancel()
-		return values, ctx.Err()
+		mu.Lock()
+		snapshot := append([]T(nil), values...)
+		mu.Unlock()
+		return snapshot, ctx.Err()
 	}
 }
 
