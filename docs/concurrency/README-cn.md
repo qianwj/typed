@@ -2,9 +2,10 @@
 
 `concurrency` 是与 Go 标准库互补的并发原语包,沿用本工具集一贯的写法:具体泛型类型、不绕 `any`、不用反射。
 
-当前版本只提供一个类型:
+当前版本提供两个类型:
 
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
+- `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Take` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
 
 > 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。
 
@@ -20,6 +21,7 @@
   - [内存模型](#内存模型)
   - [与 `chan T` 的对比](#与-chan-t-的对比)
   - [示例](#示例)
+- [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
 - [Benchmark](#benchmark)
 - [与其他包的关系](#与其他包的关系)
 
@@ -32,7 +34,7 @@ import (
 )
 ```
 
-`concurrency` 依赖 `utils/option`,因为 [`BoundedBlockingQueue.TryTake`](#非阻塞-api) 返回 `option.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
+`concurrency` 依赖 `utils/option`,因为 `BoundedBlockingQueue.TryTake` 和 `UnboundedBlockingQueue.TryTake` 都返回 `option.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
 
 `concurrency` 是独立的 `go.mod` 模块,可以单独引用,不依赖 `collections` / `reactivex` / `control` / `utils` 中的任何一个。
 
@@ -195,15 +197,89 @@ close(stop)
 
 ---
 
+## `UnboundedBlockingQueue[T]`
+
+无界的 FIFO 队列。没有容量上限,所以 `Push` 永不阻塞;`Take` 在队列空时阻塞。所有操作都支持并发使用。
+
+### 构造
+
+```go
+// NewUnboundedBlockingQueue[T any]() *UnboundedBlockingQueue[T]
+q := concurrency.NewUnboundedBlockingQueue[*Job]()
+```
+
+不需要 capacity 参数——队列按需增长。
+
+### 阻塞 API
+
+| 方法 | 行为 |
+| --- | --- |
+| `Push(data T)` | 入队。**永不阻塞**——队列无界。 |
+| `Take() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
+| `PushCtx(ctx, data T) error` | 带 context 的 `Push`。ctx 已被取消时直接返回 `ctx.Err()` 不入队;否则行为同 `Push`。 |
+| `TakeCtx(ctx) (T, error)` | 带 context 的 `Take`。阻塞到有元素或 ctx 取消;取消时返回 `(零值, ctx.Err())`。 |
+
+`TakeCtx` 会起一个一次性的 watcher goroutine,ctx 取消时唤醒所有 `cond.Wait` 的 goroutine。这个 goroutine 在 `TakeCtx` 返回时立刻退出,所以代价是每次调用多一个 goroutine——关停场景下没问题,紧循环里就别用。
+
+`Push` 用 `cond.Signal()` 唤醒一个等待者,所以一波 N 个 Push 能精确唤醒最多 N 个被阻塞的 taker,不会 thundering-herd。朴素的 cap-1 channel 信号在这里会失效——参见 `TestUnboundedBurstWakesAllWaiters` 回归测试。
+
+### 非阻塞 API
+
+| 方法 | 行为 |
+| --- | --- |
+| `TryPush(data T) bool` | 入队。**永不失败**——队列无界,所以始终返回 `true`。 |
+| `TryTake() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+
+### 状态查询
+
+| 方法 | 行为 |
+| --- | --- |
+| `Size() int` | 当前元素数。命名上对齐 `Stack.Size` / `Queue.Size` / `ArrayList.Size`。 |
+
+没有 `Capacity()`——队列无界本身已经定义好了它的容量上限。如果想要有界行为,用 [`BoundedBlockingQueue[T]`](#boundedblockingqueuet)。
+
+### 内存模型
+
+- **底层存储。** 一开始就 `make([]T, 16)`。环形缓冲区满了之后翻倍,所以 slice 长度始终是 2 的幂。`head` / `tail` 用 `& mask` 推进——一次位运算替代模运算。
+- **槽位清零。** `Take` / `TryTake` 释放 slot 时会用 `T` 的零值覆盖,跟 `BoundedBlockingQueue` 改成 channel wrapper 之前的环形缓冲区一致。带指针的 `T` 因此可以放心用,不会泄漏内存。
+- **单次操作分配。** 热路径上为零。`grow` 步骤会分配一个新数组,均摊下来每次 `Push` 是 O(1)。
+- **为什么不用 `chan T`?** Go runtime 没有"无界 buffered channel"。`make(chan T, N)` 取个很大的 `N` 看起来行,但 buffer 满了之后 `Push` 就会重新阻塞——"无界"就成了谎话。环形缓冲区 + mutex + cond 是这种场景下的标准答案。
+
+### 与 `BoundedBlockingQueue[T]` 的对比
+
+| | `BoundedBlockingQueue[T]` | `UnboundedBlockingQueue[T]` |
+| --- | --- | --- |
+| 容量 | 构造时设置 | 无(按需增长) |
+| `Push` 阻塞 | 满了阻塞 | 永不阻塞 |
+| `Take` 阻塞 | 空时阻塞 | 空时阻塞 |
+| 底层 | `chan T` | 环形缓冲区 + mutex + cond |
+| MPMC 8w 热路径吞吐 | ~22 ns/op | ~61 ns/op |
+| 内存上限 | 有(由 capacity 决定) | 无——slice 会涨到消费跟上为止 |
+| 背压 | 内建(由 capacity 决定) | 无——`Push` 不会失败 |
+
+需要背压就用 `BoundedBlockingQueue`。需要 `Push` 永远成功、且有别的机制(worker 数量、下游队列等)防止生产者把进程内存耗光,用 `UnboundedBlockingQueue`。
+
+---
+
 ## Benchmark
 
-包内自带两个 benchmark:`BoundedQueue_1P1C`、`BoundedQueue_MPMC`。运行方式:
+包内自带 4 个 benchmark:`BoundedQueue_1P1C`、`BoundedQueue_MPMC`、`UnboundedQueue_1P1C`、`UnboundedQueue_MPMC`。运行方式:
 
 ```bash
 GOWORK=off go -C concurrency test -bench=. -benchmem -run=^$ .
 ```
 
-Apple M5 Pro(Go 1.27,darwin/arm64)上 1P1C 场景约 **210 ns/op**;8 worker 的 MPMC 场景约 **22 ns/op**。两者都报告 `0 B/op` 和 `0 allocs/op`。MPMC 的数字是亮点——跟裸 `chan T` 同一量级,说明包装层每操作基本无开销。1P1C 的数字主要是微基准噪声——那个 benchmark 的消费者是 busy `TryTake` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Take` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。
+Apple M5 Pro(Go 1.27,darwin/arm64)上:
+
+| Bench | `BoundedBlockingQueue[T]` | `UnboundedBlockingQueue[T]` |
+| --- | --- | --- |
+| 1P1C | ~210 ns/op | ~28 ns/op |
+| MPMC 8w | ~22 ns/op | ~61 ns/op |
+| 单次操作分配 | 0 | 0 |
+
+`BoundedBlockingQueue` 的 MPMC 是亮点——跟裸 `chan T` 同一量级,说明包装层每操作基本无开销。1P1C 的数字主要是微基准噪声——那个 benchmark 的消费者是 busy `TryTake` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Take` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。
+
+`UnboundedBlockingQueue` 的 1P1C 比 `BoundedBlockingQueue` 快是因为消费者一直在 `TryTake` 把队列抽干,`Push` 几乎不会撞上"队列满"(没有 `BoundedBlockingQueue` 的 channel 竞争);MPMC 更慢是因为环形缓冲区一把 mutex 串行化所有操作,在高竞争下输给 channel wrapper 的 per-P 队列。
 
 ## 与其他包的关系
 

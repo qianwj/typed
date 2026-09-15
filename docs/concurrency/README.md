@@ -4,9 +4,10 @@
 
 Concurrency primitives that complement Go's standard library, written in the same style as the rest of the toolkit: concrete generic types, no `any` round-trips, no reflective tricks.
 
-Right now the package ships one type:
+Right now the package ships two types:
 
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
+- `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Take` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
 
@@ -22,6 +23,7 @@ Right now the package ships one type:
   - [Memory model](#memory-model)
   - [Comparison with `chan T`](#comparison-with-chan-t)
   - [Examples](#examples)
+- [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
 - [Benchmarks](#benchmarks)
 - [See also](#see-also)
 
@@ -34,7 +36,7 @@ import (
 )
 ```
 
-`concurrency` depends on `utils/option` because [`BoundedBlockingQueue.TryTake`](#non-blocking-variants) returns an `option.Optional[T]`, matching the rest of the toolkit's "may be absent" convention.
+`concurrency` depends on `utils/option` because both `BoundedBlockingQueue.TryTake` and `UnboundedBlockingQueue.TryTake` return an `option.Optional[T]`, matching the rest of the toolkit's "may be absent" convention.
 
 The package is its own `go.mod` module; import it independently of `collections` / `reactivex` / `control` / `utils`.
 
@@ -205,10 +207,84 @@ The package ships two benchmarks: `BoundedQueue_1P1C` and `BoundedQueue_MPMC`. R
 GOWORK=off go -C concurrency test -bench=. -benchmem -run=^$ .
 ```
 
-On an Apple M5 Pro (Go 1.27, darwin/arm64) the 1P1C case lands around **210 ns/op**; the 8-worker MPMC case lands around **22 ns/op**. Both report `0 B/op` and `0 allocs/op`. The MPMC number is the headline: it is in the same ballpark as a raw `chan T` and confirms the wrapper has ~zero per-op overhead. The 1P1C number is microbenchmark noise — the consumer in that benchmark is a busy `TryTake` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Take`, the wrapper is within a couple of ns of a raw `chan T`.
+On an Apple M5 Pro (Go 1.27, darwin/arm64):
+
+| Bench | `BoundedBlockingQueue[T]` | `UnboundedBlockingQueue[T]` |
+| --- | --- | --- |
+| 1P1C | ~210 ns/op | ~28 ns/op |
+| MPMC 8w | ~22 ns/op | ~61 ns/op |
+| Per-op allocations | 0 | 0 |
+
+The `BoundedBlockingQueue` MPMC number is the headline: it is in the same ballpark as a raw `chan T` and confirms the wrapper has ~zero per-op overhead. The 1P1C number is microbenchmark noise — the consumer in that benchmark is a busy `TryTake` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Take`, the wrapper is within a couple of ns of a raw `chan T`.
+
+The `UnboundedBlockingQueue` 1P1C is faster than `BoundedBlockingQueue` because the consumer's `TryTake` loop keeps draining the queue, so `Push` almost never sees a full queue (no `BoundedBlockingQueue` channel contention). MPMC is slower than `BoundedBlockingQueue` because the ring buffer is sequentialised through one mutex; the channel wrapper wins by going through per-P queues under contention.
+
+---
+
+## `UnboundedBlockingQueue[T]`
+
+An unbounded FIFO queue. There is no capacity to wait on, so `Push` never blocks; `Take` blocks when the queue is empty. All operations are safe for concurrent use.
+
+### Construction
+
+```go
+// NewUnboundedBlockingQueue[T any]() *UnboundedBlockingQueue[T]
+q := concurrency.NewUnboundedBlockingQueue[*Job]()
+```
+
+No capacity argument — the queue grows on demand.
+
+### Blocking variants
+
+| Method | Behaviour |
+| --- | --- |
+| `Push(data T)` | Enqueue. **Never blocks** — the queue is unbounded. |
+| `Take() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
+| `PushCtx(ctx, data T) error` | Context-aware `Push`. Returns `ctx.Err()` without enqueuing when ctx is already canceled; otherwise behaves like `Push`. |
+| `TakeCtx(ctx) (T, error)` | Context-aware `Take`. Blocks until an element is available or ctx is canceled; returns `(zero, ctx.Err())` on cancellation. |
+
+`TakeCtx` spawns a one-shot watcher goroutine that wakes any blocked `cond.Wait` when ctx is canceled. The goroutine exits as soon as `TakeCtx` returns, so the cost is one goroutine per `TakeCtx` call — fine for shutdown signals, not something you want in a tight loop.
+
+`Push` signals the cond with `Signal()` (one waiter at a time), so a burst of N pushes wakes up to N blocked takers without thundering herd. A naive `cap-1` channel signal would fail here — see `TestUnboundedBurstWakesAllWaiters` for the regression test.
+
+### Non-blocking variants
+
+| Method | Behaviour |
+| --- | --- |
+| `TryPush(data T) bool` | Enqueue. **Never fails** — the queue is unbounded, so this always returns `true`. |
+| `TryTake() option.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
+
+### Observability
+
+| Method | Behaviour |
+| --- | --- |
+| `Size() int` | Current number of elements. Matches `Stack.Size` / `Queue.Size` / `ArrayList.Size`. |
+
+There is no `Capacity()` — the queue is unbounded by definition. If you want bounded behaviour, use [`BoundedBlockingQueue[T]`](#boundedblockingqueuet) instead.
+
+### Memory model
+
+- **Backing storage.** A single `make([]T, 16)` allocated up front. The ring buffer doubles when full, so the slice size is always a power of two. `head` and `tail` advance via `& mask` — a single bitwise operation.
+- **Slot zeroing.** `Take` and `TryTake` overwrite the freed slot with the zero value of `T`, the same way `BoundedBlockingQueue`'s ring buffer did before it became a channel wrapper. Pointer-typed `T` is therefore safe to use without leaking memory.
+- **Per-op allocations.** Zero on the steady-state hot path. The `grow` step allocates a new backing array, which is amortised O(1) per `Push`.
+- **Why not `chan T`?** The Go runtime has no "unbounded buffered channel". `make(chan T, N)` for a large `N` works until it doesn't — once the buffer fills, `Push` blocks again and "unbounded" becomes a lie. A ring buffer with a mutex and a cond is the standard fix.
+
+### Comparison with `BoundedBlockingQueue[T]`
+
+| | `BoundedBlockingQueue[T]` | `UnboundedBlockingQueue[T]` |
+| --- | --- | --- |
+| Capacity | set at construction | none (grows on demand) |
+| `Push` blocks | when full | never |
+| `Take` blocks | when empty | when empty | |
+| Internals | `chan T` | ring buffer + mutex + cond |
+| Hot-path throughput (MPMC 8w) | ~22 ns/op | ~61 ns/op |
+| Memory bounded | yes (by capacity) | no — the slice grows until consumers drain it |
+| Backpressure | built-in (capacity) | none — `Push` cannot fail |
+
+Use `BoundedBlockingQueue` when you need backpressure. Use `UnboundedBlockingQueue` when you need `Push` to always succeed and you have an external mechanism (worker count, downstream queue, etc.) to stop producers from running the process out of memory.
 
 ## See also
 
 - [`reactivex`](../../reactivex/README.md) — typed async event streams with explicit demand and configurable backpressure. If the work being queued is "events to deliver to many subscribers", an `Observable` is usually a better fit than a queue.
 - [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Optional[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
-- [`chan T`](https://go.dev/ref/spec#Channel_types) in the standard library — the underlying primitive this type wraps.
+- [`chan T`](https://go.dev/ref/spec#Channel_types) in the standard library — `BoundedBlockingQueue` wraps it directly.
