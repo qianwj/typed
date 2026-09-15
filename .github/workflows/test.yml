@@ -46,7 +46,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ${{ matrix.module }}/coverage.out
+          files: ${{ matrix.module }}/coverage.out
           flags: ${{ matrix.module }}
           # Public repos on github.com do not need a token; the GitHub
           # App integration on codecov.io authenticates the upload.
