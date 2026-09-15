@@ -4,10 +4,6 @@
 
 # Typed
 
-[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=collections)](https://codecov.io/gh/qianwj/typed)
-[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=concurrency)](https://codecov.io/gh/qianwj/typed)
-[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=control)](https://codecov.io/gh/qianwj/typed)
-[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=reactivex)](https://codecov.io/gh/qianwj/typed)
 [![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
 
 **A type-safe collection toolkit for Go generics.**
