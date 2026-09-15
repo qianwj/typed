@@ -85,3 +85,58 @@ jobs:
           version: v2.13.2
           working-directory: ${{ matrix.module }}
           args: --timeout=5m
+
+  coverage-aggregate:
+    name: coverage / root
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+          # The aggregate job reads all five modules' go.sum files
+          # for module-graph resolution. cache-dependency-path only
+          # takes one path; rely on the default branch-wide cache.
+          cache-dependency-path: |
+            utils/go.sum
+            collections/go.sum
+            control/go.sum
+            reactivex/go.sum
+            concurrency/go.sum
+
+      # Regenerate coverage profiles for all five modules in this
+      # job's workspace so the codecov upload has the actual .out
+      # files to send. The `test / {module}` jobs above already
+      # uploaded the same files under their per-module flag; this
+      # upload uses a separate `root` flag so the existing badge
+      # in the top-level README renders the aggregate.
+      - name: Collect coverage across all modules
+        run: |
+          set -euo pipefail
+          for module in utils collections control reactivex concurrency; do
+            echo "--- ${module} ---"
+            (cd "${module}" && \
+              go test -race -count=1 \
+                -coverprofile=coverage.out \
+                -covermode=atomic \
+                ./...)
+          done
+
+      - name: Upload combined coverage to Codecov (root flag)
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            utils/coverage.out
+            collections/coverage.out
+            control/coverage.out
+            reactivex/coverage.out
+            concurrency/coverage.out
+          flags: root
+          fail_ci_if_error: false
+          verbose: false
