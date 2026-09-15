@@ -71,21 +71,24 @@ linters:
       range-loops: true
       for-loops: false
 
-issues:
-  max-same-issues: 0
-  max-issues-per-linter: 0
-  exclude-dirs:
-    - docs
-    - .github
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gocritic
-        - prealloc
-    - path: examples/
-      linters:
-        - gocritic
+  exclusions:
+    # Mirror the v1 issues.exclude-* knobs under the v2 schema.
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+          - prealloc
+      - path: examples/
+        linters:
+          - gocritic
+      - path: docs/
+        linters:
+          - staticcheck
+          - revive
+      - path: \.github/
+        linters:
+          - all
 
 formatters:
   enable:
@@ -95,9 +98,3 @@ formatters:
     goimports:
       local-prefixes:
         - github.com/qianwj/typed
-
-output:
-  formats:
-    colored-line-number: stdout
-  print-issued-lines: true
-  print-linter-name: true

@@ -168,7 +168,7 @@ func TestResultRecover(t *testing.T) {
 		notFound := result.Failure[int](errors.New("not found"))
 		denied := result.Failure[int](errors.New("denied"))
 
-		recover := func(err error) int { //nolint:gocritic // builtinShadow: name matches the recovery scenario.
+		recover := func(err error) int {
 			switch err.Error() {
 			case "not found":
 				return 0
