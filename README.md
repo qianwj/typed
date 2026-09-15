@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — a type-safe collection toolkit for Go generics" width="180" />
+<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — a fluent, type-safe Go generics toolkit" width="180" />
 
 # Typed
 
-**A type-safe collection toolkit for Go generics.**
+**A fluent, type-safe Go generics toolkit.**
 
 [中文版](./README-cn.md) · [Documentation](./docs/README.md)
 
@@ -16,7 +16,7 @@
 
 </div>
 
-Typed is a **fluent, type-safe collection toolkit for Go generics**.
+Typed is a **fluent, type-safe Go generics toolkit**.
 Concrete generic types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`,
 `HashSet[T]`, `Stream[T]`, `Subject[T]`) compose through left-to-right
 chainable transforms (`Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,

@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — 基于 Go 泛型的类型安全集合工具集" width="180" />
+<img src="./docs/assets/typed-logo-gopher-official-light.png" alt="Typed — 面向 Go 泛型的链式类型安全工具集" width="180" />
 
 # Typed
 
-**基于 Go 泛型的类型安全集合工具集。**
+**面向 Go 泛型的链式类型安全工具集。**
 
 [English](./README.md) · [文档索引](./docs/README-cn.md)
 
@@ -16,7 +16,7 @@
 
 </div>
 
-Typed 是一个**面向 Go 泛型的、类型安全的链式集合工具集**。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`）通过从左到右、可一路链下去的 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`）组合而成，背后是支撑整个工具集的抽象（`Optional[T]`、`Result[T]`、`IsNil`、`Equals`）。操作符的命名是有意沿用业界通用词汇，对熟悉 Java Streams、.NET LINQ 或 JavaScript 数组管道的工程师会很顺手，但**不沿用它们各自的运行时模型**。异步一侧，`reactivex.Observable[T]` 提供了强类型的事件流：显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
+Typed 是一个**面向 Go 泛型的链式类型安全工具集**。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`）通过从左到右、可一路链下去的 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`）组合而成，背后是支撑整个工具集的抽象（`Optional[T]`、`Result[T]`、`IsNil`、`Equals`）。操作符的命名是有意沿用业界通用词汇，对熟悉 Java Streams、.NET LINQ 或 JavaScript 数组管道的工程师会很顺手，但**不沿用它们各自的运行时模型**。异步一侧，`reactivex.Observable[T]` 提供了强类型的事件流：显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
 
 ## 为什么选 Typed
 
