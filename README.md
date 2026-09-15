@@ -86,9 +86,13 @@ profiles := lists.ArrayListOf(users...).
 - 🪶 **Bounded memory** — head-offset `ArrayList` with periodic
   compaction, slot zeroing on `Stack.Pop` and `Remove*`, so popped
   references do not leak through the backing array.
-- 🧵 **Bounded blocking queue** — `concurrency.BoundedBlockingQueue[T]`
-  is a fixed-capacity FIFO with `Push` / `Take` (blocking) and
-  `TryPush` / `TryTake` (non-blocking), backed by a single ring buffer.
+- 🧵 **Bounded & unbounded blocking queues** —
+  `concurrency.BoundedBlockingQueue[T]` is a fixed-capacity FIFO with
+  `Push` / `Poll` (blocking) and `TryPush` / `TryPoll` (non-blocking),
+  backed by a single `chan T`. `concurrency.UnboundedBlockingQueue[T]`
+  is the sibling that never blocks `Push`; ring buffer + mutex + cond
+  under the hood. Both expose context-aware variants
+  (`PushWithContext` / `PollWithContext`).
 
 ## Install
 
@@ -241,7 +245,7 @@ use(v)
 
 | Type | Source | Notes |
 | --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Take` block, `TryPush` / `TryTake` / `DrainTo` do not; `TryTake` returns `option.Optional[T]`; single ring buffer over `[]T`, single `sync.Mutex` + `*sync.Cond`. `0 B/op`, `0 allocs/op` on the hot path. |
+| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `option.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
 
 ## Documentation
 
@@ -344,13 +348,18 @@ concurrent. The toolkit does not introduce a new concurrency model; it
 follows Go's explicit one.
 
 For the rare case where the toolkit's own surface area is a better fit
-than `chan T` — non-blocking probes (`TryPush` / `TryTake`), a `Size()`
-that is consistent with the next operation, or a single generic type
-to express "a fixed-capacity blocking queue" — the [`concurrency`
+than `chan T` — non-blocking probes (`TryPush` / `TryPoll`), context-aware
+blocking (`PushWithContext` / `PollWithContext`), an `Optional`-based
+return for non-blocking reads, or a single generic type to express
+"a fixed-capacity blocking queue" — the [`concurrency`
 package](./docs/concurrency/README.md) ships
-[`BoundedBlockingQueue[T]`](./docs/concurrency/README.md#boundedblockingqueuet).
-Native channels are still ~5–7× faster on raw throughput; reach for
-`BoundedBlockingQueue` when the extra API surface earns back the cost.
+[`BoundedBlockingQueue[T]`](./docs/concurrency/README.md#boundedblockingqueuet)
+(a thin wrapper around `chan T`, so per-op overhead is essentially
+zero) and [`UnboundedBlockingQueue[T]`](./docs/concurrency/README.md#unboundedblockingqueuet)
+(ring buffer + mutex + cond, since the Go runtime has no "unbounded
+buffered channel"). Reach for `BoundedBlockingQueue` when you want
+backpressure via capacity; reach for `UnboundedBlockingQueue` when
+`Push` must never block.
 
 ## Error handling
 
@@ -495,8 +504,6 @@ Open:
       overhead.
 - [ ] Iterators (`iter.Seq[T]`) as a first-class output of the
       collection types, parallel to `Stream()`.
-- [ ] `concurrency` package: `PushCtx` / `TakeCtx` with cancellation.
-      Design discussion lives in [docs/concurrency/README.md § Future work](./docs/concurrency/README.md#future-work-cancellation-support) — short version: it needs a rewrite of the synchronisation core from `sync.Cond` to channel-based signalling so the wait can participate in a `select` with `ctx.Done()`.
 
 ## Contributing
 

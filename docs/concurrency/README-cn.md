@@ -5,7 +5,7 @@
 当前版本提供两个类型:
 
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
-- `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Take` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
+- `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
 
 > 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。
 
@@ -34,7 +34,7 @@ import (
 )
 ```
 
-`concurrency` 依赖 `utils/option`,因为 `BoundedBlockingQueue.TryTake` 和 `UnboundedBlockingQueue.TryTake` 都返回 `option.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
+`concurrency` 依赖 `utils/option`,因为 `BoundedBlockingQueue.TryPoll` 和 `UnboundedBlockingQueue.TryPoll` 都返回 `option.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
 
 `concurrency` 是独立的 `go.mod` 模块,可以单独引用,不依赖 `collections` / `reactivex` / `control` / `utils` 中的任何一个。
 
@@ -44,8 +44,8 @@ Go 内置的 `chan T` 本身就是一个相当不错的有界阻塞队列——�
 
 下面这些场景下,你会想要 `BoundedBlockingQueue[T]` 套在 channel 外面:
 
-- **非阻塞探测返回 `Optional`。** `TryTake` 返回 `option.Optional[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
-- **带 context 的阻塞。** `PushCtx` / `TakeCtx` 让你直接跟超时、deadline、关停信号配合,不需要在 `Push` / `Take` 外面再自己包一层 goroutine + channel。
+- **非阻塞探测返回 `Optional`。** `TryPoll` 返回 `option.Optional[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
+- **带 context 的阻塞。** `PushWithContext` / `PollWithContext` 让你直接跟超时、deadline、关停信号配合,不需要在 `Push` / `Poll` 外面再自己包一层 goroutine + channel。
 - **风格一致的泛型 API。** 用 `Size` 不用 `len`、用 `Capacity` 不用 `cap`、用 `Optional` 不用 `(T, bool)`——与 Typed 其他部分用同一套词汇。
 - **2 的幂容量向上取整。** `Capacity()` 总是返回 2 的幂,需要做位掩码的下游用起来方便。
 
@@ -75,20 +75,20 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | 方法 | 行为 |
 | --- | --- |
 | `Push(data T)` | 入队。**队列满时阻塞**,直到腾出空位。 |
-| `Take() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
-| `PushCtx(ctx, data T) error` | 带 context 的 `Push`。阻塞到队列有空位或 `ctx` 取消;取消时返回 `ctx.Err()`,元素不入队。 |
-| `TakeCtx(ctx) (T, error)` | 带 context 的 `Take`。阻塞到有元素可取或 `ctx` 取消;取消时返回 `(零值, ctx.Err())`。 |
+| `Poll() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
+| `PushWithContext(ctx, data T) error` | 带 context 的 `Push`。阻塞到队列有空位或 `ctx` 取消;取消时返回 `ctx.Err()`,元素不入队。 |
+| `PollWithContext(ctx) (T, error)` | 带 context 的 `Poll`。阻塞到有元素可取或 `ctx` 取消;取消时返回 `(零值, ctx.Err())`。 |
 
-阻塞直接走底层的 `chan T`:`Push` 就是 `ch <- data`,`Take` 就是 `<-ch`。`PushCtx` / `TakeCtx` 在同一个 `select` 上多一个 `case <-ctx.Done()`,从而零成本支持取消:ctx 取消时 `select` 走 ctx 那一支,返回 `ctx.Err()`;`PushCtx` 取消时元素不入队。
+阻塞直接走底层的 `chan T`:`Push` 就是 `ch <- data`,`Poll` 就是 `<-ch`。`PushWithContext` / `PollWithContext` 在同一个 `select` 上多一个 `case <-ctx.Done()`,从而零成本支持取消:ctx 取消时 `select` 走 ctx 那一支,返回 `ctx.Err()`;`PushWithContext` 取消时元素不入队。
 
 ### 非阻塞 API
 
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 有空位时入队,成功返回 `true`;队列满时立即返回 `false`。 |
-| `TryTake() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
 
-这些方法永不等待,正好用于 `select { ... default: ... }` 风格,以及“满了就丢”或“满了就降级”这种背压策略,不需要起额外的 watcher goroutine。`TryTake` 返回 `Optional` 而非 `(T, bool)`,是工具集通用的“可能缺席”约定,与 `Stack.Pop` / `Queue.Pop` / `Deque.PopFront` / `PopBack` 一致。
+这些方法永不等待,正好用于 `select { ... default: ... }` 风格,以及“满了就丢”或“满了就降级”这种背压策略,不需要起额外的 watcher goroutine。`TryPoll` 返回 `Optional` 而非 `(T, bool)`,是工具集通用的“可能缺席”约定,与 `Stack.Pop` / `Queue.Pop` / `Deque.PopFront` / `PopBack` 一致。
 
 ### 状态查询
 
@@ -101,7 +101,7 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 
 - **底层存储。** 启动时一次性 `make(chan T, cap)`,Go runtime 拥有 channel 内部的环形缓冲区;本类型不直接碰它。
 - **2 的幂容量。** 构造函数把请求容量向上取整到 2 的幂,让 `Capacity()` 总是返回可以直接当位掩码用的值。channel 内部机制跟这个取整无关。
-- **没有槽位清零。** 跟手写环形缓冲区不同,本类型不会在 `Take` / `TryTake` 时把释放的 slot 清零。带指针的元素出队后,在 channel 的底层数组里仍然存活,直到被下一次 send 覆盖。对“一次性取出很多,然后 long pause 没新 send”的工作负载,这些指针的存活时间会比带显式清零的环形缓冲区长。
+- **没有槽位清零。** 跟手写环形缓冲区不同,本类型不会在 `Poll` / `TryPoll` 时把释放的 slot 清零。带指针的元素出队后,在 channel 的底层数组里仍然存活,直到被下一次 send 覆盖。对“一次性取出很多,然后 long pause 没新 send”的工作负载,这些指针的存活时间会比带显式清零的环形缓冲区长。
 - **单次操作分配。** 两种实现都为零;channel send/recv 的快路径不分配。
 
 ### `chan T` 能给你什么、不能给你什么
@@ -112,14 +112,14 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | --- | --- | --- |
 | 容量 | 在 `make` 时设置 | 在 `NewBoundedBlockingQueue` 时设置;向上取整到 2 的幂 |
 | 默认是否有界 | 否(`make(chan T)` 无缓冲) | 是——必须传 capacity |
-| 阻塞发送 / 接收 | `ch <- v` / `<-ch` | `Push(v)` / `Take()` |
-| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryTake() option.Optional[T]` |
-| 带 context 的阻塞 | 套 `select { case <-ctx.Done(): }` | `PushCtx` / `TakeCtx` |
+| 阻塞发送 / 接收 | `ch <- v` / `<-ch` | `Push(v)` / `Poll()` |
+| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryPoll() option.Optional[T]` |
+| 带 context 的阻塞 | 套 `select { case <-ctx.Done(): }` | `PushWithContext` / `PollWithContext` |
 | `len(ch)` | 有,但与操作之间没有同步保证 | `Size()` —— 同样的语义,同样不串行化 |
 | 吞吐(1P1C) | ~30 ns/op(微基准) | ~210 ns/op(微基准) |
 | 吞吐(MPMC 8w) | ~22 ns/op | **~22 ns/op**(同一量级;包装层基本无开销) |
 
-> 数字来自 `go test -bench`,Apple M5 Pro、Go 1.27,队列容量 1024(1P1C)/ 64(MPMC)。1P1C 的差距基本是微基准噪声——那个 benchmark 的消费者是 busy `TryTake` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Take` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。它们用来确认包装层是"基本免费"的,不能替代在你的实际负载上跑一遍。
+> 数字来自 `go test -bench`,Apple M5 Pro、Go 1.27,队列容量 1024(1P1C)/ 64(MPMC)。1P1C 的差距基本是微基准噪声——那个 benchmark 的消费者是 busy `TryPoll` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Poll` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。它们用来确认包装层是"基本免费"的,不能替代在你的实际负载上跑一遍。
 
 ### 示例
 
@@ -130,7 +130,7 @@ jobs := concurrency.NewBoundedBlockingQueue[*Job](64)
 
 go func() {
     for {
-        j := jobs.Take()    // 阻塞,直到有任务
+        j := jobs.Poll()    // 阻塞,直到有任务
         handle(j)
     }
 }()
@@ -168,7 +168,7 @@ if q.Size() > q.Capacity() * 9 / 10 {
 
 `Size()` 是 `len(ch)` 的一次原子 length 读,不会跟紧跟着的操作串行化。
 
-#### 用 `TryTake` 做优雅退出
+#### 用 `TryPoll` 做优雅退出
 
 ```go
 stop := make(chan struct{})
@@ -180,7 +180,7 @@ go func() {
             return
         default:
         }
-        if opt := q.TryTake(); !opt.IsEmpty() {
+        if opt := q.TryPoll(); !opt.IsEmpty() {
             process(opt.Get())
             continue
         }
@@ -193,13 +193,13 @@ go func() {
 close(stop)
 ```
 
-这种写法只通过 `TryTake` 排空队列,从不阻塞在 `Take()` 上,所以生产者结束后消费者能很快退出。
+这种写法只通过 `TryPoll` 排空队列,从不阻塞在 `Poll()` 上,所以生产者结束后消费者能很快退出。
 
 ---
 
 ## `UnboundedBlockingQueue[T]`
 
-无界的 FIFO 队列。没有容量上限,所以 `Push` 永不阻塞;`Take` 在队列空时阻塞。所有操作都支持并发使用。
+无界的 FIFO 队列。没有容量上限,所以 `Push` 永不阻塞;`Poll` 在队列空时阻塞。所有操作都支持并发使用。
 
 ### 构造
 
@@ -215,11 +215,11 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | 方法 | 行为 |
 | --- | --- |
 | `Push(data T)` | 入队。**永不阻塞**——队列无界。 |
-| `Take() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
-| `PushCtx(ctx, data T) error` | 带 context 的 `Push`。ctx 已被取消时直接返回 `ctx.Err()` 不入队;否则行为同 `Push`。 |
-| `TakeCtx(ctx) (T, error)` | 带 context 的 `Take`。阻塞到有元素或 ctx 取消;取消时返回 `(零值, ctx.Err())`。 |
+| `Poll() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
+| `PushWithContext(ctx, data T) error` | 带 context 的 `Push`。ctx 已被取消时直接返回 `ctx.Err()` 不入队;否则行为同 `Push`。 |
+| `PollWithContext(ctx) (T, error)` | 带 context 的 `Poll`。阻塞到有元素或 ctx 取消;取消时返回 `(零值, ctx.Err())`。 |
 
-`TakeCtx` 会起一个一次性的 watcher goroutine,ctx 取消时唤醒所有 `cond.Wait` 的 goroutine。这个 goroutine 在 `TakeCtx` 返回时立刻退出,所以代价是每次调用多一个 goroutine——关停场景下没问题,紧循环里就别用。
+`PollWithContext` 会起一个一次性的 watcher goroutine,ctx 取消时唤醒所有 `cond.Wait` 的 goroutine。这个 goroutine 在 `PollWithContext` 返回时立刻退出,所以代价是每次调用多一个 goroutine——关停场景下没问题,紧循环里就别用。
 
 `Push` 用 `cond.Signal()` 唤醒一个等待者,所以一波 N 个 Push 能精确唤醒最多 N 个被阻塞的 taker,不会 thundering-herd。朴素的 cap-1 channel 信号在这里会失效——参见 `TestUnboundedBurstWakesAllWaiters` 回归测试。
 
@@ -228,7 +228,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 入队。**永不失败**——队列无界,所以始终返回 `true`。 |
-| `TryTake() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
 
 ### 状态查询
 
@@ -241,7 +241,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 ### 内存模型
 
 - **底层存储。** 一开始就 `make([]T, 16)`。环形缓冲区满了之后翻倍,所以 slice 长度始终是 2 的幂。`head` / `tail` 用 `& mask` 推进——一次位运算替代模运算。
-- **槽位清零。** `Take` / `TryTake` 释放 slot 时会用 `T` 的零值覆盖,跟 `BoundedBlockingQueue` 改成 channel wrapper 之前的环形缓冲区一致。带指针的 `T` 因此可以放心用,不会泄漏内存。
+- **槽位清零。** `Poll` / `TryPoll` 释放 slot 时会用 `T` 的零值覆盖,跟 `BoundedBlockingQueue` 改成 channel wrapper 之前的环形缓冲区一致。带指针的 `T` 因此可以放心用,不会泄漏内存。
 - **单次操作分配。** 热路径上为零。`grow` 步骤会分配一个新数组,均摊下来每次 `Push` 是 O(1)。
 - **为什么不用 `chan T`?** Go runtime 没有"无界 buffered channel"。`make(chan T, N)` 取个很大的 `N` 看起来行,但 buffer 满了之后 `Push` 就会重新阻塞——"无界"就成了谎话。环形缓冲区 + mutex + cond 是这种场景下的标准答案。
 
@@ -251,7 +251,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | --- | --- | --- |
 | 容量 | 构造时设置 | 无(按需增长) |
 | `Push` 阻塞 | 满了阻塞 | 永不阻塞 |
-| `Take` 阻塞 | 空时阻塞 | 空时阻塞 |
+| `Poll` 阻塞 | 空时阻塞 | 空时阻塞 |
 | 底层 | `chan T` | 环形缓冲区 + mutex + cond |
 | MPMC 8w 热路径吞吐 | ~22 ns/op | ~61 ns/op |
 | 内存上限 | 有(由 capacity 决定) | 无——slice 会涨到消费跟上为止 |
@@ -277,9 +277,9 @@ Apple M5 Pro(Go 1.27,darwin/arm64)上:
 | MPMC 8w | ~22 ns/op | ~61 ns/op |
 | 单次操作分配 | 0 | 0 |
 
-`BoundedBlockingQueue` 的 MPMC 是亮点——跟裸 `chan T` 同一量级,说明包装层每操作基本无开销。1P1C 的数字主要是微基准噪声——那个 benchmark 的消费者是 busy `TryTake` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Take` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。
+`BoundedBlockingQueue` 的 MPMC 是亮点——跟裸 `chan T` 同一量级,说明包装层每操作基本无开销。1P1C 的数字主要是微基准噪声——那个 benchmark 的消费者是 busy `TryPoll` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Poll` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。
 
-`UnboundedBlockingQueue` 的 1P1C 比 `BoundedBlockingQueue` 快是因为消费者一直在 `TryTake` 把队列抽干,`Push` 几乎不会撞上"队列满"(没有 `BoundedBlockingQueue` 的 channel 竞争);MPMC 更慢是因为环形缓冲区一把 mutex 串行化所有操作,在高竞争下输给 channel wrapper 的 per-P 队列。
+`UnboundedBlockingQueue` 的 1P1C 比 `BoundedBlockingQueue` 快是因为消费者一直在 `TryPoll` 把队列抽干,`Push` 几乎不会撞上"队列满"(没有 `BoundedBlockingQueue` 的 channel 竞争);MPMC 更慢是因为环形缓冲区一把 mutex 串行化所有操作,在高竞争下输给 channel wrapper 的 per-P 队列。
 
 ## 与其他包的关系
 

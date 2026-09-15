@@ -7,7 +7,7 @@ Concurrency primitives that complement Go's standard library, written in the sam
 Right now the package ships two types:
 
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
-- `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Take` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
+- `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
 
@@ -36,7 +36,7 @@ import (
 )
 ```
 
-`concurrency` depends on `utils/option` because both `BoundedBlockingQueue.TryTake` and `UnboundedBlockingQueue.TryTake` return an `option.Optional[T]`, matching the rest of the toolkit's "may be absent" convention.
+`concurrency` depends on `utils/option` because both `BoundedBlockingQueue.TryPoll` and `UnboundedBlockingQueue.TryPoll` return an `option.Optional[T]`, matching the rest of the toolkit's "may be absent" convention.
 
 The package is its own `go.mod` module; import it independently of `collections` / `reactivex` / `control` / `utils`.
 
@@ -46,8 +46,8 @@ Go's built-in `chan T` is a perfectly good bounded blocking queue — when you h
 
 You reach for `BoundedBlockingQueue[T]` when you want the toolkit's surface area on top of a channel:
 
-- **Optional return for non-blocking probes.** `TryTake` returns an `option.Optional[T]` in the same shape as `Stack.Pop` / `Queue.Pop`, so the result composes with the rest of the toolkit instead of forcing a `(value, ok)` round-trip.
-- **Context-aware blocking.** `PushCtx` / `TakeCtx` let you compose with timeouts, deadlines, and shutdown signals without inventing your own goroutine-and-channel dance on top of `Push` / `Take`.
+- **Optional return for non-blocking probes.** `TryPoll` returns an `option.Optional[T]` in the same shape as `Stack.Pop` / `Queue.Pop`, so the result composes with the rest of the toolkit instead of forcing a `(value, ok)` round-trip.
+- **Context-aware blocking.** `PushWithContext` / `PollWithContext` let you compose with timeouts, deadlines, and shutdown signals without inventing your own goroutine-and-channel dance on top of `Push` / `Poll`.
 - **A uniform generic API.** `Size` instead of `len`, `Capacity` instead of `cap`, `Optional` instead of `(T, bool)`. Same vocabulary as the rest of Typed.
 - **Power-of-two capacity rounding.** `Capacity()` always returns a power of two, convenient for callers that want a bitmask.
 
@@ -77,20 +77,20 @@ The zero value is not usable; always go through the constructor.
 | Method | Behaviour |
 | --- | --- |
 | `Push(data T)` | Enqueue. **Blocks** while the queue is full; wakes as soon as a slot frees up. |
-| `Take() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
-| `PushCtx(ctx, data T) error` | Context-aware `Push`. Blocks until the queue has space or `ctx` is canceled; returns `ctx.Err()` and does not enqueue on cancellation. |
-| `TakeCtx(ctx) (T, error)` | Context-aware `Take`. Blocks until an element is available or `ctx` is canceled; returns `(zero, ctx.Err())` on cancellation. |
+| `Poll() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
+| `PushWithContext(ctx, data T) error` | Context-aware `Push`. Blocks until the queue has space or `ctx` is canceled; returns `ctx.Err()` and does not enqueue on cancellation. |
+| `PollWithContext(ctx) (T, error)` | Context-aware `Poll`. Blocks until an element is available or `ctx` is canceled; returns `(zero, ctx.Err())` on cancellation. |
 
-Blocking uses the underlying `chan T` directly. `Push` is `ch <- data`, `Take` is `<-ch`. `PushCtx` and `TakeCtx` add a `case <-ctx.Done()` to the same `select`, so cancellation composes for free: a context cancel just makes the `select` pick the `ctx.Done()` branch and return `ctx.Err()`, and no element is enqueued in the cancellation case for `PushCtx`.
+Blocking uses the underlying `chan T` directly. `Push` is `ch <- data`, `Poll` is `<-ch`. `PushWithContext` and `PollWithContext` add a `case <-ctx.Done()` to the same `select`, so cancellation composes for free: a context cancel just makes the `select` pick the `ctx.Done()` branch and return `ctx.Err()`, and no element is enqueued in the cancellation case for `PushWithContext`.
 
 ### Non-blocking variants
 
 | Method | Behaviour |
 | --- | --- |
 | `TryPush(data T) bool` | Enqueue if a slot is free. Returns `true` on success, `false` immediately if the queue is full. |
-| `TryTake() option.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
+| `TryPoll() option.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
 
-These never wait, which is what you want for `select { ... default: ... }` style logic and for backpressure policies that prefer "drop the work" or "shed load" over "block the caller". `TryTake` returns an `Optional` rather than a `(T, bool)` pair because that is the toolkit-wide convention for "may be absent", shared with `Stack.Pop`, `Queue.Pop`, and `Deque.PopFront` / `PopBack`.
+These never wait, which is what you want for `select { ... default: ... }` style logic and for backpressure policies that prefer "drop the work" or "shed load" over "block the caller". `TryPoll` returns an `Optional` rather than a `(T, bool)` pair because that is the toolkit-wide convention for "may be absent", shared with `Stack.Pop`, `Queue.Pop`, and `Deque.PopFront` / `PopBack`.
 
 ### Observability
 
@@ -103,7 +103,7 @@ These never wait, which is what you want for `select { ... default: ... }` style
 
 - **Backing storage.** A single `make(chan T, cap)` allocated up front. The Go runtime owns the channel's internal ring buffer; this type never touches it directly.
 - **Power-of-two capacity.** The constructor rounds the requested capacity up to the next power of two so that `Capacity()` always returns a value usable as a bitmask. The channel's internal mechanics are independent of this rounding.
-- **No slot zeroing.** Unlike a hand-rolled ring buffer, this wrapper does not zero freed slots on `Take` / `TryTake`. Pointer values received from the queue stay alive in the channel's backing array until the slot is overwritten by a new send. For workloads that drain a burst and then sit idle for a long time, those pointer values will live longer than they would under a custom ring buffer with explicit zeroing.
+- **No slot zeroing.** Unlike a hand-rolled ring buffer, this wrapper does not zero freed slots on `Poll` / `TryPoll`. Pointer values received from the queue stay alive in the channel's backing array until the slot is overwritten by a new send. For workloads that drain a burst and then sit idle for a long time, those pointer values will live longer than they would under a custom ring buffer with explicit zeroing.
 - **Per-op allocations.** Zero, in either implementation. The channel send/recv fast path does not allocate.
 
 ### What a `chan T` does and does not give you
@@ -114,14 +114,14 @@ Because the queue is a channel under the hood, the trade-offs versus a hand-roll
 | --- | --- | --- |
 | Capacity | set at `make` | set at `NewBoundedBlockingQueue`; rounded up to the next power of two |
 | Bounded by default | no (`make(chan T)` is unbuffered) | yes — capacity is required |
-| Blocking send / receive | `ch <- v` / `<-ch` | `Push(v)` / `Take()` |
-| Non-blocking probe | wrap in `select { default: }` | `TryPush() bool` / `TryTake() option.Optional[T]` |
-| Context-aware blocking | wrap in `select { case <-ctx.Done(): }` | `PushCtx` / `TakeCtx` |
+| Blocking send / receive | `ch <- v` / `<-ch` | `Push(v)` / `Poll()` |
+| Non-blocking probe | wrap in `select { default: }` | `TryPush() bool` / `TryPoll() option.Optional[T]` |
+| Context-aware blocking | wrap in `select { case <-ctx.Done(): }` | `PushWithContext` / `PollWithContext` |
 | `len(ch)` | yes, but not synchronised with ops | `Size()` — same semantics, also not synchronised |
 | Throughput (1P1C) | ~30 ns/op (tight microbench) | ~210 ns/op (tight microbench) |
 | Throughput (MPMC 8w) | ~22 ns/op | **~22 ns/op** (in the same ballpark; wrapper has ~zero overhead) |
 
-> Numbers from `go test -bench` on Apple M5 Pro, Go 1.27, queue capacity 1024 (1P1C) / 64 (MPMC). The 1P1C gap is microbenchmark noise: the consumer in the benchmark is a busy `TryTake` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Take`, the wrapper is within a couple of ns of a raw `chan T`. They are in the right ballpark to confirm the wrapper is "free"; they are not a substitute for measuring on your workload.
+> Numbers from `go test -bench` on Apple M5 Pro, Go 1.27, queue capacity 1024 (1P1C) / 64 (MPMC). The 1P1C gap is microbenchmark noise: the consumer in the benchmark is a busy `TryPoll` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Poll`, the wrapper is within a couple of ns of a raw `chan T`. They are in the right ballpark to confirm the wrapper is "free"; they are not a substitute for measuring on your workload.
 
 ### Examples
 
@@ -132,7 +132,7 @@ jobs := concurrency.NewBoundedBlockingQueue[*Job](64)
 
 go func() {
     for {
-        j := q.Take()        // blocks until a job arrives
+        j := q.Poll()        // blocks until a job arrives
         handle(j)
     }
 }()
@@ -170,7 +170,7 @@ if q.Size() > q.Capacity() * 9 / 10 {
 
 `Size()` is `len(ch)`, an atomic length read, not serialised with the next operation you perform.
 
-#### Producer / consumer with `TryTake` for graceful shutdown
+#### Producer / consumer with `TryPoll` for graceful shutdown
 
 ```go
 stop := make(chan struct{})
@@ -182,7 +182,7 @@ go func() {
             return
         default:
         }
-        if opt := q.TryTake(); !opt.IsEmpty() {
+        if opt := q.TryPoll(); !opt.IsEmpty() {
             process(opt.Get())
             continue
         }
@@ -195,7 +195,7 @@ go func() {
 close(stop)
 ```
 
-This pattern drains the queue without blocking on `Take()` so the consumer can shut down promptly when the producer is done.
+This pattern drains the queue without blocking on `Poll()` so the consumer can shut down promptly when the producer is done.
 
 ---
 
@@ -215,15 +215,15 @@ On an Apple M5 Pro (Go 1.27, darwin/arm64):
 | MPMC 8w | ~22 ns/op | ~61 ns/op |
 | Per-op allocations | 0 | 0 |
 
-The `BoundedBlockingQueue` MPMC number is the headline: it is in the same ballpark as a raw `chan T` and confirms the wrapper has ~zero per-op overhead. The 1P1C number is microbenchmark noise — the consumer in that benchmark is a busy `TryTake` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Take`, the wrapper is within a couple of ns of a raw `chan T`.
+The `BoundedBlockingQueue` MPMC number is the headline: it is in the same ballpark as a raw `chan T` and confirms the wrapper has ~zero per-op overhead. The 1P1C number is microbenchmark noise — the consumer in that benchmark is a busy `TryPoll` loop, not a bare `<-ch`, which costs both sides most of the gap. In tight code where producer and consumer are both uncontended `Push` / `Poll`, the wrapper is within a couple of ns of a raw `chan T`.
 
-The `UnboundedBlockingQueue` 1P1C is faster than `BoundedBlockingQueue` because the consumer's `TryTake` loop keeps draining the queue, so `Push` almost never sees a full queue (no `BoundedBlockingQueue` channel contention). MPMC is slower than `BoundedBlockingQueue` because the ring buffer is sequentialised through one mutex; the channel wrapper wins by going through per-P queues under contention.
+The `UnboundedBlockingQueue` 1P1C is faster than `BoundedBlockingQueue` because the consumer's `TryPoll` loop keeps draining the queue, so `Push` almost never sees a full queue (no `BoundedBlockingQueue` channel contention). MPMC is slower than `BoundedBlockingQueue` because the ring buffer is sequentialised through one mutex; the channel wrapper wins by going through per-P queues under contention.
 
 ---
 
 ## `UnboundedBlockingQueue[T]`
 
-An unbounded FIFO queue. There is no capacity to wait on, so `Push` never blocks; `Take` blocks when the queue is empty. All operations are safe for concurrent use.
+An unbounded FIFO queue. There is no capacity to wait on, so `Push` never blocks; `Poll` blocks when the queue is empty. All operations are safe for concurrent use.
 
 ### Construction
 
@@ -239,11 +239,11 @@ No capacity argument — the queue grows on demand.
 | Method | Behaviour |
 | --- | --- |
 | `Push(data T)` | Enqueue. **Never blocks** — the queue is unbounded. |
-| `Take() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
-| `PushCtx(ctx, data T) error` | Context-aware `Push`. Returns `ctx.Err()` without enqueuing when ctx is already canceled; otherwise behaves like `Push`. |
-| `TakeCtx(ctx) (T, error)` | Context-aware `Take`. Blocks until an element is available or ctx is canceled; returns `(zero, ctx.Err())` on cancellation. |
+| `Poll() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
+| `PushWithContext(ctx, data T) error` | Context-aware `Push`. Returns `ctx.Err()` without enqueuing when ctx is already canceled; otherwise behaves like `Push`. |
+| `PollWithContext(ctx) (T, error)` | Context-aware `Poll`. Blocks until an element is available or ctx is canceled; returns `(zero, ctx.Err())` on cancellation. |
 
-`TakeCtx` spawns a one-shot watcher goroutine that wakes any blocked `cond.Wait` when ctx is canceled. The goroutine exits as soon as `TakeCtx` returns, so the cost is one goroutine per `TakeCtx` call — fine for shutdown signals, not something you want in a tight loop.
+`PollWithContext` spawns a one-shot watcher goroutine that wakes any blocked `cond.Wait` when ctx is canceled. The goroutine exits as soon as `PollWithContext` returns, so the cost is one goroutine per `PollWithContext` call — fine for shutdown signals, not something you want in a tight loop.
 
 `Push` signals the cond with `Signal()` (one waiter at a time), so a burst of N pushes wakes up to N blocked takers without thundering herd. A naive `cap-1` channel signal would fail here — see `TestUnboundedBurstWakesAllWaiters` for the regression test.
 
@@ -252,7 +252,7 @@ No capacity argument — the queue grows on demand.
 | Method | Behaviour |
 | --- | --- |
 | `TryPush(data T) bool` | Enqueue. **Never fails** — the queue is unbounded, so this always returns `true`. |
-| `TryTake() option.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
+| `TryPoll() option.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
 
 ### Observability
 
@@ -265,7 +265,7 @@ There is no `Capacity()` — the queue is unbounded by definition. If you want b
 ### Memory model
 
 - **Backing storage.** A single `make([]T, 16)` allocated up front. The ring buffer doubles when full, so the slice size is always a power of two. `head` and `tail` advance via `& mask` — a single bitwise operation.
-- **Slot zeroing.** `Take` and `TryTake` overwrite the freed slot with the zero value of `T`, the same way `BoundedBlockingQueue`'s ring buffer did before it became a channel wrapper. Pointer-typed `T` is therefore safe to use without leaking memory.
+- **Slot zeroing.** `Poll` and `TryPoll` overwrite the freed slot with the zero value of `T`, the same way `BoundedBlockingQueue`'s ring buffer did before it became a channel wrapper. Pointer-typed `T` is therefore safe to use without leaking memory.
 - **Per-op allocations.** Zero on the steady-state hot path. The `grow` step allocates a new backing array, which is amortised O(1) per `Push`.
 - **Why not `chan T`?** The Go runtime has no "unbounded buffered channel". `make(chan T, N)` for a large `N` works until it doesn't — once the buffer fills, `Push` blocks again and "unbounded" becomes a lie. A ring buffer with a mutex and a cond is the standard fix.
 
@@ -275,7 +275,7 @@ There is no `Capacity()` — the queue is unbounded by definition. If you want b
 | --- | --- | --- |
 | Capacity | set at construction | none (grows on demand) |
 | `Push` blocks | when full | never |
-| `Take` blocks | when empty | when empty | |
+| `Poll` blocks | when empty | when empty | |
 | Internals | `chan T` | ring buffer + mutex + cond |
 | Hot-path throughput (MPMC 8w) | ~22 ns/op | ~61 ns/op |
 | Memory bounded | yes (by capacity) | no — the slice grows until consumers drain it |

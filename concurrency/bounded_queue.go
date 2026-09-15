@@ -13,11 +13,12 @@ import (
 // It is a thin generic wrapper around a single bounded `chan T`, adding
 // three things on top of the channel primitives:
 //
-//   - A [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryTake] pair
+//   - A [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] pair
 //     that returns an [option.Optional] (matching the toolkit convention
 //     from `Stack.Pop` / `Queue.Pop` / `Deque.PopFront`).
-//   - Context-aware [BoundedBlockingQueue.PushCtx] / [BoundedBlockingQueue.TakeCtx]
-//     for cancellation, deadlines, and shutdown signalling.
+//   - Context-aware [BoundedBlockingQueue.PushWithContext] /
+//     [BoundedBlockingQueue.PollWithContext] for cancellation, deadlines,
+//     and shutdown signalling.
 //   - A [BoundedBlockingQueue.Capacity] accessor and a power-of-two rounding
 //     policy on the requested capacity, so `Capacity()` always returns a
 //     value usable as a bitmask.
@@ -35,14 +36,30 @@ import (
 //
 // The zero value is not usable; construct one with [NewBoundedBlockingQueue].
 //
+// # Naming
+//
+// The four blocking operations follow a consistent pattern:
+//
+//   - [BoundedBlockingQueue.Push] / [BoundedBlockingQueue.Poll] — the
+//     blocking verbs. `Push` blocks while the queue is full; `Poll` blocks
+//     while the queue is empty.
+//   - [BoundedBlockingQueue.PushWithContext] / [BoundedBlockingQueue.PollWithContext]
+//     — the context-aware variants. They block the same way as Push / Poll
+//     and additionally participate in `select { <-ctx.Done(): }` so
+//     cancellation, deadlines, and shutdown signals propagate cleanly.
+//   - [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] —
+//     the non-blocking variants. They never wait and return a `bool`
+//     (for Push) or an [option.Optional] (for Poll) so the caller can
+//     branch on backpressure or absence.
+//
 // Blocking semantics:
 //
 //   - [BoundedBlockingQueue.Push] blocks while the queue is full.
-//   - [BoundedBlockingQueue.Take] blocks while the queue is empty.
-//   - [BoundedBlockingQueue.PushCtx] / [BoundedBlockingQueue.TakeCtx] block
-//     until the queue is in the corresponding state, or until the context
-//     is canceled — whichever happens first.
-//   - [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryTake] never block.
+//   - [BoundedBlockingQueue.Poll] blocks while the queue is empty.
+//   - [BoundedBlockingQueue.PushWithContext] /
+//     [BoundedBlockingQueue.PollWithContext] block until the queue is in the
+//     corresponding state, or until ctx is canceled — whichever happens first.
+//   - [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] never block.
 //
 // All operations are safe for concurrent use.
 //
@@ -54,7 +71,7 @@ import (
 //   - The channel's internal ring buffer does not zero freed slots, so
 //     pointer values received from the queue stay alive in the channel's
 //     backing array until the slot is overwritten by a new send. A custom
-//     ring buffer can zero slots on `Take` to help the GC; this wrapper
+//     ring buffer can zero slots on `Poll` to help the GC; this wrapper
 //     cannot.
 //   - [BoundedBlockingQueue.Size] is `len(ch)`, an atomic length read, but
 //     it is not serialised with the next operation you perform. A
@@ -62,16 +79,6 @@ import (
 //     op sees a consistent view" property; `len(ch)` does not. In practice
 //     the window is a single atomic read, so this rarely matters, but it
 //     is a real semantic difference.
-//
-// # Naming
-//
-// The methods follow the conventions used elsewhere in the Typed toolkit:
-// [BoundedBlockingQueue.Size] matches `Stack.Size` / `Queue.Size` / `ArrayList.Size`;
-// [BoundedBlockingQueue.TryTake] returns an [option.Optional] in the same style
-// as `Stack.Pop` / `Queue.Pop` / `Deque.PopFront`. Blocking reads are named
-// [BoundedBlockingQueue.Take] (matching `BlockingQueue.take` in Java and the
-// Go channel idiom) rather than `Pop`, because `Pop` in this toolkit means
-// "non-blocking take that returns an Optional".
 type BoundedBlockingQueue[T any] struct {
 	ch  chan T
 	cap int
@@ -102,11 +109,11 @@ func (q *BoundedBlockingQueue[T]) Push(data T) {
 	q.ch <- data
 }
 
-// PushCtx is the context-aware variant of [BoundedBlockingQueue.Push].
+// PushWithContext is the context-aware variant of [BoundedBlockingQueue.Push].
 // It blocks until the queue has space, or until ctx is canceled — whichever
 // happens first. It returns nil on success and ctx.Err() on cancellation;
 // the element is not enqueued in the cancellation case.
-func (q *BoundedBlockingQueue[T]) PushCtx(ctx context.Context, data T) error {
+func (q *BoundedBlockingQueue[T]) PushWithContext(ctx context.Context, data T) error {
 	select {
 	case q.ch <- data:
 		return nil
@@ -126,16 +133,16 @@ func (q *BoundedBlockingQueue[T]) TryPush(data T) bool {
 	}
 }
 
-// Take dequeues and returns the next element, blocking until one is available.
-func (q *BoundedBlockingQueue[T]) Take() T {
+// Poll dequeues and returns the next element, blocking until one is available.
+func (q *BoundedBlockingQueue[T]) Poll() T {
 	return <-q.ch
 }
 
-// TakeCtx is the context-aware variant of [BoundedBlockingQueue.Take].
+// PollWithContext is the context-aware variant of [BoundedBlockingQueue.Poll].
 // It blocks until an element is available, or until ctx is canceled —
 // whichever happens first. It returns (value, nil) on success and
 // (zero, ctx.Err()) on cancellation.
-func (q *BoundedBlockingQueue[T]) TakeCtx(ctx context.Context) (T, error) {
+func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) (T, error) {
 	select {
 	case v := <-q.ch:
 		return v, nil
@@ -145,10 +152,10 @@ func (q *BoundedBlockingQueue[T]) TakeCtx(ctx context.Context) (T, error) {
 	}
 }
 
-// TryTake attempts to dequeue without blocking.
+// TryPoll attempts to dequeue without blocking.
 // It returns the dequeued value as an [option.Optional]; the result is empty
 // when the queue is empty.
-func (q *BoundedBlockingQueue[T]) TryTake() option.Optional[T] {
+func (q *BoundedBlockingQueue[T]) TryPoll() option.Optional[T] {
 	select {
 	case v := <-q.ch:
 		return option.Of(v)

@@ -18,7 +18,7 @@ import (
 // returns the zero value when the Optional is absent.
 func tryTakeOr[T any](t *testing.T, q *BoundedBlockingQueue[T], wantZeroForReport T) (T, bool) {
 	t.Helper()
-	opt := q.TryTake()
+	opt := q.TryPoll()
 	if opt.IsEmpty() {
 		var zero T
 		return zero, false
@@ -85,7 +85,7 @@ func TestNew_RoundsCapacityUpToPowerOfTwo(t *testing.T) {
 	}
 }
 
-func TestPushTake_FIFO(t *testing.T) {
+func TestPushPoll_FIFO(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](4)
 	for i := 1; i <= 4; i++ {
@@ -95,8 +95,8 @@ func TestPushTake_FIFO(t *testing.T) {
 		t.Fatalf("Size() = %d, want 4", got)
 	}
 	for i := 1; i <= 4; i++ {
-		if got := q.Take(); got != i {
-			t.Fatalf("Take() = %d, want %d", got, i)
+		if got := q.Poll(); got != i {
+			t.Fatalf("Poll() = %d, want %d", got, i)
 		}
 	}
 	if got := q.Size(); got != 0 {
@@ -104,13 +104,13 @@ func TestPushTake_FIFO(t *testing.T) {
 	}
 }
 
-func TestTake_BlocksWhenEmpty(t *testing.T) {
+func TestPoll_BlocksWhenEmpty(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
 	takeDone := make(chan int, 1)
 	go func() {
-		takeDone <- q.Take()
+		takeDone <- q.Poll()
 	}()
 
 	// Give the goroutine time to reach cond.Wait().
@@ -155,8 +155,8 @@ func TestPush_BlocksWhenFull(t *testing.T) {
 	default:
 	}
 
-	if got := q.Take(); got != 1 {
-		t.Fatalf("Take() = %d, want 1", got)
+	if got := q.Poll(); got != 1 {
+		t.Fatalf("Poll() = %d, want 1", got)
 	}
 
 	select {
@@ -166,14 +166,14 @@ func TestPush_BlocksWhenFull(t *testing.T) {
 	}
 
 	if got, ok := tryTakeOr(t, q, 2); !ok || got != 2 {
-		t.Fatalf("TryTake() = (%d, present=%v), want (2, present)", got, ok)
+		t.Fatalf("TryPoll() = (%d, present=%v), want (2, present)", got, ok)
 	}
 	if got, ok := tryTakeOr(t, q, 3); !ok || got != 3 {
-		t.Fatalf("TryTake() = (%d, present=%v), want (3, present)", got, ok)
+		t.Fatalf("TryPoll() = (%d, present=%v), want (3, present)", got, ok)
 	}
 }
 
-func TestTryPush_TryTake(t *testing.T) {
+func TestTryPush_TryPoll(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
@@ -188,13 +188,13 @@ func TestTryPush_TryTake(t *testing.T) {
 	}
 
 	if v, ok := tryTakeOr(t, q, 10); !ok || v != 10 {
-		t.Fatalf("TryTake() = (%d, present=%v), want (10, present)", v, ok)
+		t.Fatalf("TryPoll() = (%d, present=%v), want (10, present)", v, ok)
 	}
 	if v, ok := tryTakeOr(t, q, 20); !ok || v != 20 {
-		t.Fatalf("TryTake() = (%d, present=%v), want (20, present)", v, ok)
+		t.Fatalf("TryPoll() = (%d, present=%v), want (20, present)", v, ok)
 	}
-	if got := q.TryTake(); !got.IsEmpty() {
-		t.Fatalf("TryTake on empty queue returned %v, want Empty", got)
+	if got := q.TryPoll(); !got.IsEmpty() {
+		t.Fatalf("TryPoll on empty queue returned %v, want Empty", got)
 	}
 }
 
@@ -207,8 +207,8 @@ func TestRingWrap(t *testing.T) {
 			q.Push(round*10 + i)
 		}
 		for i := 0; i < 4; i++ {
-			if got := q.Take(); got != round*10+i {
-				t.Fatalf("round %d: Take() = %d, want %d", round, got, round*10+i)
+			if got := q.Poll(); got != round*10+i {
+				t.Fatalf("round %d: Poll() = %d, want %d", round, got, round*10+i)
 			}
 		}
 	}
@@ -232,22 +232,22 @@ func TestPointerT_DoesNotLeak(t *testing.T) {
 	}()
 	time.Sleep(20 * time.Millisecond)
 
-	if got := q.Take(); got != v1 {
+	if got := q.Poll(); got != v1 {
 		t.Fatalf("got %p, want %p", got, v1)
 	}
 	<-pushed
 
-	if got := q.Take(); got != v2 {
+	if got := q.Poll(); got != v2 {
 		t.Fatalf("got %p, want %p", got, v2)
 	}
-	if got := q.Take(); got != v3 {
+	if got := q.Poll(); got != v3 {
 		t.Fatalf("got %p, want %p", got, v3)
 	}
 
 	// Hint to the runtime that now is a fine time to collect. The Take
 	// implementation clears the slot to release the reference, but we don't
 	// directly assert that here — we rely on -race and the slot-zeroing
-	// code path in Take/TryTake.
+	// code path in Take/TryPoll.
 	runtime.GC()
 }
 
@@ -258,7 +258,7 @@ func TestPointerT_DoesNotLeak(t *testing.T) {
 //   - be race-free (verified separately with `go test -race`)
 //
 // Producers block on Push when the queue is small, so the blocking path
-// is exercised on the producer side even though the consumer uses TryTake.
+// is exercised on the producer side even though the consumer uses TryPoll.
 func TestConcurrent_ManyProducersManyConsumers(t *testing.T) {
 	t.Parallel()
 	const (
@@ -286,7 +286,7 @@ func TestConcurrent_ManyProducersManyConsumers(t *testing.T) {
 		}()
 	}
 
-	// A single consumer using TryTake in a tight loop is the simplest way
+	// A single consumer using TryPoll in a tight loop is the simplest way
 	// to drain the queue without ever blocking — that means the test's
 	// "did the system make progress?" signal is purely the counter.
 	doneProducing := make(chan struct{})
@@ -297,7 +297,7 @@ func TestConcurrent_ManyProducersManyConsumers(t *testing.T) {
 
 loop:
 	for {
-		if opt := q.TryTake(); !opt.IsEmpty() {
+		if opt := q.TryPoll(); !opt.IsEmpty() {
 			_ = opt.Get()
 			consumed.Add(1)
 			continue
@@ -306,7 +306,7 @@ loop:
 		case <-doneProducing:
 			// Producers are done; drain anything left and exit.
 			for {
-				if opt := q.TryTake(); !opt.IsEmpty() {
+				if opt := q.TryPoll(); !opt.IsEmpty() {
 					_ = opt.Get()
 					consumed.Add(1)
 					continue
@@ -335,25 +335,25 @@ loop:
 	}
 }
 
-// TestTryTakeReturnsOptional is a small sanity check on the return type —
-// it locks in that TryTake returns option.Optional[T] (and therefore an
+// TestTryPollReturnsOptional is a small sanity check on the return type —
+// it locks in that TryPoll returns option.Optional[T] (and therefore an
 // absent value is observable via IsEmpty, not via a zero T).
-func TestTryTakeReturnsOptional(t *testing.T) {
+func TestTryPollReturnsOptional(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 	q.Push(0) // note: 0 is a perfectly valid element; an absent Optional must not be confused with it
 
-	opt := q.TryTake()
+	opt := q.TryPoll()
 	if opt.IsEmpty() {
-		t.Fatal("first TryTake() should be present")
+		t.Fatal("first TryPoll() should be present")
 	}
 	if got := opt.Get(); got != 0 {
-		t.Fatalf("first TryTake() = %d, want 0", got)
+		t.Fatalf("first TryPoll() = %d, want 0", got)
 	}
 
-	empty := q.TryTake()
+	empty := q.TryPoll()
 	if !empty.IsEmpty() {
-		t.Fatalf("second TryTake() = %v, want Empty", empty)
+		t.Fatalf("second TryPoll() = %v, want Empty", empty)
 	}
 
 	// Sanity: the empty factory also looks the same.
@@ -362,33 +362,33 @@ func TestTryTakeReturnsOptional(t *testing.T) {
 	}
 }
 
-// --- PushCtx / TakeCtx ---------------------------------------------------
+// --- PushWithContext / PollWithContext ---------------------------------------------------
 
-func TestPushCtx_FastPathSucceeds(t *testing.T) {
+func TestPushWithContext_FastPathSucceeds(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
-	if err := q.PushCtx(context.Background(), 7); err != nil {
-		t.Fatalf("PushCtx on empty queue returned %v, want nil", err)
+	if err := q.PushWithContext(context.Background(), 7); err != nil {
+		t.Fatalf("PushWithContext on empty queue returned %v, want nil", err)
 	}
 	if got, ok := tryTakeOr(t, q, -1); !ok || got != 7 {
-		t.Fatalf("element after PushCtx = (%d, present=%v), want (7, present)", got, ok)
+		t.Fatalf("element after PushWithContext = (%d, present=%v), want (7, present)", got, ok)
 	}
 }
 
-func TestTakeCtx_FastPathSucceeds(t *testing.T) {
+func TestPollWithContext_FastPathSucceeds(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 	q.Push(9)
-	v, err := q.TakeCtx(context.Background())
+	v, err := q.PollWithContext(context.Background())
 	if err != nil {
-		t.Fatalf("TakeCtx on non-empty queue returned err=%v, want nil", err)
+		t.Fatalf("PollWithContext on non-empty queue returned err=%v, want nil", err)
 	}
 	if v != 9 {
-		t.Fatalf("TakeCtx = %d, want 9", v)
+		t.Fatalf("PollWithContext = %d, want 9", v)
 	}
 }
 
-func TestPushCtx_BlocksUntilTake(t *testing.T) {
+func TestPushWithContext_BlocksUntilTake(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 	q.Push(1)
@@ -396,45 +396,45 @@ func TestPushCtx_BlocksUntilTake(t *testing.T) {
 
 	pushDone := make(chan error, 1)
 	go func() {
-		pushDone <- q.PushCtx(context.Background(), 3)
+		pushDone <- q.PushWithContext(context.Background(), 3)
 	}()
 
 	// Give the goroutine time to reach the channel receive.
 	time.Sleep(20 * time.Millisecond)
 	select {
 	case err := <-pushDone:
-		t.Fatalf("PushCtx returned %v before any Take", err)
+		t.Fatalf("PushWithContext returned %v before any Take", err)
 	default:
 	}
 
-	if got := q.Take(); got != 1 {
-		t.Fatalf("Take() = %d, want 1", got)
+	if got := q.Poll(); got != 1 {
+		t.Fatalf("Poll() = %d, want 1", got)
 	}
 
 	select {
 	case err := <-pushDone:
 		if err != nil {
-			t.Fatalf("PushCtx returned err=%v after Take, want nil", err)
+			t.Fatalf("PushWithContext returned err=%v after Take, want nil", err)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("PushCtx did not return after Take freed a slot")
+		t.Fatal("PushWithContext did not return after Take freed a slot")
 	}
 	if got, ok := tryTakeOr(t, q, -1); !ok || got != 2 {
 		t.Fatalf("first remaining = (%d, present=%v), want (2, present)", got, ok)
 	}
 	if got, ok := tryTakeOr(t, q, -1); !ok || got != 3 {
-		t.Fatalf("element after PushCtx = (%d, present=%v), want (3, present)", got, ok)
+		t.Fatalf("element after PushWithContext = (%d, present=%v), want (3, present)", got, ok)
 	}
 }
 
-func TestTakeCtx_BlocksUntilPush(t *testing.T) {
+func TestPollWithContext_BlocksUntilPush(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
 	takeDone := make(chan int, 1)
 	takeErr := make(chan error, 1)
 	go func() {
-		v, err := q.TakeCtx(context.Background())
+		v, err := q.PollWithContext(context.Background())
 		takeDone <- v
 		takeErr <- err
 	}()
@@ -442,7 +442,7 @@ func TestTakeCtx_BlocksUntilPush(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 	select {
 	case v := <-takeDone:
-		t.Fatalf("TakeCtx returned (%d, ...) before any Push", v)
+		t.Fatalf("PollWithContext returned (%d, ...) before any Push", v)
 	default:
 	}
 
@@ -451,17 +451,17 @@ func TestTakeCtx_BlocksUntilPush(t *testing.T) {
 	select {
 	case v := <-takeDone:
 		if v != 42 {
-			t.Fatalf("TakeCtx value = %d, want 42", v)
+			t.Fatalf("PollWithContext value = %d, want 42", v)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("TakeCtx did not return after Push")
+		t.Fatal("PollWithContext did not return after Push")
 	}
 	if err := <-takeErr; err != nil {
-		t.Fatalf("TakeCtx err = %v, want nil", err)
+		t.Fatalf("PollWithContext err = %v, want nil", err)
 	}
 }
 
-func TestPushCtx_CanceledDoesNotEnqueue(t *testing.T) {
+func TestPushWithContext_CanceledDoesNotEnqueue(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 	q.Push(1)
@@ -470,7 +470,7 @@ func TestPushCtx_CanceledDoesNotEnqueue(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	pushDone := make(chan error, 1)
 	go func() {
-		pushDone <- q.PushCtx(ctx, 99)
+		pushDone <- q.PushWithContext(ctx, 99)
 	}()
 
 	// Let the goroutine reach the channel receive, then cancel.
@@ -480,24 +480,24 @@ func TestPushCtx_CanceledDoesNotEnqueue(t *testing.T) {
 	select {
 	case err := <-pushDone:
 		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("PushCtx err = %v, want context.Canceled", err)
+			t.Fatalf("PushWithContext err = %v, want context.Canceled", err)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("PushCtx did not return after cancel")
+		t.Fatal("PushWithContext did not return after cancel")
 	}
 	// The element must NOT have been enqueued.
 	if got := q.Size(); got != 2 {
-		t.Fatalf("Size after canceled PushCtx = %d, want 2 (element must be dropped)", got)
+		t.Fatalf("Size after canceled PushWithContext = %d, want 2 (element must be dropped)", got)
 	}
-	if got := q.Take(); got != 1 {
-		t.Fatalf("Take() = %d, want 1 (queue unchanged)", got)
+	if got := q.Poll(); got != 1 {
+		t.Fatalf("Poll() = %d, want 1 (queue unchanged)", got)
 	}
-	if got := q.Take(); got != 2 {
-		t.Fatalf("Take() = %d, want 2 (queue unchanged)", got)
+	if got := q.Poll(); got != 2 {
+		t.Fatalf("Poll() = %d, want 2 (queue unchanged)", got)
 	}
 }
 
-func TestTakeCtx_CanceledReturnsZero(t *testing.T) {
+func TestPollWithContext_CanceledReturnsZero(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
@@ -505,7 +505,7 @@ func TestTakeCtx_CanceledReturnsZero(t *testing.T) {
 	takeDone := make(chan int, 1)
 	takeErr := make(chan error, 1)
 	go func() {
-		v, err := q.TakeCtx(ctx)
+		v, err := q.PollWithContext(ctx)
 		takeDone <- v
 		takeErr <- err
 	}()
@@ -516,21 +516,21 @@ func TestTakeCtx_CanceledReturnsZero(t *testing.T) {
 	select {
 	case v := <-takeDone:
 		if v != 0 {
-			t.Fatalf("TakeCtx value after cancel = %d, want zero", v)
+			t.Fatalf("PollWithContext value after cancel = %d, want zero", v)
 		}
 	case <-time.After(time.Second):
-		t.Fatal("TakeCtx did not return after cancel")
+		t.Fatal("PollWithContext did not return after cancel")
 	}
 	if err := <-takeErr; !errors.Is(err, context.Canceled) {
-		t.Fatalf("TakeCtx err = %v, want context.Canceled", err)
+		t.Fatalf("PollWithContext err = %v, want context.Canceled", err)
 	}
 	// Queue must still be empty — cancellation must not have dequeued anything.
 	if got := q.Size(); got != 0 {
-		t.Fatalf("Size after canceled TakeCtx = %d, want 0", got)
+		t.Fatalf("Size after canceled PollWithContext = %d, want 0", got)
 	}
 }
 
-func TestPushCtx_Deadline(t *testing.T) {
+func TestPushWithContext_Deadline(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](1)
 	q.Push(1) // queue is full
@@ -538,47 +538,47 @@ func TestPushCtx_Deadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	err := q.PushCtx(ctx, 2)
+	err := q.PushWithContext(ctx, 2)
 	elapsed := time.Since(start)
 
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("PushCtx err = %v, want context.DeadlineExceeded", err)
+		t.Fatalf("PushWithContext err = %v, want context.DeadlineExceeded", err)
 	}
 	if elapsed < 20*time.Millisecond {
-		t.Fatalf("PushCtx returned in %v, want >= ~30ms (deadline)", elapsed)
+		t.Fatalf("PushWithContext returned in %v, want >= ~30ms (deadline)", elapsed)
 	}
 	if elapsed > 2*time.Second {
-		t.Fatalf("PushCtx returned in %v, want ~30ms (deadline)", elapsed)
+		t.Fatalf("PushWithContext returned in %v, want ~30ms (deadline)", elapsed)
 	}
 	if got := q.Size(); got != 1 {
 		t.Fatalf("Size after deadline = %d, want 1", got)
 	}
 }
 
-func TestTakeCtx_Deadline(t *testing.T) {
+func TestPollWithContext_Deadline(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := q.TakeCtx(ctx)
+	_, err := q.PollWithContext(ctx)
 	elapsed := time.Since(start)
 
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("TakeCtx err = %v, want context.DeadlineExceeded", err)
+		t.Fatalf("PollWithContext err = %v, want context.DeadlineExceeded", err)
 	}
 	if elapsed < 20*time.Millisecond {
-		t.Fatalf("TakeCtx returned in %v, want >= ~30ms (deadline)", elapsed)
+		t.Fatalf("PollWithContext returned in %v, want >= ~30ms (deadline)", elapsed)
 	}
 }
 
-// TestPushCtx_TakeCtxRace is a stress test for the ctx-aware paths: many
-// goroutines call PushCtx and TakeCtx concurrently, and a fraction of
+// TestPushWithContext_PollWithContextRace is a stress test for the ctx-aware paths: many
+// goroutines call PushWithContext and PollWithContext concurrently, and a fraction of
 // them get their ctx canceled mid-flight. The test passes if every
 // successful Push/Take is paired (no lost or duplicate elements) and
 // no goroutine deadlocks.
-func TestPushCtx_TakeCtxRace(t *testing.T) {
+func TestPushWithContext_PollWithContextRace(t *testing.T) {
 	t.Parallel()
 	const (
 		producers      = 4
@@ -599,21 +599,21 @@ func TestPushCtx_TakeCtxRace(t *testing.T) {
 		go func() {
 			defer wgProd.Done()
 			for i := 0; i < perProducer; i++ {
-				_ = q.PushCtx(context.Background(), base+i)
+				_ = q.PushWithContext(context.Background(), base+i)
 				produced.Add(1)
 			}
 		}()
 	}
 
-	// One consumer running TakeCtx in a tight loop. Each call uses a fresh
-	// ctx with a 5ms timeout; a few will hit the timeout, and those TakeCtx
+	// One consumer running PollWithContext in a tight loop. Each call uses a fresh
+	// ctx with a 5ms timeout; a few will hit the timeout, and those PollWithContext
 	// calls must return (zero, DeadlineExceeded) without dequeuing.
 	takeDone := make(chan struct{})
 	go func() {
 		defer close(takeDone)
 		for consumed.Load() < int64(expectedTotal) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
-			if v, err := q.TakeCtx(ctx); err == nil {
+			if v, err := q.PollWithContext(ctx); err == nil {
 				_ = v
 				consumed.Add(1)
 			}
@@ -636,7 +636,7 @@ func TestPushCtx_TakeCtxRace(t *testing.T) {
 
 	// Drain anything left so Size() must be 0 at the end.
 	for {
-		if opt := q.TryTake(); opt.IsEmpty() {
+		if opt := q.TryPoll(); opt.IsEmpty() {
 			break
 		}
 	}
@@ -645,7 +645,7 @@ func TestPushCtx_TakeCtxRace(t *testing.T) {
 		t.Fatalf("produced = %d, want %d", got, expectedTotal)
 	}
 	// The exact consumed count is bounded below by the number of successful
-	// TakeCtx calls; we only assert that it matches the produced count
+	// PollWithContext calls; we only assert that it matches the produced count
 	// (i.e. every produced element was eventually consumed — possibly by
 	// the final drain loop above).
 	total := consumed.Load() + int64(q.Size())

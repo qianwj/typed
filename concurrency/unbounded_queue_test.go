@@ -15,7 +15,7 @@ import (
 // success, or the zero value and false on an empty Optional.
 func tryTakeUnboundedOr[T any](t *testing.T, q *UnboundedBlockingQueue[T], wantZeroForReport T) (T, bool) {
 	t.Helper()
-	opt := q.TryTake()
+	opt := q.TryPoll()
 	if opt.IsEmpty() {
 		var zero T
 		return zero, false
@@ -31,14 +31,14 @@ func TestUnboundedNewAndSize(t *testing.T) {
 	}
 }
 
-func TestUnboundedPushTakeFIFO(t *testing.T) {
+func TestUnboundedPushPollFIFO(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	for i := 1; i <= 5; i++ {
 		q.Push(i)
 	}
 	for i := 1; i <= 5; i++ {
-		if got := q.Take(); got != i {
+		if got := q.Poll(); got != i {
 			t.Fatalf("Take #%d = %d, want %d", i, got, i)
 		}
 	}
@@ -57,25 +57,25 @@ func TestUnboundedTryPushAlwaysSucceeds(t *testing.T) {
 	}
 }
 
-func TestUnboundedTryTake(t *testing.T) {
+func TestUnboundedTryPoll(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	q.Push(7)
 	if v, ok := tryTakeUnboundedOr(t, q, -1); !ok || v != 7 {
-		t.Fatalf("TryTake() = (%d, present=%v), want (7, present)", v, ok)
+		t.Fatalf("TryPoll() = (%d, present=%v), want (7, present)", v, ok)
 	}
-	if got := q.TryTake(); !got.IsEmpty() {
-		t.Fatalf("TryTake on empty queue returned %v, want Empty", got)
+	if got := q.TryPoll(); !got.IsEmpty() {
+		t.Fatalf("TryPoll on empty queue returned %v, want Empty", got)
 	}
 }
 
-func TestUnboundedTakeBlocksWhenEmpty(t *testing.T) {
+func TestUnboundedPollBlocksWhenEmpty(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 
 	takeDone := make(chan int, 1)
 	go func() {
-		takeDone <- q.Take()
+		takeDone <- q.Poll()
 	}()
 
 	time.Sleep(20 * time.Millisecond)
@@ -97,12 +97,12 @@ func TestUnboundedTakeBlocksWhenEmpty(t *testing.T) {
 	}
 }
 
-func TestUnboundedPushCtxAlwaysSucceedsWhenCtxAlive(t *testing.T) {
+func TestUnboundedPushWithContextAlwaysSucceedsWhenCtxAlive(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	for i := 0; i < 10; i++ {
-		if err := q.PushCtx(context.Background(), i); err != nil {
-			t.Fatalf("PushCtx returned %v, want nil", err)
+		if err := q.PushWithContext(context.Background(), i); err != nil {
+			t.Fatalf("PushWithContext returned %v, want nil", err)
 		}
 	}
 	if got := q.Size(); got != 10 {
@@ -110,36 +110,36 @@ func TestUnboundedPushCtxAlwaysSucceedsWhenCtxAlive(t *testing.T) {
 	}
 }
 
-func TestUnboundedPushCtxRespectsCanceledCtx(t *testing.T) {
+func TestUnboundedPushWithContextRespectsCanceledCtx(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before push
-	if err := q.PushCtx(ctx, 99); !errors.Is(err, context.Canceled) {
-		t.Fatalf("PushCtx err = %v, want context.Canceled", err)
+	if err := q.PushWithContext(ctx, 99); !errors.Is(err, context.Canceled) {
+		t.Fatalf("PushWithContext err = %v, want context.Canceled", err)
 	}
 	if got := q.Size(); got != 0 {
-		t.Fatalf("Size() after canceled PushCtx = %d, want 0", got)
+		t.Fatalf("Size() after canceled PushWithContext = %d, want 0", got)
 	}
 }
 
-func TestUnboundedTakeCtxDeadline(t *testing.T) {
+func TestUnboundedPollWithContextDeadline(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := q.TakeCtx(ctx)
+	_, err := q.PollWithContext(ctx)
 	elapsed := time.Since(start)
 	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("TakeCtx err = %v, want context.DeadlineExceeded", err)
+		t.Fatalf("PollWithContext err = %v, want context.DeadlineExceeded", err)
 	}
 	if elapsed < 20*time.Millisecond {
-		t.Fatalf("TakeCtx returned in %v, want >= ~30ms", elapsed)
+		t.Fatalf("PollWithContext returned in %v, want >= ~30ms", elapsed)
 	}
 }
 
-func TestUnboundedTakeCtxDeadlineReturnsAfterItem(t *testing.T) {
+func TestUnboundedPollWithContextDeadlineReturnsAfterItem(t *testing.T) {
 	t.Parallel()
 	q := NewUnboundedBlockingQueue[int]()
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -148,12 +148,12 @@ func TestUnboundedTakeCtxDeadlineReturnsAfterItem(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		q.Push(1)
 	}()
-	v, err := q.TakeCtx(ctx)
+	v, err := q.PollWithContext(ctx)
 	if err != nil {
-		t.Fatalf("TakeCtx err = %v, want nil", err)
+		t.Fatalf("PollWithContext err = %v, want nil", err)
 	}
 	if v != 1 {
-		t.Fatalf("TakeCtx value = %d, want 1", v)
+		t.Fatalf("PollWithContext value = %d, want 1", v)
 	}
 }
 
@@ -168,7 +168,7 @@ func TestUnboundedRingGrowth(t *testing.T) {
 		q.Push(i)
 	}
 	for i := 0; i < n; i++ {
-		if got := q.Take(); got != i {
+		if got := q.Poll(); got != i {
 			t.Fatalf("Take #%d = %d, want %d (ring growth broken)", i, got, i)
 		}
 	}
@@ -189,7 +189,7 @@ func TestUnboundedPointerTGCReleased(t *testing.T) {
 		q.Push(&box{payload: new(int)})
 	}
 	for i := 0; i < n; i++ {
-		v := q.Take()
+		v := q.Poll()
 		if v == nil {
 			t.Fatalf("Take #%d returned nil", i)
 		}
@@ -205,7 +205,7 @@ func TestUnboundedPointerTGCReleased(t *testing.T) {
 //   - not lose or duplicate elements
 //   - be race-free (verified separately with `go test -race`)
 //
-// The consumer uses TryTake in a tight loop (so it never blocks), which
+// The consumer uses TryPoll in a tight loop (so it never blocks), which
 // forces the producer side to exercise the blocking path when the
 // queue is full — except this queue is unbounded, so producers never
 // block. We still keep many producers to put pressure on the cond
@@ -244,7 +244,7 @@ func TestUnboundedConcurrent_ManyProducersManyConsumers(t *testing.T) {
 
 loop:
 	for {
-		if opt := q.TryTake(); !opt.IsEmpty() {
+		if opt := q.TryPoll(); !opt.IsEmpty() {
 			_ = opt.Get()
 			consumed.Add(1)
 			continue
@@ -252,7 +252,7 @@ loop:
 		select {
 		case <-doneProducing:
 			for {
-				opt := q.TryTake()
+				opt := q.TryPoll()
 				if opt.IsEmpty() {
 					break loop
 				}
@@ -303,7 +303,7 @@ func TestUnboundedBurstWakesAllWaiters(t *testing.T) {
 			defer wg.Done()
 			// Each taker takes one item. Loop until we get our share.
 			for i := 0; i < bursts/waiters; i++ {
-				q.Take()
+				q.Poll()
 				received.Add(1)
 			}
 		}()

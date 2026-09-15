@@ -20,7 +20,7 @@ func BenchmarkUnboundedQueue_1P1C(b *testing.B) {
 
 	go func() {
 		for !done.Load() || q.Size() > 0 {
-			if opt := q.TryTake(); !opt.IsEmpty() {
+			if opt := q.TryPoll(); !opt.IsEmpty() {
 				_ = opt.Get()
 			}
 			consumedCount.Add(1)
@@ -65,7 +65,7 @@ func BenchmarkUnboundedQueue_MPMC(b *testing.B) {
 				}
 			} else {
 				for range perWorker {
-					q.Take()
+					q.Poll()
 				}
 			}
 		}()

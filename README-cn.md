@@ -59,7 +59,7 @@ profiles := lists.ArrayListOf(users...).
 - 📡 **强类型异步流** —— `reactivex.Observable[T]`,显式需求(`Request(n)`)、按订阅配置背压(`WithBuffer`、`OverflowStrategy`),以及热多播的 `Subject[T]`。
 - 🧠 **更智能的相等** —— `objects.Equals[T]` 理解 `func (T) Equal(T) bool`、对 nil/空集合做归一化,对 typed nil 指针 nil 安全。
 - 🪶 **有界内存** —— `ArrayList` 用 head-offset 布局并周期性压缩,`Stack.Pop` 和 `Remove*` 路径把释放的槽位清零,被弹出的引用不会因底层数组残留。
-- 🧵 **有界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Take` 阻塞,`TryPush` / `TryTake` 不阻塞,底层是单个环形缓冲区。
+- 🧵 **有界与无界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞,底层是单个 `chan T`。`concurrency.UnboundedBlockingQueue[T]` 是它的兄弟类型,`Push` 永不阻塞,底层是环形缓冲区 + mutex + cond。两者都暴露了带 context 的变体(`PushWithContext` / `PollWithContext`)。
 
 ## 安装
 
@@ -189,7 +189,7 @@ use(v)
 
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Take` 阻塞,`TryPush` / `TryTake` / `DrainTo` 不阻塞;`TryTake` 返回 `option.Optional[T]`;基于 `[]T` 的环形缓冲区,单 `sync.Mutex` + `*sync.Cond`。热路径上 `0 B/op`、`0 allocs/op`。 |
+| `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `option.Optional[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
 
 ## 文档导航
 
@@ -265,7 +265,7 @@ adults := lists.ArrayListOf(users...).
 
 任何集合类型都不支持并发修改。Go 的标准做法 —— 单 goroutine 持有集合,通信走 channel —— 继续适用。`Stream` 默认不并行;普通的 `Map` 不会悄悄变成并发的。Typed 不引入新的并发模型,沿用 Go 显式并发的路子。
 
-少数场景下,工具集自己的 API 比 `chan T` 更顺手:非阻塞探测(`TryPush` / `TryTake`)、与下一次操作一致的 `Size()`、或者一个泛型签名就能讲清“固定容量的阻塞队列”。这时 [`concurrency` 包](./docs/concurrency/README-cn.md) 提供了 [`BoundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#boundedblockingqueuet)。原生的 `chan` 在裸吞吐上仍然快约 5–7×,只有额外的 API 表达力能换回这部分成本时,再选 `BoundedBlockingQueue`。
+少数场景下,工具集自己的 API 比 `chan T` 更顺手:非阻塞探测(`TryPush` / `TryPoll`)、带 context 的阻塞(`PushWithContext` / `PollWithContext`)、非阻塞读返回 `Optional`、或者一个泛型签名就能讲清“固定容量的阻塞队列”。这时 [`concurrency` 包](./docs/concurrency/README-cn.md) 提供了 [`BoundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#boundedblockingqueuet)(`chan T` 的薄包装,每操作开销基本为零)和 [`UnboundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#unboundedblockingqueuet)(环形缓冲区 + mutex + cond,因为 Go runtime 没有“无界 buffered channel”)。需要容量做背压用 `BoundedBlockingQueue`;需要 `Push` 永不阻塞用 `UnboundedBlockingQueue`。
 
 ## 错误处理
 
@@ -359,8 +359,6 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [ ] 错误感知的集合操作(`MapE`、`FilterE`、`CollectE`),作为 `Result[T]`-per-element 的一等管道替代品。
 - [ ] 基准测试:`ArrayList` 头部操作、`LinkedList` 迭代、`HashMap` rehash 行为、`Stream` 管道开销。
 - [ ] 迭代器(`iter.Seq[T]`)作为集合类型的一等输出,与 `Stream()` 并列。
-- [ ] `concurrency` 包:`PushCtx` / `TakeCtx` 支持取消。设计讨论在
-      [docs/concurrency/README-cn.md § 未来工作](./docs/concurrency/README-cn.md#未来工作-取消支持)——一句话:需要把同步核心从 `sync.Cond` 改成基于 channel 的信号,这样等待能跟 `ctx.Done()` 在同一个 `select` 里。
 
 ## 贡献指南
 

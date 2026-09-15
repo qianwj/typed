@@ -21,7 +21,7 @@ func BenchmarkBoundedQueue_1P1C(b *testing.B) {
 
 	go func() {
 		for !done.Load() || q.Size() > 0 {
-			if opt := q.TryTake(); !opt.IsEmpty() {
+			if opt := q.TryPoll(); !opt.IsEmpty() {
 				_ = opt.Get()
 			}
 			consumedCount.Add(1)
@@ -37,7 +37,7 @@ func BenchmarkBoundedQueue_1P1C(b *testing.B) {
 	b.StopTimer()
 
 	done.Store(true)
-	// Wait for the consumer to drain. The TryTake loop above is bounded by
+	// Wait for the consumer to drain. The TryPoll loop above is bounded by
 	// both `done` and `q.Size()`, so it will exit as soon as it observes
 	// both, but we give it a moment in case it is mid-iteration.
 	for q.Size() > 0 || consumedCount.Load() < int64(b.N) {
@@ -68,7 +68,7 @@ func BenchmarkBoundedQueue_MPMC(b *testing.B) {
 				}
 			} else {
 				for range perWorker {
-					q.Take()
+					q.Poll()
 				}
 			}
 		}()
