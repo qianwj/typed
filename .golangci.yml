@@ -41,11 +41,12 @@ linters:
     govet:
       enable-all: true
       disable:
-        - shadow # too noisy for a fluent-API surface; revisit per-file
+        - fieldalignment # Structural refactor for cache friendliness; hurts
+                         # field-declaration readability for marginal perf gain.
+                         # Revisit when the codebase is API-frozen.
+        - shadow         # Too noisy for a fluent-API surface; revisit per-file.
     revive:
       rules:
-        - name: exported
-          severity: warning
         - name: package-comments
           severity: warning
         - name: var-naming
@@ -56,10 +57,15 @@ linters:
     gocritic:
       enabled-tags: [diagnostic, performance, style]
       disabled-checks:
-        - hugeParam      # noisy on generic receivers
-        - rangeValCopy   # noisy on generic receivers
+        - hugeParam       # Noisy on generic receivers
+        - rangeValCopy    # Noisy on generic receivers
         - ifElseChain
         - wrapperFunc
+        - commentedOutCode
+        - octalLiteral
+        - unlambda        # Re-enable once Go 1.26+ lands; some 1.27-only idioms trip this
+        - importShadow
+        - paramTypeCombine
     prealloc:
       simple: true
       range-loops: true

@@ -119,6 +119,7 @@ use(v)
 - [内存模型](#内存模型)
 - [并发模型](#并发模型)
 - [错误处理](#错误处理)
+- [稳定性与 SemVer](#稳定性与-semver)
 - [Go 版本要求](#go-版本要求)
 - [开发路线](#开发路线)
 - [许可证](#许可证)
@@ -280,6 +281,47 @@ port, _ := result.Wrap(lookupPort()).
 `Recover` 总会返回 `T`;需要把新错误往上传,请用 `Unwrap` 收尾而不是 `Recover`。
 
 对需要暴露错误的集合管道,推荐把错误路径转成缺失的 `Optional[T]`(例如对返回 `(T, error)` 的查询用 `OfNullable`),并把成功路径留在普通链式 API 上。
+
+## 稳定性与 SemVer
+
+每个 module 都遵循 [Semantic Versioning 2.0.0](https://semver.org/)。当前刻意停在 `v1.0.0` 之前:
+
+- **`0.0.x`(当前)。** 没有 API 稳定性承诺。工具集刻意保持小巧,改一个方法签名成本低、早期受众也小,所以破坏性变更的代价同样低。Patch 发布(`0.0.x`)只包含 bug 修复;只要涉及公开签名、导出类型、或者某个算子已有文档行为,一律算作 **minor** 升级(`0.0.x` → `0.(x+1).0`)。
+- **`0.y.0`(模块进入 feature freeze 后规划)。** 公开类型、导出函数签名、算子的文档行为全部冻结。Patch 发布只修 bug 和文档,不再加新的 API 面。模块在 API 经历过至少一个 minor 周期且没有再改动时升到这一档。
+- **`v1.0.0`。** 只给"维护者愿意 backport bug fix"的模块预留。当前推荐用 `use at HEAD` 安装。
+
+### 哪些改动算 minor 之间的破坏性变更
+
+- 重命名导出类型或方法。
+- 修改泛型接收者(比如 `Map(func(T) R)` 改成 `Map(func(context.Context, T) (R, error))`)。
+- 给公开 struct 加新的必填字段。
+- 改写文档里已有的不变量(例如 "`Map` 对 nil slice 返回空 observable"、"`MinBy` 在空列表上 panic")。
+
+### 不算破坏性变更
+
+- 给已有类型加新方法。
+- 加新的顶层函数或子包。
+- 给 variadic options 函数加新选项。
+- 在"文档已声明不在范围内"的输入上改大 O(例如每个集合类型头上都标了"非并发安全")。
+- bug fix 改写了文档里已经说"可能发生"的可观察行为。
+
+### 每个 module 独立的发布 tag
+
+每个 module 用自己的 tag 前缀:
+
+```text
+utils/v0.0.1
+collections/v0.0.1
+control/v0.0.1
+reactivex/v0.0.1
+concurrency/v0.0.1
+```
+
+某个 module tag 的变动不会带动另一个;`utils/v0.0.2` 和 `reactivex/v0.0.1` 可能同年发布,也可能隔几年。前缀彼此独立。
+
+### 怎么查破坏性变更
+
+每次发布的 release notes 里都会给一行 `BREAKING:` 摘要签名或行为变动。上一版和当前 `vX.Y.Z` tag 之间的 diff 才是权威 changelog,release notes 只是摘要。
 
 ## Go 版本要求
 

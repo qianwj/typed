@@ -62,7 +62,7 @@ type errCaptureSubscriber struct {
 func (e *errCaptureSubscriber) OnSubscribe(s Subscription) { s.Request(1) }
 func (e *errCaptureSubscriber) OnNext(int)                 {}
 func (e *errCaptureSubscriber) OnError(err error)          { e.err <- err; close(e.done) }
-func (e *errCaptureSubscriber) OnComplete()                 { close(e.done) }
+func (e *errCaptureSubscriber) OnComplete()                { close(e.done) }
 
 // TestOptions_ApplyBackpressure covers applyBackpressureOptions: nil
 // entries are skipped, DropOldest without a positive buffer is rejected
@@ -167,15 +167,20 @@ func TestCollect_ErrorAndCancellation(t *testing.T) {
 
 	t.Run("SubscribeWithNilCtx", func(t *testing.T) {
 		// Subscribe must treat a nil ctx as context.Background.
-		var s Subscription
-		s = Just(1, 2, 3).Subscribe(nil, &captureSubscriber[int]{})
+		// Build the nil context via a typed variable so SA1012 does
+		// not flag the call: the API contract under test is precisely
+		// "what happens when context.Context is nil", which the static
+		// analyser cannot distinguish from an oversight.
+		var nilCtx context.Context
+		s := Just(1, 2, 3).Subscribe(nilCtx, &captureSubscriber[int]{})
 		if s == nil {
 			t.Fatal("expected non-nil subscription")
 		}
 	})
 
 	t.Run("ToSliceWithNilCtx", func(t *testing.T) {
-		values, err := Just(7, 8, 9).ToSlice(nil)
+		var nilCtx context.Context
+		values, err := Just(7, 8, 9).ToSlice(nilCtx)
 		if err != nil {
 			t.Fatalf("err = %v", err)
 		}
@@ -195,13 +200,6 @@ func subjectAsObservable[T any](s *Subject[T]) Observable[T] {
 	}
 }
 
-// withCancelHook returns a no-op Subscription whose Cancel records
-// that it was called; used to assert that Subject.OnSubscribe cancels
-// the upstream when the subject is already terminated.
-func (n nullSubscription) withCancelHook(fn func()) cancelHookSubscription {
-	return cancelHookSubscription{cancel: fn}
-}
-
 type cancelHookSubscription struct {
 	cancel       func()
 	requestCount atomic.Int64
@@ -215,4 +213,4 @@ func (c *cancelHookSubscription) Cancel() {
 }
 func (c *cancelHookSubscription) Done() <-chan struct{} { return nil }
 func (c *cancelHookSubscription) IsClosed() bool        { return false }
-func (c *cancelHookSubscription) Err() error             { return nil }
+func (c *cancelHookSubscription) Err() error            { return nil }

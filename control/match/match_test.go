@@ -553,8 +553,7 @@ func TestTypeChainFallbacksPanics(t *testing.T) {
 		// Bind to a typed var so the compiler infers R = string
 		// without needing a non-nil handler to anchor the type.
 		var f func(any) string
-		var result string
-		result = Type(123).
+		result := Type(123).
 			Case(func(s string) string { return "" }).
 			Default(f)
 		_ = result
@@ -566,8 +565,7 @@ func TestTypeChainFallbacksPanics(t *testing.T) {
 			}
 		}()
 		var f func(any) string
-		var result string
-		result = Type(123).
+		result := Type(123).
 			Case(func(s string) string { return "" }).
 			OrElseGet(f)
 		_ = result

@@ -140,12 +140,12 @@ func TestStreamSortByMinByMaxBy(t *testing.T) {
 		t.Fatalf("SortBy: got %v, want %v", sorted, want)
 	}
 
-	if min := src.Stream().MinBy(func(a, b int) int { return a - b }).OrElse(0); min != 1 {
-		t.Fatalf("MinBy: got %d, want 1", min)
+	if got := src.Stream().MinBy(func(a, b int) int { return a - b }).OrElse(0); got != 1 {
+		t.Fatalf("MinBy: got %d, want 1", got)
 	}
 
-	if max := src.Stream().MaxBy(func(a, b int) int { return a - b }).OrElse(0); max != 9 {
-		t.Fatalf("MaxBy: got %d, want 9", max)
+	if got := src.Stream().MaxBy(func(a, b int) int { return a - b }).OrElse(0); got != 9 {
+		t.Fatalf("MaxBy: got %d, want 9", got)
 	}
 }
 
@@ -154,10 +154,14 @@ func TestStreamSortByMinByMaxBy(t *testing.T) {
 // Go 1.27 generic methods is explicit: this is the only way to support
 // type-changing fluent methods such as Map[R].
 func TestArrayListIsConcreteType(t *testing.T) {
-	var _ *lists.ArrayList[int] = lists.NewArrayList[int]()
-	var _ *lists.LinkedList[int] = lists.NewLinkedList[int]()
-	arr := lists.ArrayListOf(1, 2)
-	var _ stream.Stream[int] = arr.Stream()
+	// Compile-time assertions that the concrete types are exactly
+	// what the fluent API claims. QF1011 wants us to drop the
+	// explicit type, but the constraint "this *is* a stream.Stream[int]"
+	// is the whole point of the test.
+	//nolint:staticcheck // QF1011: explicit type is the assertion under test.
+	var _ stream.Stream[int] = lists.NewArrayList[int]().Stream()
+	//nolint:staticcheck // QF1011: explicit type is the assertion under test.
+	var _ stream.Stream[int] = lists.NewLinkedList[int]().Stream()
 }
 
 // TestLinkedListMapReduce exercises the Map / Reduce / Any / All / None /

@@ -371,6 +371,71 @@ pattern is to convert the error path into an absent `Optional[T]`
 (e.g. `OfNullable` on a lookup that returns `(T, error)`) and keep the
 success path on the regular fluent API.
 
+## Stability and SemVer
+
+Every module is published under [Semantic Versioning 2.0.0](https://semver.org/).
+The pre-`v1.0.0` numbering is chosen on purpose:
+
+- **`0.0.x` (current).** No API stability guarantee. The toolkit is
+  intentionally small enough that the cost of editing a method
+  signature is low, and the audience is small enough that the cost of
+  breaking an early adopter is also low. Patch releases (`0.0.x`)
+  contain only bug fixes; anything that touches a public signature,
+  exported type, or the documented behaviour of an existing
+  operator is a **minor** bump (`0.0.x` → `0.(x+1).0`).
+- **`0.y.0` (planned once a module reaches feature freeze).** Public
+  types, exported function signatures, and the documented
+  behaviour of an operator are frozen. Patch releases contain only
+  bug fixes and documentation; no new API surface. A module is
+  promoted to this tier when its API has been exercised for at
+  least one minor cycle without changes.
+- **`v1.0.0`.** Reserved for the modules the maintainer is willing
+  to backport bug fixes to. Until then, "use at HEAD" is the
+  recommended installation mode.
+
+### What changes between minor releases will look like
+
+- Renaming an exported type or method.
+- Changing a generic receiver type (e.g. swapping `Map(func(T) R)`
+  for `Map(func(context.Context, T) (R, error))`).
+- Adding new required fields to a public struct.
+- Changing a documented invariant (e.g. "`Map` returns an empty
+  observable on a nil slice", "`MinBy` panics on an empty list").
+
+### What does not count as a breaking change
+
+- Adding a new method to an existing type.
+- Adding a new top-level function or sub-package.
+- Adding a new option to a variadic options function.
+- Performance improvements that change big-O only on inputs the
+  previous contract already declared out of scope (for example, the
+  "no concurrency safety" note on every collection type).
+- Bug fixes that change observable behaviour in ways that the
+  documentation already said could happen.
+
+### Per-module release tag format
+
+Each module publishes its own tag prefix:
+
+```text
+utils/v0.0.1
+collections/v0.0.1
+control/v0.0.1
+reactivex/v0.0.1
+concurrency/v0.0.1
+```
+
+A change to one module's tag never implies a change to another.
+`utils/v0.0.2` may ship the same week as `reactivex/v0.0.1`, or
+years later; the prefixes are independent.
+
+### How to find a breaking change
+
+Every release notes a `BREAKING:` line for any signature or
+behaviour change. The diff between the previous and current
+`vX.Y.Z` tag is the authoritative changelog; release notes
+summarise it but do not replace it.
+
 ## Go version
 
 The current modules use **Go 1.27**:

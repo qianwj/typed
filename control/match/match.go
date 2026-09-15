@@ -80,7 +80,7 @@ func In[T comparable](values ...T) Pattern[T] {
 
 // Between returns a Pattern that matches values in the inclusive range
 // [min, max].
-func Between[T cmp.Ordered](min, max T) Pattern[T] {
+func Between[T cmp.Ordered](min, max T) Pattern[T] { //nolint:gocritic // builtinShadow: min/max are part of the public API.
 	return PatternFunc[T](func(value T) bool {
 		return value >= min && value <= max
 	})

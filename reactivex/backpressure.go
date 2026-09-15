@@ -84,7 +84,7 @@ func (s *bufferedSubscription[T]) startLocked() bool {
 	if !s.ready || s.draining || s.cancelled || s.terminated {
 		return false
 	}
-	if !(s.count > 0 && s.demand > 0) && !(s.closed && (s.err != nil || s.count == 0)) {
+	if (s.count == 0 || s.demand == 0) && (!s.closed || (s.err == nil && s.count > 0)) {
 		return false
 	}
 	s.draining = true

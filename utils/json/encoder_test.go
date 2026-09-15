@@ -1,6 +1,7 @@
 package json_test
 
 import (
+	"bytes"
 	v2 "encoding/json/v2"
 	"errors"
 	"reflect"
@@ -232,16 +233,6 @@ func TestEncodeEmptySliceIsArray(t *testing.T) {
 // method. The custom encoding completely replaces the
 // default struct encoding.
 func TestEncodeCustomMarshaler(t *testing.T) {
-	type point struct {
-		X, Y int
-	}
-
-	// Define a wrapper type with a custom MarshalJSON that
-	// always emits "P(X,Y)" so we can verify the method
-	// is being called.
-	type custom struct{ p point }
-	_ = custom{}
-
 	// Use a value type that has its own MarshalJSON.
 	r := json.Encode(marshalerPoint{X: 1, Y: 2})
 	if !r.IsSuccess() {
@@ -298,7 +289,7 @@ func TestEncodeDeterministicMap(t *testing.T) {
 	if !r1.IsSuccess() || !r2.IsSuccess() {
 		t.Fatalf("Encode(deterministic): failures: %v, %v", r1.Error(), r2.Error())
 	}
-	if string(r1.Value()) != string(r2.Value()) {
+	if !bytes.Equal(r1.Value(), r2.Value()) {
 		t.Fatalf("Encode(deterministic): non-stable: %s vs %s", r1.Value(), r2.Value())
 	}
 	// Sorted order must be a, b, c.
@@ -685,7 +676,7 @@ func TestEncodeReuseResult(t *testing.T) {
 	// Calling Value twice returns the same bytes.
 	first := r.Value()
 	second := r.Value()
-	if string(first) != string(second) {
+	if !bytes.Equal(first, second) {
 		t.Fatalf("Value twice: got %s and %s, want same", first, second)
 	}
 }
@@ -734,7 +725,10 @@ func TestEncodeCompatibleWithResultImport(t *testing.T) {
 	// types do not line up, the test fails to build.
 	r := json.Encode(42)
 
-	// Type assertion: r must be result.Result[[]byte].
+	// Type assertion: r must be result.Result[[]byte]. The explicit
+	// type is the assertion under test (compile-time check that
+	// json.Encode returns result.Result[[]byte] exactly).
+	//nolint:staticcheck // QF1011: explicit type is the assertion under test.
 	var _ result.Result[[]byte] = r
 
 	// Use the API: Value, Error, IsSuccess, IsFailure,

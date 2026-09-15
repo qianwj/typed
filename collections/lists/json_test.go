@@ -1,6 +1,7 @@
 package lists_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"strings"
@@ -217,7 +218,7 @@ func TestArrayListMarshalMatchesCollect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal slice: %v", err)
 	}
-	if string(fromList) != string(fromSlice) {
+	if !bytes.Equal(fromList, fromSlice) {
 		t.Fatalf("Marshal list and slice disagree: %s vs %s", fromList, fromSlice)
 	}
 }

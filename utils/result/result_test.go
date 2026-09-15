@@ -38,7 +38,7 @@ func TestResultFailure(t *testing.T) {
 	if !r.IsFailure() {
 		t.Fatal("Failure(...) should be a failure")
 	}
-	if got := r.Error(); got != sentinel {
+	if got := r.Error(); !errors.Is(got, sentinel) {
 		t.Fatalf("Error: got %v, want %v", got, sentinel)
 	}
 }
@@ -168,7 +168,7 @@ func TestResultRecover(t *testing.T) {
 		notFound := result.Failure[int](errors.New("not found"))
 		denied := result.Failure[int](errors.New("denied"))
 
-		recover := func(err error) int {
+		recover := func(err error) int { //nolint:gocritic // builtinShadow: name matches the recovery scenario.
 			switch err.Error() {
 			case "not found":
 				return 0
@@ -241,7 +241,7 @@ func TestResultUnwrap(t *testing.T) {
 	t.Run("failure returns zero value and the error", func(t *testing.T) {
 		sentinel := errors.New("boom")
 		v, err := result.Failure[int](sentinel).Unwrap()
-		if err != sentinel {
+		if !errors.Is(err, sentinel) {
 			t.Fatalf("got error %v, want %v", err, sentinel)
 		}
 		if v != 0 {
@@ -291,7 +291,7 @@ func TestResultMap(t *testing.T) {
 		if got.IsSuccess() {
 			t.Fatal("got Success, want Failure")
 		}
-		if got.Error() != sentinel {
+		if !errors.Is(got.Error(), sentinel) {
 			t.Fatalf("got %v, want %v", got.Error(), sentinel)
 		}
 		if called {
@@ -320,7 +320,7 @@ func TestResultFlatMap(t *testing.T) {
 		if got.IsSuccess() {
 			t.Fatal("got Success, want Failure")
 		}
-		if got.Error() != sentinel {
+		if !errors.Is(got.Error(), sentinel) {
 			t.Fatalf("got %v, want %v", got.Error(), sentinel)
 		}
 	})
@@ -331,7 +331,7 @@ func TestResultFlatMap(t *testing.T) {
 			called = true
 			return result.Success("x")
 		})
-		if got.Error() != sentinel {
+		if !errors.Is(got.Error(), sentinel) {
 			t.Fatalf("got %v, want %v", got.Error(), sentinel)
 		}
 		if called {
@@ -484,7 +484,7 @@ func TestResultWrapFailureNonNilErr(t *testing.T) {
 	if !r.IsFailure() {
 		t.Fatal("Wrap(99, err): IsFailure = false, want true")
 	}
-	if err := r.Error(); err != sentinel {
+	if err := r.Error(); !errors.Is(err, sentinel) {
 		t.Fatalf("Wrap(99, err).Error: got %v, want %v", err, sentinel)
 	}
 }
@@ -514,13 +514,13 @@ func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
 	withZero := result.Wrap(0, err)
 	// Both must be observationally identical: same error,
 	// same Unwrap output, same Optional, same Map / OrElse.
-	if withIgnored.Error() != withZero.Error() {
+	if !errors.Is(withIgnored.Error(), withZero.Error()) {
 		t.Fatal("ignored vs zero: errors differ")
 	}
-	if vIgnored, eIgnored := withIgnored.Unwrap(); eIgnored != err || vIgnored != 0 {
+	if vIgnored, eIgnored := withIgnored.Unwrap(); !errors.Is(eIgnored, err) || vIgnored != 0 {
 		t.Fatalf("withIgnored.Unwrap: got (%v, %v), want (0, err)", vIgnored, eIgnored)
 	}
-	if vZero, eZero := withZero.Unwrap(); eZero != err || vZero != 0 {
+	if vZero, eZero := withZero.Unwrap(); !errors.Is(eZero, err) || vZero != 0 {
 		t.Fatalf("withZero.Unwrap: got (%v, %v), want (0, err)", vZero, eZero)
 	}
 	if withIgnored.Optional().IsPresent() || withZero.Optional().IsPresent() {
@@ -582,7 +582,7 @@ func TestResultWrapWithUnwrap(t *testing.T) {
 
 	sentinel := errors.New("bridge test")
 	v, err = result.Wrap(0, sentinel).Unwrap()
-	if err != sentinel {
+	if !errors.Is(err, sentinel) {
 		t.Fatalf("Unwrap on failure: err = %v, want %v", err, sentinel)
 	}
 	if v != 0 {

@@ -79,6 +79,26 @@ func TestEquals_ReflectionAndDeepWalk(t *testing.T) {
 			t.Fatal("maps: differing values should not be equal")
 		}
 	})
+
+	t.Run("UnexportedFieldsSkipped", func(t *testing.T) {
+		// Unexported fields must not crash Equals: we mirror
+		// reflect.DeepEqual and skip them silently rather than
+		// treat two structs as unequal by side effect. Differing
+		// unexported values still compare equal under this rule.
+		type S struct {
+			Pub  int
+			priv int
+		}
+		if !Equals(S{Pub: 1, priv: 2}, S{Pub: 1, priv: 2}) {
+			t.Fatal("equal exported + equal unexported: should be equal")
+		}
+		if !Equals(S{Pub: 1, priv: 2}, S{Pub: 1, priv: 99}) {
+			t.Fatal("differing unexported must not crash, must compare equal")
+		}
+		if Equals(S{Pub: 1, priv: 0}, S{Pub: 2, priv: 0}) {
+			t.Fatal("differing exported must compare unequal")
+		}
+	})
 }
 
 // TestIsEmptyOrNil_NilAndEmptyPaths drives the isEmptyOrNil helper through

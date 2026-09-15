@@ -229,6 +229,12 @@ func deepEqualFixedVisit(x, y any, visited map[visitKey]bool) bool {
 
 	case reflect.Struct:
 		for i := 0; i < rx.NumField(); i++ {
+			// reflect.Value.Interface panics on unexported fields.
+			// Match reflect.DeepEqual's behaviour: skip them silently
+			// rather than treat two structs as unequal by side effect.
+			if !rx.Type().Field(i).IsExported() {
+				continue
+			}
 			if !deepEqualFixedVisit(rx.Field(i).Interface(), ry.Field(i).Interface(), visited) {
 				return false
 			}

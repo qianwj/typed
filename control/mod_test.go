@@ -174,7 +174,7 @@ func TestRepeatEErrorOnFirstCall(t *testing.T) {
 		calls++
 		return boom
 	})
-	if gotN != 0 || err != boom {
+	if gotN != 0 || !errors.Is(err, boom) {
 		t.Fatalf("RepeatE(5) error-on-first: got (%d, %v), want (0, %v)", gotN, err, boom)
 	}
 	if calls != 1 {
@@ -196,7 +196,7 @@ func TestRepeatEErrorOnMiddleCall(t *testing.T) {
 		}
 		return nil
 	})
-	if gotN != 2 || err != boom {
+	if gotN != 2 || !errors.Is(err, boom) {
 		t.Fatalf("RepeatE(10) error-on-third: got (%d, %v), want (2, %v)", gotN, err, boom)
 	}
 	if calls != 3 {
@@ -217,7 +217,7 @@ func TestRepeatEErrorOnLastCall(t *testing.T) {
 		}
 		return nil
 	})
-	if gotN != 4 || err != boom {
+	if gotN != 4 || !errors.Is(err, boom) {
 		t.Fatalf("RepeatE(5) error-on-last: got (%d, %v), want (4, %v)", gotN, err, boom)
 	}
 	if calls != 5 {
@@ -239,7 +239,7 @@ func TestRepeatEStopsAfterError(t *testing.T) {
 		}
 		return nil
 	})
-	if err != boom {
+	if !errors.Is(err, boom) {
 		t.Fatalf("RepeatE(100) stop-after-error: err = %v, want %v", err, boom)
 	}
 	if calls != 4 {
@@ -306,7 +306,7 @@ func TestRepeatEMixedNilAndErrors(t *testing.T) {
 			return errors.New("should not reach")
 		}
 	})
-	if gotN != 3 || err != first {
+	if gotN != 3 || !errors.Is(err, first) {
 		t.Fatalf("RepeatE(10) mixed: got (%d, %v), want (3, %v)", gotN, err, first)
 	}
 	if calls != 4 {

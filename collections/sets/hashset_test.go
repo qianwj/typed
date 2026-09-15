@@ -237,7 +237,11 @@ func TestNone(t *testing.T) {
 	}
 
 	s := NewHashSet[int]()
-	s.Add(1); s.Add(2); s.Add(3); s.Add(4); s.Add(5)
+	s.Add(1)
+	s.Add(2)
+	s.Add(3)
+	s.Add(4)
+	s.Add(5)
 	if !s.None(func(v int) bool { return v > 10 }) {
 		t.Fatal("no values > 10: None should return true")
 	}
@@ -257,7 +261,11 @@ func TestFind(t *testing.T) {
 	}
 
 	s := NewHashSet[int]()
-	s.Add(1); s.Add(2); s.Add(3); s.Add(4); s.Add(5)
+	s.Add(1)
+	s.Add(2)
+	s.Add(3)
+	s.Add(4)
+	s.Add(5)
 	if got := s.Find(func(v int) bool { return v == 3 }); got.IsEmpty() || got.Get() != 3 {
 		t.Fatalf("hit: got %v, want Optional{3}", got)
 	}
