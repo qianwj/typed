@@ -139,30 +139,16 @@ head element is ready.
 
 Use case: scheduled tasks, retry with backoff.
 
-## Tier 4 — async
-
-### `Future[T]` — typed async result
-
-A typed wrapper around "spawn one goroutine, return its result".
-Mostly subsumed by `Group` (which can do this with one goroutine),
-so lower priority.
-
-```go
-type Future[T any] struct { /* ... */ }
-
-func NewFuture[T any](fn func() (T, error)) *Future[T]
-func (f *Future[T]) Await() (T, error)
-func (f *Future[T]) AwaitWithContext(ctx context.Context) (T, error)
-func (f *Future[T]) Done() bool
-```
-
-Use case: cache warm-up, single-shot async computation that wants a
-typed return.
-
 ## Out of scope
 
 Considered and explicitly rejected:
 
+- **`Future[T]` — typed async result.** Go's `go` keyword + a
+  buffered channel already gives you one-shot async value delivery
+  in two lines; `Group` with one task adds cancellation and error
+  aggregation on top. A dedicated `Future` type would just be a
+  re-skinned wrapper around the same machinery, with no new
+  capability. Skip unless a real ergonomic gap appears.
 - **Rate limiter / token bucket.** Different domain (time math,
   refill semantics), different testability needs (clock injection).
   Belongs in its own package — a future `typed/ratelimit` is the
