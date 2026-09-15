@@ -8,11 +8,11 @@ import (
 
 // ExampleBoundedBlockingQueue shows the optional-returning TryPoll
 // paired with Push: the non-blocking probe avoids the (T, bool) shape
-// by returning adt.Optional.
+// by returning adt.Option.
 //
 // The explicit type annotations on each TryPoll call are the
 // assertions under test (compile-time check that TryPoll returns
-// adt.Optional[int] exactly).
+// adt.Option[int] exactly).
 func ExampleBoundedBlockingQueue() {
 	q := concurrency.NewBoundedBlockingQueue[int](4)
 	q.Push(1)

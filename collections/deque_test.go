@@ -99,7 +99,7 @@ func TestDequeFrontBackDoNotRemove(t *testing.T) {
 // ---------- empty Deque behaviour ----------
 
 // TestDequePopAndPeekOnEmpty confirms that every accessor
-// returns an absent Optional on an empty Deque, and leaves the
+// returns an absent Option on an empty Deque, and leaves the
 // Deque in the empty state.
 func TestDequePopAndPeekOnEmpty(t *testing.T) {
 	d := NewDeque[int]()
@@ -337,10 +337,10 @@ func TestDequeOpsAreConstantTime(t *testing.T) {
 	}
 }
 
-// ---------- Optional integration ----------
+// ---------- Option integration ----------
 
 // TestDequeReturnsOptionValues exercises the type contract of
-// the access methods: every accessor returns adt.Optional[T]
+// the access methods: every accessor returns adt.Option[T]
 // with a present value on a hit and an absent value on a miss.
 func TestDequeReturnsOptionValues(t *testing.T) {
 	for _, name := range []string{"PopFront", "PopBack", "Front", "Back"} {
@@ -391,9 +391,9 @@ func TestDequeReturnsOptionValues(t *testing.T) {
 	})
 }
 
-// TestDequeChaining shows that Optional-based chaining works
+// TestDequeChaining shows that Option-based chaining works
 // out of the box, which is the main reason Deque returns
-// adt.Optional[T] instead of (T, bool).
+// adt.Option[T] instead of (T, bool).
 func TestDequeChaining(t *testing.T) {
 	d := NewDeque[int]()
 	d.PushBack(3)

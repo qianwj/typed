@@ -77,18 +77,18 @@ func TestResultFailurePanicOnNil(t *testing.T) {
 	_ = adt.Failure[int](nil)
 }
 
-// TestResultOptional covers the bridge from Result to Optional.
-// Successes become present Optionals, failures become empty ones
+// TestResultOption covers the bridge from Result to Option.
+// Successes become present Options, failures become empty ones
 // and the error is dropped.
-func TestResultOptional(t *testing.T) {
+func TestResultOption(t *testing.T) {
 	t.Run("success becomes present", func(t *testing.T) {
-		o := adt.Success(7).Optional()
+		o := adt.Success(7).Option()
 		if !o.IsPresent() || o.Get() != 7 {
 			t.Fatalf("got %v, want present 7", o)
 		}
 	})
 	t.Run("failure becomes empty", func(t *testing.T) {
-		o := adt.Failure[int](errors.New("boom")).Optional()
+		o := adt.Failure[int](errors.New("boom")).Option()
 		if o.IsPresent() {
 			t.Fatalf("got %v, want empty", o)
 		}
@@ -109,7 +109,7 @@ func TestResultOrElse(t *testing.T) {
 
 // TestResultOrElseGet ensures the lazy fallback only runs on
 // failure. This is the right choice when the fallback is expensive
-// or has side effects, mirroring Optional.OrElseGet.
+// or has side effects, mirroring Option.OrElseGet.
 func TestResultOrElseGet(t *testing.T) {
 	t.Run("success skips fallback", func(t *testing.T) {
 		called := false
@@ -473,7 +473,7 @@ func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
 	withIgnored := adt.Wrap(42, err)
 	withZero := adt.Wrap(0, err)
 	// Both must be observationally identical: same error,
-	// same Unwrap output, same Optional, same Map / OrElse.
+	// same Unwrap output, same Option, same Map / OrElse.
 	if !errors.Is(withIgnored.Error(), withZero.Error()) {
 		t.Fatal("ignored vs zero: errors differ")
 	}
@@ -483,8 +483,8 @@ func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
 	if vZero, eZero := withZero.Unwrap(); !errors.Is(eZero, err) || vZero != 0 {
 		t.Fatalf("withZero.Unwrap: got (%v, %v), want (0, err)", vZero, eZero)
 	}
-	if withIgnored.Optional().IsPresent() || withZero.Optional().IsPresent() {
-		t.Fatal("Optional of a failure must be absent, regardless of value")
+	if withIgnored.Option().IsPresent() || withZero.Option().IsPresent() {
+		t.Fatal("Option of a failure must be absent, regardless of value")
 	}
 	if withIgnored.OrElse(7) != withZero.OrElse(7) {
 		t.Fatal("OrElse of failures must agree, regardless of value")
@@ -609,22 +609,22 @@ func TestResultWrapComposesWithRecover(t *testing.T) {
 	}
 }
 
-// TestResultWrapComposesWithOptional confirms that
-// Optional() collapses a Wrap-built result the same way it
-// collapses Success / Failure: success → present Optional,
-// failure → absent Optional (error dropped).
-func TestResultWrapComposesWithOptional(t *testing.T) {
-	present := adt.Wrap(42, nil).Optional()
+// TestResultWrapComposesWithOption confirms that
+// Option() collapses a Wrap-built result the same way it
+// collapses Success / Failure: success → present Option,
+// failure → absent Option (error dropped).
+func TestResultWrapComposesWithOption(t *testing.T) {
+	present := adt.Wrap(42, nil).Option()
 	if !present.IsPresent() {
-		t.Fatal("Optional on success: should be present")
+		t.Fatal("Option on success: should be present")
 	}
 	if v := present.OrElse(0); v != 42 {
-		t.Fatalf("Optional on success: got %d, want 42", v)
+		t.Fatalf("Option on success: got %d, want 42", v)
 	}
 
-	absent := adt.Wrap(0, errors.New("optional test")).Optional()
+	absent := adt.Wrap(0, errors.New("optional test")).Option()
 	if absent.IsPresent() {
-		t.Fatal("Optional on failure: should be absent")
+		t.Fatal("Option on failure: should be absent")
 	}
 }
 

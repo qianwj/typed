@@ -275,7 +275,7 @@ func (e *BestEffortError) Unwrap() []error {
 }
 
 // Get returns the i-th task error in completion order as an
-// [adt.Optional]. The result is present when 0 <= i < len(e.Errors)
+// [adt.Option]. The result is present when 0 <= i < len(e.Errors)
 // and empty otherwise (no panic, no out-of-range signal — same
 // "absent value is observable via IsEmpty" rule as
 // [BoundedBlockingQueue.TryPoll]).
@@ -285,7 +285,7 @@ func (e *BestEffortError) Unwrap() []error {
 // for the rare case where the caller wants positional access — for
 // example, formatting "task #3 failed: ..." while leaving the rest
 // for errors.Is.
-func (e *BestEffortError) Get(i int) adt.Optional[error] {
+func (e *BestEffortError) Get(i int) adt.Option[error] {
 	if i >= 0 && i < len(e.Errors) {
 		return adt.Of(e.Errors[i])
 	}

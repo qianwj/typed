@@ -13,8 +13,8 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 	for _, list := range []interface {
 		Add(int)
 		AddFirst(int)
-		RemoveFirst() adt.Optional[int]
-		RemoveLast() adt.Optional[int]
+		RemoveFirst() adt.Option[int]
+		RemoveLast() adt.Option[int]
 		Size() int
 		IsEmpty() bool
 		Clear()
@@ -39,12 +39,12 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 	}
 }
 
-// TestArrayListOptionalReturnsOnEmpty exercises the absent-Optional
-// branches of every ArrayList method that returns adt.Optional[T].
+// TestArrayListOptionReturnsOnEmpty exercises the absent-Option
+// branches of every ArrayList method that returns adt.Option[T].
 // These are defensive branches: callers should not normally call Get
-// on an empty list, but the contract is "absent Optional, not panic",
+// on an empty list, but the contract is "absent Option, not panic",
 // and the branches must be covered.
-func TestArrayListOptionalReturnsOnEmpty(t *testing.T) {
+func TestArrayListOptionReturnsOnEmpty(t *testing.T) {
 	a := NewArrayList[int]()
 	if v := a.Get(0); v.IsPresent() {
 		t.Fatalf("Get(0) on empty: got present %d, want absent", v.OrElse(0))
@@ -69,12 +69,12 @@ func TestArrayListOptionalReturnsOnEmpty(t *testing.T) {
 	}
 }
 
-// TestLinkedListOptionalReturnsOnEmpty is the LinkedList-side parallel
-// of TestArrayListOptionalReturnsOnEmpty. Get, First, Last,
+// TestLinkedListOptionReturnsOnEmpty is the LinkedList-side parallel
+// of TestArrayListOptionReturnsOnEmpty. Get, First, Last,
 // RemoveFirst, RemoveLast, MinBy and MaxBy all return an absent
-// Optional when the list is empty, and the absent branches are
+// Option when the list is empty, and the absent branches are
 // covered here.
-func TestLinkedListOptionalReturnsOnEmpty(t *testing.T) {
+func TestLinkedListOptionReturnsOnEmpty(t *testing.T) {
 	l := NewLinkedList[int]()
 	if v := l.Get(0); v.IsPresent() {
 		t.Fatalf("Get(0) on empty: got present %d, want absent", v.OrElse(0))
@@ -104,7 +104,7 @@ func TestLinkedListOptionalReturnsOnEmpty(t *testing.T) {
 
 // TestLinkedListGetRemoveFirstLastBounds exercises the present
 // branches of LinkedList.Get / RemoveFirst / RemoveLast on a
-// non-empty list. Combined with TestLinkedListOptionalReturnsOnEmpty
+// non-empty list. Combined with TestLinkedListOptionReturnsOnEmpty
 // these bring the present and absent branches to coverage.
 func TestLinkedListGetRemoveFirstLastBounds(t *testing.T) {
 	l := LinkedListOf(10, 20, 30)
@@ -146,7 +146,7 @@ func TestLinkedListGetRemoveFirstLastBounds(t *testing.T) {
 
 // TestArrayListMinMaxByNonEmpty exercises the present branches of
 // ArrayList.MinBy / MaxBy (the empty branches are covered in
-// TestArrayListOptionalReturnsOnEmpty).
+// TestArrayListOptionReturnsOnEmpty).
 func TestArrayListMinMaxByNonEmpty(t *testing.T) {
 	a := ArrayListOf(3, 1, 4, 1, 5, 9, 2, 6)
 	if v := a.MinBy(func(x, y int) int { return x - y }).OrElse(0); v != 1 {

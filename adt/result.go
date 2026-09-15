@@ -9,12 +9,12 @@
 // the value and the error through a chain of combinators (Map,
 // FlatMap, OrElse) without writing repeated `if err != nil` blocks.
 //
-// # Bridge to Optional
+// # Bridge to Option
 //
-// Result.Optional returns an [Optional][T]: a success becomes a
-// present Optional, a failure becomes an absent one (and the error
-// is dropped). This is the one-way bridge from Result to Optional;
-// Optional is a more general zero-or-one container.
+// Result.Option returns an [Option][T]: a success becomes a
+// present Option, a failure becomes an absent one (and the error
+// is dropped). This is the one-way bridge from Result to Option;
+// Option is a more general zero-or-one container.
 //
 // # Bridge from (T, error)
 //
@@ -177,11 +177,11 @@ func (r Result[T]) Unwrap() (T, error) {
 	return r.value, nil
 }
 
-// Optional converts a successful Result into a present Optional and
-// a failed Result into an absent Optional. The error is dropped, so
-// Optional is only appropriate when the caller has already decided
+// Option converts a successful Result into a present Option and
+// a failed Result into an absent Option. The error is dropped, so
+// Option is only appropriate when the caller has already decided
 // that the error channel can be discarded.
-func (r Result[T]) Optional() Optional[T] {
+func (r Result[T]) Option() Option[T] {
 	if r.err != nil {
 		return Empty[T]()
 	}

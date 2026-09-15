@@ -250,8 +250,8 @@ func TestNone(t *testing.T) {
 	}
 }
 
-// TestFind covers the previously 0%-covered HashSet.Find: present Optional
-// on a hit, absent Optional on a miss.
+// TestFind covers the previously 0%-covered HashSet.Find: present Option
+// on a hit, absent Option on a miss.
 func TestFind(t *testing.T) {
 	t.Parallel()
 
@@ -267,7 +267,7 @@ func TestFind(t *testing.T) {
 	s.Add(4)
 	s.Add(5)
 	if got := s.Find(func(v int) bool { return v == 3 }); got.IsEmpty() || got.Get() != 3 {
-		t.Fatalf("hit: got %v, want Optional{3}", got)
+		t.Fatalf("hit: got %v, want Option{3}", got)
 	}
 	if got := s.Find(func(v int) bool { return v > 100 }); !got.IsEmpty() {
 		t.Fatalf("miss: got %v, want absent", got)

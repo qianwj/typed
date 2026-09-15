@@ -176,4 +176,4 @@ kind := match.Type(payload).
 ## See also
 
 - `control.Repeat(n, f)` is the imperative equivalent of `collections.Range(0, n).ForEach(f)` (one fewer `Stream` allocation). See [`collections`](../collections/README.md).
-- `match.Case` complements `Option` and `Result`: use pattern matching when "what exactly did I match?" is the question, `Optional` when "the value may be X", and `Result` when "the operation may fail". See [`adt`](../adt/README.md) and [`adt`](../adt/README.md).
+- `match.Case` complements `Option` and `Result`: use pattern matching when "what exactly did I match?" is the question, `Option` when "the value may be X", and `Result` when "the operation may fail". See [`adt`](../adt/README.md) and [`adt`](../adt/README.md).

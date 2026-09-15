@@ -61,7 +61,7 @@ func TestStackPeekDoesNotRemove(t *testing.T) {
 // ---------- empty Stack behaviour ----------
 
 // TestStackPopAndPeekOnEmpty confirms that Pop and Peek on an
-// empty Stack return an absent Optional, and do not panic or
+// empty Stack return an absent Option, and do not panic or
 // corrupt the Stack.
 func TestStackPopAndPeekOnEmpty(t *testing.T) {
 	s := NewStack[int]()
@@ -330,10 +330,10 @@ func TestStackClearReleasesPointerElements(t *testing.T) {
 	}
 }
 
-// ---------- Optional integration ----------
+// ---------- Option integration ----------
 
 // TestStackPopReturnsOptionValues verifies the type contract:
-// Pop returns adt.Optional[T] with a present value when the
+// Pop returns adt.Option[T] with a present value when the
 // stack is non-empty and an absent value when it is empty.
 func TestStackPopReturnsOptionValues(t *testing.T) {
 	s := NewStack[int]()

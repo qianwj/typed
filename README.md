@@ -21,7 +21,7 @@ Concrete generic types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`,
 `HashSet[T]`, `Stream[T]`, `Subject[T]`) compose through left-to-right
 chainable transforms (`Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
 `Take`, `Drop`, `SortBy`, `Distinct`, `Concat`), backed by the supporting
-abstractions (`Optional[T]`, `Result[T]`, `IsNil`, `Equals`) that the rest
+abstractions (`Option[T]`, `Result[T]`, `IsNil`, `Equals`) that the rest
 of the toolkit is built on. The operator vocabulary is intentionally
 familiar to anyone who has used Java Streams, .NET LINQ, or JavaScript
 array pipelines — without inheriting their runtime model. On the async
@@ -74,7 +74,7 @@ profiles := lists.ArrayListOf(users...).
 - 🪄 **Fluent transforms** — `Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
   `Take`, `Drop`, `Distinct`, `SortBy`, `Concat`. All return concrete
   types under Go 1.27's generic methods.
-- 🟢 **Optional / Result** — `Optional[T]` for "may be absent",
+- 🟢 **Option / Result** — `Option[T]` for "may be absent",
   `Result[T]` for "may fail". Both bridge cleanly to `(T, error)` and
   compose with the collection API.
 - 📡 **Typed async streams** — `reactivex.Observable[T]` with explicit
@@ -133,7 +133,7 @@ adults := lists.ArrayListOf(users...).
     Map(func(u User) string { return u.Name }).
     Collect()
 
-// Optional-based access — no (T, bool) dance
+// Option-based access — no (T, bool) dance
 first := adults.First().OrElse("(none)")
 
 // Linear structures
@@ -169,7 +169,7 @@ use(v)
 ## Design principles
 
 - **Type safety first.** Use Go generics and avoid `any`, reflection,
-  and runtime type assertions wherever possible. `Optional[T]` carries
+  and runtime type assertions wherever possible. `Option[T]` carries
   an explicit `present` flag rather than relying on a nil check, so it
   works for any `T` including value types such as `int`, `string`, and
   `struct{}`.
@@ -177,8 +177,8 @@ use(v)
   concrete generic types, not interfaces. Go 1.27's generic methods
   (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) only work on concrete
   receivers; an interface would break fluent chaining.
-- **Optional-based access.** Every accessor that can fail by absence
-  returns `adt.Optional[T]` rather than `(T, bool)`. The convention
+- **Option-based access.** Every accessor that can fail by absence
+  returns `adt.Option[T]` rather than `(T, bool)`. The convention
   is uniform across `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`, `LinkedList`, `Stack`, `Queue`, and `Deque`.
 - **Bounded memory.** `ArrayList` uses a head-offset layout with
   periodic compaction so the retained capacity of a long-running
@@ -187,13 +187,13 @@ use(v)
   saw. `Stack.Pop`, `ArrayList.RemoveFirst / RemoveLast`, and
   `Deque.PopFront / PopBack` zero the freed slot so the runtime's
   reachability walk does not keep popped references alive.
-- **Optional laziness.** Collection operations are eager; `Stream[T]`
+- **Option laziness.** Collection operations are eager; `Stream[T]`
   is the explicit lazy layer, backed by Go's `iter.Seq[T]`.
 - **Composability.** Collections, iterators, and `Stream` can be
   combined into new data sources; the snapshot contract on `Stream()`
   keeps mutations from leaking into in-flight pipelines.
 - **Early termination.** `First`, `Any`, `All`, `Find`, `Take`, and
-  the `Optional`-returning accessors stop as soon as the answer is
+  the `Option`-returning accessors stop as soon as the answer is
   known.
 - **Opt-in, not a replacement.** Typed is a fluent layer on top of
   idiomatic Go; simple logic should remain easy to write with
@@ -225,8 +225,8 @@ use(v)
 
 | Type | Source | Notes |
 | --- | --- | --- |
-| `adt.Optional[T]` | `adt` | Present / absent value, no nil check on `T`. |
-| `adt.Either[L, R]` | `adt` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Optional`. `Fold` for the canonical branch-pick pattern. |
+| `adt.Option[T]` | `adt` | Present / absent value, no nil check on `T`. |
+| `adt.Either[L, R]` | `adt` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Option`. `Fold` for the canonical branch-pick pattern. |
 | `adt.Result[T]` | `adt` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
 | `json.Encode[T] / Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
 | `objects.Equaler` (interface, optional) | `utils/objects` | Hint interface `Equal(any) bool`; not required for `Equals` to dispatch. |
@@ -255,7 +255,7 @@ use(v)
 
 | Type | Source | Notes |
 | --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `adt.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
+| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `adt.Option[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
 | `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
 | `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
 
@@ -268,7 +268,7 @@ Per-package API reference and examples, in English and Chinese:
 - [control](./docs/control/README.md) — `Repeat` / `RepeatE` and `control/match`
 - [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
 - [concurrency](./docs/concurrency/README.md) — `BoundedBlockingQueue[T]` (blocking + non-blocking, fixed capacity)
-- [adt](./docs/adt/README.md) — `Optional[T]`
+- [adt](./docs/adt/README.md) — `Option[T]`
 - [adt](./docs/adt/README.md) — `Result[T]`
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
 - [utils/json](./docs/utils/json/README.md) — `Encode` / `Decode` on `encoding/json/v2`
@@ -290,15 +290,15 @@ to their Typed counterpart.
 | `sorted` | `Sort` / `SortBy` |
 | `limit` / `take` | `Take` |
 | `skip` / `drop` | `Drop` |
-| `findFirst` / `find` | `First` / `Find` (returns `Optional[T]`) |
+| `findFirst` / `find` | `First` / `Find` (returns `Option[T]`) |
 | `anyMatch` / `some` | `Any` |
 | `allMatch` / `every` | `All` |
 | `noneMatch` | `None` |
 | `reduce` | `Reduce` |
 | `collect(toList())` | `Collect` |
 | `forEach` | `ForEach` |
-| `Optional.of` / `ofNullable` | `adt.Of` / `adt.OfNullable` |
-| `Optional.orElse` | `OrElse` |
+| `Option.of` / `ofNullable` | `adt.Of` / `adt.OfNullable` |
+| `Option.orElse` | `OrElse` |
 | `Stream` lazy | `Stream[T]` |
 | `IntStream.range` | `Range(start, end) Stream[T]` |
 | `Deque` (Java) | `Deque[T]` (LinkedList-backed) |
@@ -361,7 +361,7 @@ follows Go's explicit one.
 
 For the rare case where the toolkit's own surface area is a better fit
 than `chan T` — non-blocking probes (`TryPush` / `TryPoll`), context-aware
-blocking (`PushWithContext` / `PollWithContext`), an `Optional`-based
+blocking (`PushWithContext` / `PollWithContext`), an `Option`-based
 return for non-blocking reads, a single generic type to express "a
 fixed-capacity blocking queue", or `errgroup`-style structured
 concurrency with a typed `fn(ctx)` signature — the [`concurrency`
@@ -395,7 +395,7 @@ port, _ := adt.Wrap(lookupPort()).
 chain with `Unwrap` instead.
 
 For collection pipelines that need to surface errors, the recommended
-pattern is to convert the error path into an absent `Optional[T]`
+pattern is to convert the error path into an absent `Option[T]`
 (e.g. `OfNullable` on a lookup that returns `(T, error)`) and keep the
 success path on the regular fluent API.
 
@@ -474,7 +474,7 @@ go 1.27.1
 
 Go 1.23 introduced `iter.Seq`, `iter.Seq2`, and `for range` support
 for function iterators. Go 1.27's generic methods make fluent APIs
-such as `Stream[T].Map[R]`, `Optional[T].Map[R]`, and
+such as `Stream[T].Map[R]`, `Option[T].Map[R]`, and
 `Result[T].Map[R]` possible.
 
 ## Roadmap
@@ -488,10 +488,10 @@ Done:
 - [x] Order-dependent operations on lists: `Get`, `Insert`, `RemoveAt`,
       `First`, `Last`, `Find`, `Take`, `Drop`, `Distinct`, `SortBy`,
       `MinBy`, `MaxBy`.
-- [x] Optional-based access: `Get` / `First` / `Last` / `Find` /
+- [x] Option-based access: `Get` / `First` / `Last` / `Find` /
       `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` and `Stack` /
       `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back` return
-      `Optional[T]`.
+      `Option[T]`.
 - [x] `Stream[T]` adapter backed by `iter.Seq[T]`, with
       early-terminating terminals.
 - [x] Linear structures: `Stack[T]`, `Queue[T]`, `Deque[T]`.

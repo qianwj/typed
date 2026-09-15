@@ -4,7 +4,7 @@
 
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
-- `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Optional[T]`.
+- `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Option[T]`.
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — lists with immutable-style transforms (`Filter` / `Map` / `Take` / `Drop` / `Concat` / `Distinct` / `SortBy`).
 - `maps.HashMap[K, V]` — hash table with `Keys` / `Values` / `Entries` / `Filter*` / `MapValues` / `Concat`.
 - `sets.HashSet[T]` — hash set with set algebra (`Union` / `Intersect` / `Difference` / `SymmetricDifference`) and same-kind transforms.
@@ -45,7 +45,7 @@ The four sub-packages are independent `go.mod` modules; import what you use.
 
 ## `Stack[T]` / `Queue[T]` / `Deque[T]`
 
-All three are constructed as struct pointers, returning `*Stack[T]` and the like. Every "take one" operation returns `option.Optional[T]` rather than `(T, bool)`, so it composes naturally with the `Stream` / `Result` chains.
+All three are constructed as struct pointers, returning `*Stack[T]` and the like. Every "take one" operation returns `option.Option[T]` rather than `(T, bool)`, so it composes naturally with the `Stream` / `Result` chains.
 
 ```go
 s := collections.NewStack[int]()
@@ -60,9 +60,9 @@ s.Pop()                        // option.Empty[int](), no panic
 
 | Type | Construct | Key methods |
 |---|---|---|
-| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
-| `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
-| `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Optional[T] / PopBack() Optional[T] / Front() Optional[T] / Back() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Option[T] / PopBack() Option[T] / Front() Option[T] / Back() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 
 `Pop*` / `Peek*` on an empty container return `option.Empty[T]()`: they do not panic, and `Peek` / `Front` / `Back` leave the container unchanged, while `Pop*` mutates per the container rules.
 
@@ -78,10 +78,10 @@ s.Pop()                        // option.Empty[int](), no panic
 |---|---|
 | `Add(v)` / `AddFirst(v)` | Append to the tail / insert at the head. |
 | `Insert(i, v)` | Insert at index `i`; `i < 0` or `i > Size()` panics. |
-| `Get(i) Optional[T]` | Out-of-range returns `Empty`, no panic. |
-| `First() Optional[T]` / `Last() Optional[T]` | Empty list returns `Empty`. |
+| `Get(i) Option[T]` | Out-of-range returns `Empty`, no panic. |
+| `First() Option[T]` / `Last() Option[T]` | Empty list returns `Empty`. |
 | `RemoveAt(i) T` | Remove the element at index `i` and return it; out-of-range panics. |
-| `RemoveFirst() Optional[T]` / `RemoveLast() Optional[T]` | Empty list returns `Empty`. |
+| `RemoveFirst() Option[T]` / `RemoveLast() Option[T]` | Empty list returns `Empty`. |
 | `Size() / IsEmpty() / Clear() / Collect() []T` | Cardinality and export. |
 | `Stream() stream.Stream[T]` | Convert to a lazy `Stream[T]` (no data copy). |
 | `MarshalJSON / UnmarshalJSON` | JSON array. |
@@ -98,12 +98,12 @@ s.Pop()                        // option.Empty[int](), no panic
 | `Concat(other)` | Append. |
 | `Peek(visit func(T))` | Walk without changing the list; returns the receiver for chaining, useful for inline debugging. |
 | `SortBy(less func(x, y T) int) *ArrayList[T]` | Sort by `less`; returns a new list. |
-| `MinBy(less func(x, y T) int) option.Optional[T]` | Empty list returns `option.Empty[T]()`; otherwise returns the smallest element (present). |
-| `MaxBy(less func(x, y T) int) option.Optional[T]` | Same as above, returns the largest element. |
+| `MinBy(less func(x, y T) int) option.Option[T]` | Empty list returns `option.Empty[T]()`; otherwise returns the smallest element (present). |
+| `MaxBy(less func(x, y T) int) option.Option[T]` | Same as above, returns the largest element. |
 
 ### Predicates
 
-`Any(p) / All(p) / None(p) / Find(p) Optional[T]` — short-circuiting universal / existential quantifiers; `Find` returns the first matching element.
+`Any(p) / All(p) / None(p) / Find(p) Option[T]` — short-circuiting universal / existential quantifiers; `Find` returns the first matching element.
 
 ### Examples
 
@@ -134,10 +134,10 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 |---|---|
 | `Add(v)` / `AddFirst(v)` | Append / insert at the head. |
 | `Insert(i, v)` | Insert at index `i`; out-of-range panics. |
-| `Get(i) Optional[T]` | Out-of-range returns `Empty`. |
-| `First() / Last() Optional[T]` | Empty list returns `Empty`. |
+| `Get(i) Option[T]` | Out-of-range returns `Empty`. |
+| `First() / Last() Option[T]` | Empty list returns `Empty`. |
 | `RemoveAt(i) T` | Out-of-range panics. |
-| `RemoveFirst() / RemoveLast() Optional[T]` | Empty list returns `Empty`. |
+| `RemoveFirst() / RemoveLast() Option[T]` | Empty list returns `Empty`. |
 | `Size() / IsEmpty() / Clear() / Collect() []T` | Cardinality and export. |
 | `Stream() stream.Stream[T]` | Lazy `Stream[T]`. |
 | `MarshalJSON / UnmarshalJSON` | JSON array. |
@@ -148,11 +148,11 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 
 `Map` and `FlatMap` on a linked list return `*ArrayList[R]` because downstream consumers usually want index or slice access; the conversion is a single `O(n)` walk.
 
-`MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` — empty list returns `Empty`, otherwise the extreme.
+`MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` — empty list returns `Empty`, otherwise the extreme.
 
 ### Predicates
 
-`Any / All / None / Find(p) Optional[T]`, plus `Reduce[U](init U, f func(U, T) U) U`.
+`Any / All / None / Find(p) Option[T]`, plus `Reduce[U](init U, f func(U, T) U) U`.
 
 ---
 
@@ -216,7 +216,7 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 | `Concat(other) *HashSet[T]` | Union (deduplicated); receiver is not modified. |
 | `Reduce[R](init R, f func(R, T) R) R` | Fold. |
 | `SortBy(less) *ArrayList[T]` | Sort and export as a list. |
-| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | Empty set returns `option.Empty[T]()`. |
+| `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | Empty set returns `option.Empty[T]()`. |
 
 ### Set algebra
 
@@ -233,7 +233,7 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 
 ### Predicates
 
-`Any / All / None / Find(p) option.Optional[T]`.
+`Any / All / None / Find(p) option.Option[T]`.
 
 ---
 
@@ -262,13 +262,13 @@ A lazy synchronous stream. `Stream[T]` is a thin wrapper over `iter.Seq[T]`; eve
 |---|---|
 | `Collect() []T` | Materialise into a slice. |
 | `Count() int` | Count (counts the post-filter elements). |
-| `First() / Last() option.Optional[T]` | First / last element. |
+| `First() / Last() option.Option[T]` | First / last element. |
 | `Any(p) / All(p) / None(p) bool` | Short-circuiting existential / universal. |
-| `Find(p) option.Optional[T]` | First matching element. |
+| `Find(p) option.Option[T]` | First matching element. |
 | `Reduce(init T, f func(acc, v T) T) T` | Fold. |
 | `ForEach(visit func(T))` | Pure consumption. |
 | `Associate[K, V](f func(T) (K, V)) map[K]V` | Fold into a `map`; later values overwrite earlier ones on key collision. |
-| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | Extreme; empty stream returns `option.Empty[T]()`. |
+| `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | Extreme; empty stream returns `option.Empty[T]()`. |
 | `SortBy(less) Stream[T]` | Terminal: materialise and sort, then return a new stream. |
 
 > `SortBy` on `Stream` is terminal (it walks the stream once) — unlike `ArrayList` / `LinkedList` / `HashSet`, where `SortBy` is a "transform-style" method.
@@ -304,6 +304,6 @@ collections.Range[int](0, 5).
 
 ## See also
 
-- Most return values are `option.Optional[T]`; see [`adt`](../adt/README.md).
+- Most return values are `option.Option[T]`; see [`adt`](../adt/README.md).
 - The error flow uses `result.Result[T]`; see [`adt`](../adt/README.md).
 - For asynchronous / multi-subscriber scenarios, use `reactivex.Observable[T]`; see [`reactivex`](../reactivex/README.md). The `Stream` here is a synchronous, single-consumer model — the two do not interoperate.

@@ -62,7 +62,7 @@ func TestQueuePeekDoesNotRemove(t *testing.T) {
 // ---------- empty Queue behaviour ----------
 
 // TestQueuePopAndPeekOnEmpty confirms that Pop and Peek on an
-// empty Queue return an absent Optional and leave the Queue
+// empty Queue return an absent Option and leave the Queue
 // in the empty state.
 func TestQueuePopAndPeekOnEmpty(t *testing.T) {
 	q := NewQueue[int]()
@@ -227,10 +227,10 @@ func TestQueuePushPopIsConstantTime(t *testing.T) {
 	}
 }
 
-// ---------- Optional integration ----------
+// ---------- Option integration ----------
 
 // TestQueueReturnsOptionValues exercises the type contract of
-// the access methods: Pop and Peek return adt.Optional[T]
+// the access methods: Pop and Peek return adt.Option[T]
 // with a present value on a hit and an absent value on a miss.
 func TestQueueReturnsOptionValues(t *testing.T) {
 	q := NewQueue[int]()
@@ -257,9 +257,9 @@ func TestQueueReturnsOptionValues(t *testing.T) {
 	})
 }
 
-// TestQueueChaining shows that Optional-based chaining works
+// TestQueueChaining shows that Option-based chaining works
 // out of the box, which is the main reason Queue returns
-// adt.Optional[T] instead of (T, bool).
+// adt.Option[T] instead of (T, bool).
 func TestQueueChaining(t *testing.T) {
 	q := NewQueue[int]()
 	q.Push(3)

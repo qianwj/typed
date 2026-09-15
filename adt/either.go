@@ -33,16 +33,16 @@
 // and the call site picks the right branch with IsLeft / IsRight
 // or the Fold combinator.
 //
-// # Comparison with Optional[T]
+// # Comparison with Option[T]
 //
-// Optional[T] holds zero or one value of a single type.
+// Option[T] holds zero or one value of a single type.
 // Either[L, R] holds exactly one value, but the value's type
-// depends on which side was taken. Optional answers "is this
+// depends on which side was taken. Option answers "is this
 // here?"; Either answers "which of these two is it?".
 //
-// The safe accessors (Left / Right) return Optional[L] /
-// Optional[R] so call sites can chain with the same combinators
-// they already use for Optional.
+// The safe accessors (Left / Right) return Option[L] /
+// Option[R] so call sites can chain with the same combinators
+// they already use for Option.
 package adt
 
 // Either[L, R] holds either a Left value of type L or a Right
@@ -84,19 +84,19 @@ func (e Either[L, R]) IsRight() bool {
 	return e.isRight
 }
 
-// Left returns the Left value as an [Optional]. The result is
+// Left returns the Left value as an [Option]. The result is
 // present when IsLeft() is true and absent when IsRight() is true.
 // Use Fold or the OrZero variant when a zero value is acceptable.
-func (e Either[L, R]) Left() Optional[L] {
+func (e Either[L, R]) Left() Option[L] {
 	if e.isRight {
 		return Empty[L]()
 	}
 	return Of(e.left)
 }
 
-// Right returns the Right value as an [Optional]. The result is
+// Right returns the Right value as an [Option]. The result is
 // present when IsRight() is true and absent when IsLeft() is true.
-func (e Either[L, R]) Right() Optional[R] {
+func (e Either[L, R]) Right() Option[R] {
 	if e.isRight {
 		return Of(e.right)
 	}

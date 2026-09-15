@@ -4,7 +4,7 @@
 
 当前版本提供三个类型:
 
-- `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
+- `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Option` 形式的非阻塞探测、带 context 的阻塞。
 - `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
 - `Group` —— 结构化并发,两种失败策略可选:`Strict`(任何任务失败即失败,ctx 取消兄弟)和 `BestEffort`(任务全部跑完,只有全部成功才成功,否则返回聚合后的 error)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
 
@@ -37,7 +37,7 @@ import (
 )
 ```
 
-`concurrency` 依赖 `adt`,因为 `BoundedBlockingQueue.TryPoll` 和 `UnboundedBlockingQueue.TryPoll` 都返回 `adt.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
+`concurrency` 依赖 `adt`,因为 `BoundedBlockingQueue.TryPoll` 和 `UnboundedBlockingQueue.TryPoll` 都返回 `adt.Option[T]`,与工具集其他地方的“可能缺席”约定保持一致。
 
 `concurrency` 是独立的 `go.mod` 模块,可以单独引用,不依赖 `collections` / `reactivex` / `control` / `utils` 中的任何一个。
 
@@ -47,9 +47,9 @@ Go 内置的 `chan T` 本身就是一个相当不错的有界阻塞队列——�
 
 下面这些场景下,你会想要 `BoundedBlockingQueue[T]` 套在 channel 外面:
 
-- **非阻塞探测返回 `Optional`。** `TryPoll` 返回 `adt.Optional[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
+- **非阻塞探测返回 `Option`。** `TryPoll` 返回 `adt.Option[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
 - **带 context 的阻塞。** `PushWithContext` / `PollWithContext` 让你直接跟超时、deadline、关停信号配合,不需要在 `Push` / `Poll` 外面再自己包一层 goroutine + channel。
-- **风格一致的泛型 API。** 用 `Size` 不用 `len`、用 `Capacity` 不用 `cap`、用 `Optional` 不用 `(T, bool)`——与 Typed 其他部分用同一套词汇。
+- **风格一致的泛型 API。** 用 `Size` 不用 `len`、用 `Capacity` 不用 `cap`、用 `Option` 不用 `(T, bool)`——与 Typed 其他部分用同一套词汇。
 - **2 的幂容量向上取整。** `Capacity()` 总是返回 2 的幂,需要做位掩码的下游用起来方便。
 
 跟裸 `chan T` 相比,热路径上的代价基本为零。
@@ -89,9 +89,9 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 有空位时入队,成功返回 `true`;队列满时立即返回 `false`。 |
-| `TryPoll() adt.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() adt.Option[T]` | 队列非空时出队,成功返回 present 的 `Option`;空队列时立即返回空 `Option`。 |
 
-这些方法永不等待,正好用于 `select { ... default: ... }` 风格,以及“满了就丢”或“满了就降级”这种背压策略,不需要起额外的 watcher goroutine。`TryPoll` 返回 `Optional` 而非 `(T, bool)`,是工具集通用的“可能缺席”约定,与 `Stack.Pop` / `Queue.Pop` / `Deque.PopFront` / `PopBack` 一致。
+这些方法永不等待,正好用于 `select { ... default: ... }` 风格,以及“满了就丢”或“满了就降级”这种背压策略,不需要起额外的 watcher goroutine。`TryPoll` 返回 `Option` 而非 `(T, bool)`,是工具集通用的“可能缺席”约定,与 `Stack.Pop` / `Queue.Pop` / `Deque.PopFront` / `PopBack` 一致。
 
 ### 状态查询
 
@@ -116,7 +116,7 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | 容量 | 在 `make` 时设置 | 在 `NewBoundedBlockingQueue` 时设置;向上取整到 2 的幂 |
 | 默认是否有界 | 否(`make(chan T)` 无缓冲) | 是——必须传 capacity |
 | 阻塞发送 / 接收 | `ch <- v` / `<-ch` | `Push(v)` / `Poll()` |
-| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryPoll() adt.Optional[T]` |
+| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryPoll() adt.Option[T]` |
 | 带 context 的阻塞 | 套 `select { case <-ctx.Done(): }` | `PushWithContext` / `PollWithContext` |
 | `len(ch)` | 有,但与操作之间没有同步保证 | `Size()` —— 同样的语义,同样不串行化 |
 | 吞吐(1P1C) | ~30 ns/op(微基准) | ~210 ns/op(微基准) |
@@ -231,7 +231,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 入队。**永不失败**——队列无界,所以始终返回 `true`。 |
-| `TryPoll() adt.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() adt.Option[T]` | 队列非空时出队,成功返回 present 的 `Option`;空队列时立即返回空 `Option`。 |
 
 ### 状态查询
 
@@ -371,5 +371,5 @@ Apple M5 Pro(Go 1.27,darwin/arm64)上:
 ## 与其他包的关系
 
 - [`reactivex`](../../reactivex/README-cn.md) —— 带显式 demand 和可配背压的强类型异步事件流。如果要排队的其实是“派发给多个订阅者的事件”,`Observable` 通常比队列更合适。
-- [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) —— 同步、内存中的 `Queue[T]`。在没有并发、又想要 `Optional[T]` 风格取值时使用;它不加锁、没有 `TryPush`、也没有背压。
+- [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) —— 同步、内存中的 `Queue[T]`。在没有并发、又想要 `Option[T]` 风格取值时使用;它不加锁、没有 `TryPush`、也没有背压。
 - 标准库的 [`chan T`](https://go.dev/ref/spec#Channel_types) —— 本类型就是它的一个薄包装。

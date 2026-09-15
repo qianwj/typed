@@ -23,7 +23,7 @@
 
 ### 抽象
 
-- 🟢 [`adt`](./adt/README-cn.md) —— `Optional[T]`,可能缺席的值。
+- 🟢 [`adt`](./adt/README-cn.md) —— `Option[T]`,可能缺席的值。
 - 🟡 [`adt`](./adt/README-cn.md) —— `Result[T]`,成功 / 失败以及与 `(T, error)` 互转的桥。
 - 🟰 [`utils/objects`](./utils/objects/README-cn.md) —— `IsNil` / `Equals`(含 `Equal(T) bool` 分派与 nil/空归一化)。
 - 📦 [`utils/json`](./utils/json/README-cn.md) —— `Encode` / `Decode`,基于 `encoding/json/v2` 的 `Result` 风格编解码。

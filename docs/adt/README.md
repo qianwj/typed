@@ -4,7 +4,7 @@
 
 Typed algebraic data types — value types that explicitly model "present vs absent", "success vs failure", or "this variant vs that variant". The package ships three types:
 
-- [`Optional[T]`](#optionalt) — zero-or-one of a single type. The typed alternative to `(T, bool)`.
+- [`Option[T]`](#optionalt) — zero-or-one of a single type. The typed alternative to `(T, bool)`.
 - [`Result[T]`](#resultt) — success carrying `T`, or failure carrying a non-nil `error`. The typed alternative to `(T, error)`.
 - [`Either[L, R]`](#eitherl-r) — exactly one of two values. The general tagged-union primitive the first two specialise.
 
@@ -14,7 +14,7 @@ Typed algebraic data types — value types that explicitly model "present vs abs
 
 - [Import](#import)
 - [Why one package?](#why-one-package)
-- [`Optional[T]`](#optionalt)
+- [`Option[T]`](#optionalt)
 - [`Result[T]`](#resultt)
 - [`Either[L, R]`](#eitherl-r)
 - [Choosing between them](#choosing-between-them)
@@ -26,36 +26,36 @@ Typed algebraic data types — value types that explicitly model "present vs abs
 import "github.com/qianwj/typed/adt"
 ```
 
-All three types share the same import — `adt.Optional`, `adt.Result`, `adt.Either`.
+All three types share the same import — `adt.Option`, `adt.Result`, `adt.Either`.
 
 ## Why one package?
 
 The three types share the same vocabulary (present / absent / success / failure / left / right) and cross-reference each other in idiomatic ways:
 
-- `Result.Optional` returns an `Optional[T]` — a success becomes present, a failure becomes absent.
-- `Either.Left` / `Either.Right` return `Optional[L]` / `Optional[R]` — safe accessors over the tagged union.
+- `Result.Option` returns an `Option[T]` — a success becomes present, a failure becomes absent.
+- `Either.Left` / `Either.Right` return `Option[L]` / `Option[R]` — safe accessors over the tagged union.
 
 Co-locating them in one package makes those relationships visible at the call site without the import-by-import friction of separate sub-packages. A separate module (`typed/adt`, not `typed/utils/adt`) signals that they are value types, not utilities in the same sense as `objects.IsNil` or a JSON codec — consumers can depend on the value types without pulling in unrelated `utils/*` code.
 
-## `Optional[T]`
+## `Option[T]`
 
-`Optional[T]` is a container that may or may not hold a value of type `T`. An `Optional` is either present (carrying a `T`) or absent (no value). The zero value of `Optional` is absent and is equivalent to `Empty[T]()`.
+`Option[T]` is a container that may or may not hold a value of type `T`. An `Option` is either present (carrying a `T`) or absent (no value). The zero value of `Option` is absent and is equivalent to `Empty[T]()`.
 
-`Optional` is not an interface, which lets its methods declare their own type parameters (`Map[R]`, `FlatMap[R]`) — a Go 1.27+ generic-method feature.
+`Option` is not an interface, which lets its methods declare their own type parameters (`Map[R]`, `FlatMap[R]`) — a Go 1.27+ generic-method feature.
 
 ### Why not `(T, bool)`?
 
 - The call site is self-documenting; combinators chain without scattering `if ok { ... }` blocks at every step.
-- `Optional` treats value types (`int` / `string` / `struct{}`) and pointer-like types uniformly — it carries an explicit `present` flag instead of relying on a nil check on the value. There is no "is it zero or is it absent" ambiguity for `int`.
+- `Option` treats value types (`int` / `string` / `struct{}`) and pointer-like types uniformly — it carries an explicit `present` flag instead of relying on a nil check on the value. There is no "is it zero or is it absent" ambiguity for `int`.
 - It keeps `Result[T]` and other `(T, error)`-shaped combinators decoupled from "is it absent?".
 
 ### Construction
 
 | Factory | Semantics |
 |---|---|
-| `Empty[T any]() Optional[T]` | Carries no value. The zero value `Optional[T]{}` is equivalent. |
-| `Of[T any](value T) Optional[T]` | Carries `value`. **Panics on a typed nil** (e.g. a `nil *Foo` passed as a pointer-typed `T`). |
-| `OfNullable[T any](value T) Optional[T]` | Applies Go's nil semantics: a nil pointer / map / slice / chan / func / interface becomes `Empty`; anything else is treated as `Of(value)`. |
+| `Empty[T any]() Option[T]` | Carries no value. The zero value `Option[T]{}` is equivalent. |
+| `Of[T any](value T) Option[T]` | Carries `value`. **Panics on a typed nil** (e.g. a `nil *Foo` passed as a pointer-typed `T`). |
+| `OfNullable[T any](value T) Option[T]` | Applies Go's nil semantics: a nil pointer / map / slice / chan / func / interface becomes `Empty`; anything else is treated as `Of(value)`. |
 
 > Pick `Of` vs `OfNullable` based on `T`: value types use `Of`; pointer-like and interface types use `OfNullable`.
 
@@ -70,10 +70,10 @@ Co-locating them in one package makes those relationships visible at the call si
 
 | Method | Behaviour when absent |
 |---|---|
-| `Get() T` | **Panics** ("Get on empty Optional"). |
+| `Get() T` | **Panics** ("Get on empty Option"). |
 | `OrElse(default T) T` | Returns `default`. `default` is always evaluated. |
 | `OrElseGet(f func() T) T` | Returns `f()`. `f` runs only when absent. |
-| `OrElseThrow(errMsg string) (T, error)` | Returns `(zero, errors.New(errMsg))` when absent; `(value, nil)` when present. **Does not panic** — the name follows Java's `Optional.orElseThrow` convention, adapted to Go's explicit `(T, error)`. |
+| `OrElseThrow(errMsg string) (T, error)` | Returns `(zero, errors.New(errMsg))` when absent; `(value, nil)` when present. **Does not panic** — the name follows Java's `Option.orElseThrow` convention, adapted to Go's explicit `(T, error)`. |
 
 ### Side effects
 
@@ -86,9 +86,9 @@ Co-locating them in one package makes those relationships visible at the call si
 
 | Method | Description |
 |---|---|
-| `Filter(predicate func(T) bool) Optional[T]` | Returns this `Optional` when present and `predicate(value) == true`; otherwise `Empty`. `predicate` is not called when the receiver is absent. |
-| `Map[R](f func(T) R) Optional[R]` | Returns `Empty[R]` when absent; **does not call** `f`. |
-| `FlatMap[R](f func(T) Optional[R]) Optional[R]` | **Does not call** `f` when absent. When called, the `Optional[R]` returned by `f` is taken as the result. |
+| `Filter(predicate func(T) bool) Option[T]` | Returns this `Option` when present and `predicate(value) == true`; otherwise `Empty`. `predicate` is not called when the receiver is absent. |
+| `Map[R](f func(T) R) Option[R]` | Returns `Empty[R]` when absent; **does not call** `f`. |
+| `FlatMap[R](f func(T) Option[R]) Option[R]` | **Does not call** `f` when absent. When called, the `Option[R]` returned by `f` is taken as the result. |
 
 ### Examples
 
@@ -155,7 +155,7 @@ The zero value of `Result` is a failure with a nil error; callers should always 
 
 | Method | Description |
 |---|---|
-| `Optional() Optional[T]` | Success → present `Optional`; failure → absent `Optional`. The error is dropped — use only when the caller has decided the error channel can be discarded. |
+| `Option() Option[T]` | Success → present `Option`; failure → absent `Option`. The error is dropped — use only when the caller has decided the error channel can be discarded. |
 
 ### Chained transforms
 
@@ -208,12 +208,12 @@ Go's `(T, error)` shape is convenient for one-shot call sites but awkward once a
 
 | Method | Description |
 |---|---|
-| `Left() Optional[L]` | Present when `IsLeft()`; absent when `IsRight()`. |
-| `Right() Optional[R]` | Present when `IsRight()`; absent when `IsLeft()`. |
+| `Left() Option[L]` | Present when `IsLeft()`; absent when `IsRight()`. |
+| `Right() Option[R]` | Present when `IsRight()`; absent when `IsLeft()`. |
 | `LeftOrZero() L` | Returns the `Left` value, or the zero value of `L` when on `Right`. Use when reading the wrong side is harmless. |
 | `RightOrZero() R` | Mirror of `LeftOrZero`. |
 
-The safe accessors return `Optional` so call sites can chain with the same combinators they already use elsewhere.
+The safe accessors return `Option` so call sites can chain with the same combinators they already use elsewhere.
 
 ### Combinators
 
@@ -244,20 +244,20 @@ msg := result.Fold(
 
 | Question | Reach for |
 | --- | --- |
-| May or may not have a value, with no associated failure detail | `Optional[T]` |
+| May or may not have a value, with no associated failure detail | `Option[T]` |
 | Always returns a value on success or an error on failure | `Result[T]` |
 | Two distinct success / failure categories, or two value types | `Either[L, R]` |
 
-`Optional` is zero-or-one. `Result` is success-or-failure (the failure always carries a standard `error`). `Either` is general — both branches can be any type, including two distinct error types if you want error categorisation beyond a single `error` interface.
+`Option` is zero-or-one. `Result` is success-or-failure (the failure always carries a standard `error`). `Either` is general — both branches can be any type, including two distinct error types if you want error categorisation beyond a single `error` interface.
 
 In practice:
 
-- A `Map[K]V.Get(key)` that may miss → `Optional[V]`.
+- A `Map[K]V.Get(key)` that may miss → `Option[V]`.
 - A database query that returns a row or errors → `Result[Row]`.
 - A function that may produce `T` or a configuration error → `Either[ConfigError, T]`.
 
 ## See also
 
-- Every "may be absent" accessor in [`collections`](../collections/README.md) returns `adt.Optional[T]`: `ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`, the `Stack` / `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back`, and `Stream.First` / `Last` / `Find`.
+- Every "may be absent" accessor in [`collections`](../collections/README.md) returns `adt.Option[T]`: `ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`, the `Stack` / `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back`, and `Stream.First` / `Last` / `Find`.
 - [`utils/json`](../utils/json/README.md) uses `adt.Result[T]` for codec return values.
 - [`reactivex.Single[T]`](../reactivex/README.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README.md#maybet) — reactive containers whose terminal events are `Either`-like.

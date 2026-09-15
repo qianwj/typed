@@ -39,7 +39,7 @@ func (s *Stack[T]) Push(value T) {
 }
 
 // Pop removes and returns the top element wrapped in a present
-// adt.Optional[T], or an absent Optional if the Stack is
+// adt.Option[T], or an absent Option if the Stack is
 // empty.
 //
 // Pop explicitly zeroes the popped slot before shortening the
@@ -56,7 +56,7 @@ func (s *Stack[T]) Push(value T) {
 // that all finalizers run. With the previous (non-zeroing) Pop
 // the finalizers would never fire, because the backing array
 // kept the popped pointers alive through out-of-range slots.
-func (s *Stack[T]) Pop() adt.Optional[T] {
+func (s *Stack[T]) Pop() adt.Option[T] {
 	n := len(s.items) - 1
 	if n < 0 {
 		return adt.Empty[T]()
@@ -69,10 +69,10 @@ func (s *Stack[T]) Pop() adt.Optional[T] {
 }
 
 // Peek returns the top element wrapped in a present
-// adt.Optional[T], or an absent Optional if the Stack is
+// adt.Option[T], or an absent Option if the Stack is
 // empty. Peek does not modify the Stack: the same call
 // repeated yields the same value, and Size is unchanged.
-func (s *Stack[T]) Peek() adt.Optional[T] {
+func (s *Stack[T]) Peek() adt.Option[T] {
 	if len(s.items) == 0 {
 		return adt.Empty[T]()
 	}
@@ -87,7 +87,7 @@ func (s *Stack[T]) Size() int {
 
 // IsEmpty reports whether the Stack has no elements. IsEmpty
 // is the O(1) companion to Size and the standard guard before
-// Pop or Peek for callers that prefer it to the absent-Optional
+// Pop or Peek for callers that prefer it to the absent-Option
 // return.
 func (s *Stack[T]) IsEmpty() bool {
 	return len(s.items) == 0

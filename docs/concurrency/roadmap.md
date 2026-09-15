@@ -11,7 +11,7 @@ The conventions used by every new type here:
   `Release` for lock-style ops, `Await` for one-shot waits.
 - `WithContext` suffix for ctx-aware blocking variants.
 - `Try` prefix for the non-blocking variant.
-- Optional returns use `option.Optional[T]` (matching
+- Option returns use `option.Option[T]` (matching
   [`collections.Queue`](../collections/README.md#stackt--queuet--dequet)
   and the rest of the toolkit).
 - `*Or[T]` helpers for tests where the convention is "(value, ok)".

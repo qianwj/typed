@@ -7,9 +7,9 @@ import (
 	"github.com/qianwj/typed/adt"
 )
 
-// TestOptionalEmpty exercises the basic absence story for value
+// TestOptionEmpty exercises the basic absence story for value
 // types, which is the case that breaks a nil-sentinel design.
-func TestOptionalEmpty(t *testing.T) {
+func TestOptionEmpty(t *testing.T) {
 	t.Run("value type int", func(t *testing.T) {
 		o := adt.Empty[int]()
 		if o.IsPresent() {
@@ -33,10 +33,10 @@ func TestOptionalEmpty(t *testing.T) {
 	})
 }
 
-// TestOptionalOf ensures a present Optional of a value type can
+// TestOptionOf ensures a present Option of a value type can
 // carry a real (non-zero) value and is also able to carry a zero
 // value while staying present.
-func TestOptionalOf(t *testing.T) {
+func TestOptionOf(t *testing.T) {
 	t.Run("non-zero", func(t *testing.T) {
 		o := adt.Of(42)
 		if !o.IsPresent() {
@@ -66,10 +66,10 @@ func TestOptionalOf(t *testing.T) {
 	})
 }
 
-// TestOptionalOfNullable covers the pointer/reference type branch.
-// A typed nil must become an absent Optional; a non-nil value must
+// TestOptionOfNullable covers the pointer/reference type branch.
+// A typed nil must become an absent Option; a non-nil value must
 // become a present one.
-func TestOptionalOfNullable(t *testing.T) {
+func TestOptionOfNullable(t *testing.T) {
 	t.Run("nil pointer is absent", func(t *testing.T) {
 		var p *user
 		o := adt.OfNullable(p)
@@ -124,7 +124,7 @@ func TestOptionalOfNullable(t *testing.T) {
 	})
 	t.Run("value type never nil", func(t *testing.T) {
 		// Value types (int, string, struct, …) cannot be nil.
-		// OfNullable must return a present Optional regardless
+		// OfNullable must return a present Option regardless
 		// of the value, including the zero value. This is the
 		// reason OfNullable cannot be used as a universal
 		// constructor: prefer Of for value types.
@@ -140,19 +140,19 @@ func TestOptionalOfNullable(t *testing.T) {
 	})
 }
 
-// TestOptionalGetPanicOnEmpty documents the deliberate panic when
-// the caller extracts from an absent Optional without checking.
-func TestOptionalGetPanicOnEmpty(t *testing.T) {
+// TestOptionGetPanicOnEmpty documents the deliberate panic when
+// the caller extracts from an absent Option without checking.
+func TestOptionGetPanicOnEmpty(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("Get on empty Optional should panic")
+			t.Fatal("Get on empty Option should panic")
 		}
 	}()
 	_ = adt.Empty[int]().Get()
 }
 
-// TestOptionalOrElse covers both branches of OrElse.
-func TestOptionalOrElse(t *testing.T) {
+// TestOptionOrElse covers both branches of OrElse.
+func TestOptionOrElse(t *testing.T) {
 	if got := adt.Of(7).OrElse(99); got != 7 {
 		t.Fatalf("OrElse on present: got %d, want 7", got)
 	}
@@ -161,10 +161,10 @@ func TestOptionalOrElse(t *testing.T) {
 	}
 }
 
-// TestOptionalOrElseGet ensures the fallback function only runs
+// TestOptionOrElseGet ensures the fallback function only runs
 // when the receiver is absent. This is the property the eager
 // OrElse does not provide.
-func TestOptionalOrElseGet(t *testing.T) {
+func TestOptionOrElseGet(t *testing.T) {
 	t.Run("present skips the fallback", func(t *testing.T) {
 		called := false
 		got := adt.Of(5).OrElseGet(func() int {
@@ -186,11 +186,11 @@ func TestOptionalOrElseGet(t *testing.T) {
 	})
 }
 
-// TestOptionalOrElseThrow documents the (T, error) shape. Note that
+// TestOptionOrElseThrow documents the (T, error) shape. Note that
 // the function does not panic despite the name: the Go convention
 // is to return an error, and the name is borrowed from Java's
-// Optional.orElseThrow.
-func TestOptionalOrElseThrow(t *testing.T) {
+// Option.orElseThrow.
+func TestOptionOrElseThrow(t *testing.T) {
 	t.Run("present returns value with nil error", func(t *testing.T) {
 		v, err := adt.Of(7).OrElseThrow("missing")
 		if err != nil {
@@ -208,9 +208,9 @@ func TestOptionalOrElseThrow(t *testing.T) {
 	})
 }
 
-// TestOptionalIfPresent confirms the side-effecting callback is
-// only invoked when the Optional is present.
-func TestOptionalIfPresent(t *testing.T) {
+// TestOptionIfPresent confirms the side-effecting callback is
+// only invoked when the Option is present.
+func TestOptionIfPresent(t *testing.T) {
 	called := 0
 	adt.Of(10).IfPresent(func(int) { called++ })
 	adt.Empty[int]().IfPresent(func(int) { called++ })
@@ -219,9 +219,9 @@ func TestOptionalIfPresent(t *testing.T) {
 	}
 }
 
-// TestOptionalIfPresentOrElse checks that exactly one of the two
+// TestOptionIfPresentOrElse checks that exactly one of the two
 // callbacks runs, depending on presence.
-func TestOptionalIfPresentOrElse(t *testing.T) {
+func TestOptionIfPresentOrElse(t *testing.T) {
 	present, absent := 0, 0
 	track := func(int) { present++ }
 	trackAbsent := func() { absent++ }
@@ -237,9 +237,9 @@ func TestOptionalIfPresentOrElse(t *testing.T) {
 	}
 }
 
-// TestOptionalFilter covers all three branches: present+keep,
+// TestOptionFilter covers all three branches: present+keep,
 // present+drop, and absent.
-func TestOptionalFilter(t *testing.T) {
+func TestOptionFilter(t *testing.T) {
 	t.Run("present and kept", func(t *testing.T) {
 		got := adt.Of(10).Filter(func(n int) bool { return n > 5 })
 		if !got.IsPresent() || got.Get() != 10 {
@@ -267,9 +267,9 @@ func TestOptionalFilter(t *testing.T) {
 	})
 }
 
-// TestOptionalMap exercises a type-changing chain and verifies the
+// TestOptionMap exercises a type-changing chain and verifies the
 // absent branch is propagated without invoking f.
-func TestOptionalMap(t *testing.T) {
+func TestOptionMap(t *testing.T) {
 	t.Run("present applies f and changes type", func(t *testing.T) {
 		got := adt.Of(7).Map(func(n int) string {
 			return "n=" + itoa(n)
@@ -293,12 +293,12 @@ func TestOptionalMap(t *testing.T) {
 	})
 }
 
-// TestOptionalFlatMap checks that FlatMap delegates to the inner
-// Optional returned by f when present, and propagates absence
+// TestOptionFlatMap checks that FlatMap delegates to the inner
+// Option returned by f when present, and propagates absence
 // without calling f.
-func TestOptionalFlatMap(t *testing.T) {
+func TestOptionFlatMap(t *testing.T) {
 	t.Run("present delegates to f", func(t *testing.T) {
-		got := adt.Of(5).FlatMap(func(n int) adt.Optional[string] {
+		got := adt.Of(5).FlatMap(func(n int) adt.Option[string] {
 			if n > 0 {
 				return adt.Of(itoa(n))
 			}
@@ -309,7 +309,7 @@ func TestOptionalFlatMap(t *testing.T) {
 		}
 	})
 	t.Run("f returning empty stays empty", func(t *testing.T) {
-		got := adt.Of(-1).FlatMap(func(int) adt.Optional[string] {
+		got := adt.Of(-1).FlatMap(func(int) adt.Option[string] {
 			return adt.Empty[string]()
 		})
 		if got.IsPresent() {
@@ -318,7 +318,7 @@ func TestOptionalFlatMap(t *testing.T) {
 	})
 	t.Run("empty propagates without calling f", func(t *testing.T) {
 		called := false
-		got := adt.Empty[int]().FlatMap(func(int) adt.Optional[string] {
+		got := adt.Empty[int]().FlatMap(func(int) adt.Option[string] {
 			called = true
 			return adt.Of("x")
 		})
@@ -331,11 +331,11 @@ func TestOptionalFlatMap(t *testing.T) {
 	})
 }
 
-// TestOptionalChained combinators read more naturally than a manual
+// TestOptionChained combinators read more naturally than a manual
 // sequence of conditionals. This is a smoke test for the
 // documentation example.
-func TestOptionalChained(t *testing.T) {
-	parse := func(s string) adt.Optional[int] {
+func TestOptionChained(t *testing.T) {
+	parse := func(s string) adt.Option[int] {
 		if s == "" {
 			return adt.Empty[int]()
 		}

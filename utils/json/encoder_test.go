@@ -732,12 +732,12 @@ func TestEncodeCompatibleWithResultImport(t *testing.T) {
 	var _ adt.Result[[]byte] = r
 
 	// Use the API: Value, Error, IsSuccess, IsFailure,
-	// Unwrap, OrElse, Optional.
+	// Unwrap, OrElse, Option.
 	_ = r.Value()
 	_ = r.Error()
 	_ = r.IsSuccess()
 	_ = r.IsFailure()
 	_, _ = r.Unwrap()
 	_ = r.OrElse(nil)
-	_ = r.Optional()
+	_ = r.Option()
 }

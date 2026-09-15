@@ -2,7 +2,7 @@
 
 泛型集合与同步数据流。`collections` 分为四类容器和一个惰性流工具：
 
-- `Stack[T]` / `Queue[T]` / `Deque[T]` — 基本线性容器，返回 `option.Optional[T]` 表示"无值"。
+- `Stack[T]` / `Queue[T]` / `Deque[T]` — 基本线性容器，返回 `option.Option[T]` 表示"无值"。
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — 列表，提供不可变式 transform（`Filter`/`Map`/`Take`/`Drop`/`Concat`/`Distinct`/`SortBy`）。
 - `maps.HashMap[K, V]` — 哈希表，提供 `Keys`/`Values`/`Entries`/`Filter*`/`MapValues`/`Concat`。
 - `sets.HashSet[T]` — 哈希集合，提供集合代数（`Union`/`Intersect`/`Difference`/`SymmetricDifference`）以及同型 transform。
@@ -43,7 +43,7 @@ import (
 
 ## `Stack[T]` / `Queue[T]` / `Deque[T]`
 
-三者都是结构体指针构造，返回 `*Stack[T]` 等。所有"取一个元素"的操作都返回 `option.Optional[T]`，而不是 `(T, bool)`，以便和 `Stream` / `Result` 链路自然拼装。
+三者都是结构体指针构造，返回 `*Stack[T]` 等。所有"取一个元素"的操作都返回 `option.Option[T]`，而不是 `(T, bool)`，以便和 `Stream` / `Result` 链路自然拼装。
 
 ```go
 s := collections.NewStack[int]()
@@ -58,9 +58,9 @@ s.Pop()                        // option.Empty[int]()，不 panic
 
 | 类型 | 构造 | 关键方法 |
 |---|---|---|
-| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
-| `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Optional[T] / Peek() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
-| `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Optional[T] / PopBack() Optional[T] / Front() Optional[T] / Back() Optional[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
+| `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Option[T] / PopBack() Option[T] / Front() Option[T] / Back() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 
 `Pop*` / `Peek*` 在容器为空时返回 `option.Empty[T]()`，不会 panic，也不会修改容器（`Peek`/`Front`/`Back`），或者按对应规则修改（`Pop*`）。
 
@@ -76,10 +76,10 @@ s.Pop()                        // option.Empty[int]()，不 panic
 |---|---|
 | `Add(v)` / `AddFirst(v)` | 追加到末尾 / 插入到头部。 |
 | `Insert(i, v)` | 在下标 `i` 插入 `v`；`i < 0` 或 `i > Size()` 会 panic。 |
-| `Get(i) Optional[T]` | 下标越界返回 `Empty`，不 panic。 |
-| `First() Optional[T]` / `Last() Optional[T]` | 空表返回 `Empty`。 |
+| `Get(i) Option[T]` | 下标越界返回 `Empty`，不 panic。 |
+| `First() Option[T]` / `Last() Option[T]` | 空表返回 `Empty`。 |
 | `RemoveAt(i) T` | 删除下标 `i` 的元素并返回它；越界 panic。 |
-| `RemoveFirst() Optional[T]` / `RemoveLast() Optional[T]` | 空表返回 `Empty`。 |
+| `RemoveFirst() Option[T]` / `RemoveLast() Option[T]` | 空表返回 `Empty`。 |
 | `Size() / IsEmpty() / Clear() / Collect() []T` | 基础量与导出。 |
 | `Stream() stream.Stream[T]` | 转成惰性 `Stream[T]`（不复制数据）。 |
 | `MarshalJSON / UnmarshalJSON` | JSON 数组。 |
@@ -96,12 +96,12 @@ s.Pop()                        // option.Empty[int]()，不 panic
 | `Concat(other)` | 末尾拼接。 |
 | `Peek(visit func(T))` | 不改表地遍历；返回值仍是原表，用于链式调试。 |
 | `SortBy(less func(x, y T) int) *ArrayList[T]` | 按 `less` 排序，返回新表。 |
-| `MinBy(less func(x, y T) int) option.Optional[T]` | 空表返回 `option.Empty[T]()`；否则返回最小元素（出席）。 |
-| `MaxBy(less func(x, y T) int) option.Optional[T]` | 同上，返回最大元素。 |
+| `MinBy(less func(x, y T) int) option.Option[T]` | 空表返回 `option.Empty[T]()`；否则返回最小元素（出席）。 |
+| `MaxBy(less func(x, y T) int) option.Option[T]` | 同上，返回最大元素。 |
 
 ### 谓词
 
-`Any(p) / All(p) / None(p) / Find(p) Optional[T]` — 短路的全称 / 存在量词；`Find` 返回首个匹配元素。
+`Any(p) / All(p) / None(p) / Find(p) Option[T]` — 短路的全称 / 存在量词；`Find` 返回首个匹配元素。
 
 ### 例子
 
@@ -132,10 +132,10 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 |---|---|
 | `Add(v)` / `AddFirst(v)` | 追加到末尾 / 插入到头部。 |
 | `Insert(i, v)` | 在下标 `i` 插入；越界 panic。 |
-| `Get(i) Optional[T]` | 越界返回 `Empty`。 |
-| `First() / Last() Optional[T]` | 空表返回 `Empty`。 |
+| `Get(i) Option[T]` | 越界返回 `Empty`。 |
+| `First() / Last() Option[T]` | 空表返回 `Empty`。 |
 | `RemoveAt(i) T` | 越界 panic。 |
-| `RemoveFirst() / RemoveLast() Optional[T]` | 空表返回 `Empty`。 |
+| `RemoveFirst() / RemoveLast() Option[T]` | 空表返回 `Empty`。 |
 | `Size() / IsEmpty() / Clear() / Collect() []T` | 基础量与导出。 |
 | `Stream() stream.Stream[T]` | 惰性 `Stream[T]`。 |
 | `MarshalJSON / UnmarshalJSON` | JSON 数组。 |
@@ -146,11 +146,11 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 
 注意 `Map` / `FlatMap` 从链表到数组是顺序遍历，复杂度 `O(n)`，但结果类型是 `*ArrayList[R]`，因为下游多半要按下标或切片处理。
 
-`MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` — 空表返回 `Empty`，否则返回极值。
+`MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` — 空表返回 `Empty`，否则返回极值。
 
 ### 谓词
 
-`Any / All / None / Find(p) Optional[T]`，以及 `Reduce[U](init U, f func(U, T) U) U`。
+`Any / All / None / Find(p) Option[T]`，以及 `Reduce[U](init U, f func(U, T) U) U`。
 
 ---
 
@@ -214,7 +214,7 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 | `Concat(other) *HashSet[T]` | 并集（去重），原表不变。 |
 | `Reduce[R](init R, f func(R, T) R) R` | 折叠。 |
 | `SortBy(less) *ArrayList[T]` | 排序后导出为列表。 |
-| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | 空集返回 `option.Empty[T]()`。 |
+| `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | 空集返回 `option.Empty[T]()`。 |
 
 ### 集合代数
 
@@ -231,7 +231,7 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 
 ### 谓词
 
-`Any / All / None / Find(p) option.Optional[T]`。
+`Any / All / None / Find(p) option.Option[T]`。
 
 ---
 
@@ -260,13 +260,13 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 |---|---|
 | `Collect() []T` | 物化为切片。 |
 | `Count() int` | 计数（短路不过滤后元素）。 |
-| `First() / Last() option.Optional[T]` | 第一个 / 最后一个元素。 |
+| `First() / Last() option.Option[T]` | 第一个 / 最后一个元素。 |
 | `Any(p) / All(p) / None(p) bool` | 短路存在 / 全称量词。 |
-| `Find(p) option.Optional[T]` | 首个匹配元素。 |
+| `Find(p) option.Option[T]` | 首个匹配元素。 |
 | `Reduce(init T, f func(acc, v T) T) T` | 折叠。 |
 | `ForEach(visit func(T))` | 纯消费。 |
 | `Associate[K, V](f func(T) (K, V)) map[K]V` | 折叠为 `map`，同键后者覆盖前者。 |
-| `MinBy(less) option.Optional[T]` / `MaxBy(less) option.Optional[T]` | 极值；空流返回 `option.Empty[T]()`。 |
+| `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | 极值；空流返回 `option.Empty[T]()`。 |
 | `SortBy(less) Stream[T]` | 终结式：先物化排序再返回新流。 |
 
 > `SortBy` 在 `Stream` 上是终结操作（会一次性遍历），与 `ArrayList` / `LinkedList` / `HashSet` 上"transform 风格"的 `SortBy` 不一样。
@@ -302,6 +302,6 @@ collections.Range[int](0, 5).
 
 ## 与其他包的关系
 
-- 返回值大量用 `option.Optional[T]`，见 [`adt`](../adt/README-cn.md)。
+- 返回值大量用 `option.Option[T]`，见 [`adt`](../adt/README-cn.md)。
 - 错误流请用 `result.Result[T]`，见 [`adt`](../adt/README-cn.md)。
 - 异步 / 多订阅请用 `reactivex.Observable[T]`，见 [`reactivex`](../reactivex/README-cn.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。

@@ -6,7 +6,7 @@ Concurrency primitives that complement Go's standard library, written in the sam
 
 Right now the package ships three types:
 
-- `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
+- `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Option`-based non-blocking probes, and context-aware blocking.
 - `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
 - `Group` — structured concurrency with two failure policies: `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns aggregated errors). Built on `sync.WaitGroup`, no external dependencies.
 
@@ -39,7 +39,7 @@ import (
 )
 ```
 
-`concurrency` depends on `adt` because both `BoundedBlockingQueue.TryPoll` and `UnboundedBlockingQueue.TryPoll` return an `adt.Optional[T]`, matching the rest of the toolkit's "may be absent" convention.
+`concurrency` depends on `adt` because both `BoundedBlockingQueue.TryPoll` and `UnboundedBlockingQueue.TryPoll` return an `adt.Option[T]`, matching the rest of the toolkit's "may be absent" convention.
 
 The package is its own `go.mod` module; import it independently of `collections` / `reactivex` / `control` / `utils`.
 
@@ -49,9 +49,9 @@ Go's built-in `chan T` is a perfectly good bounded blocking queue — when you h
 
 You reach for `BoundedBlockingQueue[T]` when you want the toolkit's surface area on top of a channel:
 
-- **Optional return for non-blocking probes.** `TryPoll` returns an `adt.Optional[T]` in the same shape as `Stack.Pop` / `Queue.Pop`, so the result composes with the rest of the toolkit instead of forcing a `(value, ok)` round-trip.
+- **Option return for non-blocking probes.** `TryPoll` returns an `adt.Option[T]` in the same shape as `Stack.Pop` / `Queue.Pop`, so the result composes with the rest of the toolkit instead of forcing a `(value, ok)` round-trip.
 - **Context-aware blocking.** `PushWithContext` / `PollWithContext` let you compose with timeouts, deadlines, and shutdown signals without inventing your own goroutine-and-channel dance on top of `Push` / `Poll`.
-- **A uniform generic API.** `Size` instead of `len`, `Capacity` instead of `cap`, `Optional` instead of `(T, bool)`. Same vocabulary as the rest of Typed.
+- **A uniform generic API.** `Size` instead of `len`, `Capacity` instead of `cap`, `Option` instead of `(T, bool)`. Same vocabulary as the rest of Typed.
 - **Power-of-two capacity rounding.** `Capacity()` always returns a power of two, convenient for callers that want a bitmask.
 
 The trade-off versus a raw `chan T` is essentially zero on the hot path.
@@ -91,9 +91,9 @@ Blocking uses the underlying `chan T` directly. `Push` is `ch <- data`, `Poll` i
 | Method | Behaviour |
 | --- | --- |
 | `TryPush(data T) bool` | Enqueue if a slot is free. Returns `true` on success, `false` immediately if the queue is full. |
-| `TryPoll() adt.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
+| `TryPoll() adt.Option[T]` | Dequeue if anything is available. Returns a present `Option` on success, an empty `Option` immediately if the queue is empty. |
 
-These never wait, which is what you want for `select { ... default: ... }` style logic and for backpressure policies that prefer "drop the work" or "shed load" over "block the caller". `TryPoll` returns an `Optional` rather than a `(T, bool)` pair because that is the toolkit-wide convention for "may be absent", shared with `Stack.Pop`, `Queue.Pop`, and `Deque.PopFront` / `PopBack`.
+These never wait, which is what you want for `select { ... default: ... }` style logic and for backpressure policies that prefer "drop the work" or "shed load" over "block the caller". `TryPoll` returns an `Option` rather than a `(T, bool)` pair because that is the toolkit-wide convention for "may be absent", shared with `Stack.Pop`, `Queue.Pop`, and `Deque.PopFront` / `PopBack`.
 
 ### Observability
 
@@ -118,7 +118,7 @@ Because the queue is a channel under the hood, the trade-offs versus a hand-roll
 | Capacity | set at `make` | set at `NewBoundedBlockingQueue`; rounded up to the next power of two |
 | Bounded by default | no (`make(chan T)` is unbuffered) | yes — capacity is required |
 | Blocking send / receive | `ch <- v` / `<-ch` | `Push(v)` / `Poll()` |
-| Non-blocking probe | wrap in `select { default: }` | `TryPush() bool` / `TryPoll() adt.Optional[T]` |
+| Non-blocking probe | wrap in `select { default: }` | `TryPush() bool` / `TryPoll() adt.Option[T]` |
 | Context-aware blocking | wrap in `select { case <-ctx.Done(): }` | `PushWithContext` / `PollWithContext` |
 | `len(ch)` | yes, but not synchronised with ops | `Size()` — same semantics, also not synchronised |
 | Throughput (1P1C) | ~30 ns/op (tight microbench) | ~210 ns/op (tight microbench) |
@@ -255,7 +255,7 @@ No capacity argument — the queue grows on demand.
 | Method | Behaviour |
 | --- | --- |
 | `TryPush(data T) bool` | Enqueue. **Never fails** — the queue is unbounded, so this always returns `true`. |
-| `TryPoll() adt.Optional[T]` | Dequeue if anything is available. Returns a present `Optional` on success, an empty `Optional` immediately if the queue is empty. |
+| `TryPoll() adt.Option[T]` | Dequeue if anything is available. Returns a present `Option` on success, an empty `Option` immediately if the queue is empty. |
 
 ### Observability
 
@@ -373,5 +373,5 @@ None — `Group` is meant to be used once and discarded. `Wait()` is the only in
 ## See also
 
 - [`reactivex`](../../reactivex/README.md) — typed async event streams with explicit demand and configurable backpressure. If the work being queued is "events to deliver to many subscribers", an `Observable` is usually a better fit than a queue.
-- [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Optional[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
+- [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Option[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
 - [`chan T`](https://go.dev/ref/spec#Channel_types) in the standard library — `BoundedBlockingQueue` wraps it directly.

@@ -46,7 +46,7 @@ import (
 //     [UnboundedBlockingQueue.PollWithContext] — the context-aware variants.
 //   - [UnboundedBlockingQueue.TryPush] / [UnboundedBlockingQueue.TryPoll] —
 //     the non-blocking variants. `TryPush` always succeeds because the
-//     queue is unbounded; `TryPoll` returns an [adt.Optional].
+//     queue is unbounded; `TryPoll` returns an [adt.Option].
 //
 // The zero value is not usable; construct one with
 // [NewUnboundedBlockingQueue].
@@ -148,9 +148,9 @@ func (q *UnboundedBlockingQueue[T]) Poll() T {
 }
 
 // TryPoll is the non-blocking variant of [UnboundedBlockingQueue.Poll].
-// It returns the dequeued value as an [adt.Optional]; the result is
+// It returns the dequeued value as an [adt.Option]; the result is
 // empty when the queue is empty.
-func (q *UnboundedBlockingQueue[T]) TryPoll() adt.Optional[T] {
+func (q *UnboundedBlockingQueue[T]) TryPoll() adt.Option[T] {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if q.count == 0 {

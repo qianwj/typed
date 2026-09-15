@@ -17,7 +17,7 @@ func ExampleArrayListOf() {
 	// Output: [44 60]
 }
 
-// ExampleArrayList_First shows the Optional-based accessor on
+// ExampleArrayList_First shows the Option-based accessor on
 // ArrayList, replacing the (T, bool) shape with a fluent chain.
 func ExampleArrayList_First() {
 	values := lists.ArrayListOf[int]()

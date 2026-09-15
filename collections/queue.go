@@ -49,24 +49,24 @@ func (q *Queue[T]) Push(value T) {
 }
 
 // Pop removes and returns the front element wrapped in a present
-// adt.Optional[T], or an absent Optional if the Queue is
+// adt.Option[T], or an absent Option if the Queue is
 // empty.
 //
 // Pop delegates to ArrayList.RemoveFirst, which under the
 // head-offset layout is O(1): the front slot is zeroed, head is
 // bumped, and the discarded prefix is folded back to zero once
 // it grows past 64 elements.
-func (q *Queue[T]) Pop() adt.Optional[T] {
+func (q *Queue[T]) Pop() adt.Option[T] {
 	return q.items.RemoveFirst()
 }
 
 // Peek returns the front element wrapped in a present
-// adt.Optional[T], or an absent Optional if the Queue is
+// adt.Option[T], or an absent Option if the Queue is
 // empty. Peek delegates to ArrayList.Get(0) and is O(1).
 //
 // Peek does not modify the Queue: the same call repeated yields
 // the same value, and Size is unchanged.
-func (q *Queue[T]) Peek() adt.Optional[T] {
+func (q *Queue[T]) Peek() adt.Option[T] {
 	if q.items.IsEmpty() {
 		return adt.Empty[T]()
 	}
@@ -81,7 +81,7 @@ func (q *Queue[T]) Size() int {
 
 // IsEmpty reports whether the Queue has no elements. IsEmpty is
 // the O(1) companion to Size and the standard guard before
-// Pop or Peek for callers that prefer it to the absent-Optional
+// Pop or Peek for callers that prefer it to the absent-Option
 // return.
 func (q *Queue[T]) IsEmpty() bool {
 	return q.items.IsEmpty()

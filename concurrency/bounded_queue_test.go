@@ -14,8 +14,8 @@ import (
 
 // tryTakeOr is a small helper for tests that want the (value, present) shape.
 // It returns the dequeued value and true on success, or the zero value and
-// false on an empty Optional. Using IsEmpty first is necessary because Get
-// returns the zero value when the Optional is absent.
+// false on an empty Option. Using IsEmpty first is necessary because Get
+// returns the zero value when the Option is absent.
 func tryTakeOr[T any](t *testing.T, q *BoundedBlockingQueue[T], wantZeroForReport T) (T, bool) {
 	t.Helper()
 	opt := q.TryPoll()
@@ -335,13 +335,13 @@ loop:
 	}
 }
 
-// TestTryPollReturnsOptional is a small sanity check on the return type —
-// it locks in that TryPoll returns adt.Optional[T] (and therefore an
+// TestTryPollReturnsOption is a small sanity check on the return type —
+// it locks in that TryPoll returns adt.Option[T] (and therefore an
 // absent value is observable via IsEmpty, not via a zero T).
-func TestTryPollReturnsOptional(t *testing.T) {
+func TestTryPollReturnsOption(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
-	q.Push(0) // note: 0 is a perfectly valid element; an absent Optional must not be confused with it
+	q.Push(0) // note: 0 is a perfectly valid element; an absent Option must not be confused with it
 
 	opt := q.TryPoll()
 	if opt.IsEmpty() {

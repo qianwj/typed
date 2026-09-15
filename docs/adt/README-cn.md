@@ -4,7 +4,7 @@
 
 强类型的代数数据类型 —— 显式建模「存在 / 缺失」「成功 / 失败」「这一变体 / 那一变体」的值类型。本包提供三种类型：
 
-- [`Optional[T]`](#optionalt) —— 单一类型的零或一个。`(T, bool)` 的类型化替代。
+- [`Option[T]`](#optionalt) —— 单一类型的零或一个。`(T, bool)` 的类型化替代。
 - [`Result[T]`](#resultt) —— 携带 `T` 的成功，或携带非 nil `error` 的失败。`(T, error)` 的类型化替代。
 - [`Either[L, R]`](#eitherl-r) —— 两种值中恰好取一。前两种类型的通用 tagged-union 原语。
 
@@ -14,7 +14,7 @@
 
 - [包导入](#包导入)
 - [为什么放在同一个包](#为什么放在同一个包)
-- [`Optional[T]`](#optionalt)
+- [`Option[T]`](#optionalt)
 - [`Result[T]`](#resultt)
 - [`Either[L, R]`](#eitherl-r)
 - [如何选择](#如何选择)
@@ -32,30 +32,30 @@ import "github.com/qianwj/typed/adt"
 
 三种类型共享同一套词汇（present / absent / success / failure / left / right），并以惯用方式相互引用：
 
-- `Result.Optional` 返回 `Optional[T]` —— 成功转 present，失败转 absent。
-- `Either.Left` / `Either.Right` 返回 `Optional[L]` / `Optional[R]` —— tagged union 的安全访问器。
+- `Result.Option` 返回 `Option[T]` —— 成功转 present，失败转 absent。
+- `Either.Left` / `Either.Right` 返回 `Option[L]` / `Option[R]` —— tagged union 的安全访问器。
 
 放进同一个包让这些关系在调用点显而易见，省去多 import 的摩擦。独立的 module（`typed/adt` 而非 `typed/utils/adt`）表明这些是值类型，不是 `objects.IsNil` 或 JSON codec 那种意义上的工具——消费者可以只依赖值类型，不用连带拉入 `utils/*` 其他代码。
 
-## `Optional[T]`
+## `Option[T]`
 
-`Optional[T]` 是一个容器，可能持有也可能不持有类型 `T` 的值。`Optional` 要么 present（携带 `T`），要么 absent（无值）。`Optional` 的零值就是 absent，等价于 `Empty[T]()`。
+`Option[T]` 是一个容器，可能持有也可能不持有类型 `T` 的值。`Option` 要么 present（携带 `T`），要么 absent（无值）。`Option` 的零值就是 absent，等价于 `Empty[T]()`。
 
-`Optional` 不是接口，所以方法可以声明自己的类型参数（`Map[R]`、`FlatMap[R]`）—— Go 1.27+ 的泛型方法特性。
+`Option` 不是接口，所以方法可以声明自己的类型参数（`Map[R]`、`FlatMap[R]`）—— Go 1.27+ 的泛型方法特性。
 
 ### 为什么不直接用 `(T, bool)`？
 
 - 调用点自我解释；组合子可以链式拼装，不用每一步散落 `if ok { ... }`。
-- `Optional` 对值类型（`int` / `string` / `struct{}`）与指针类型一视同仁 —— 它携带独立的 `present` 标志位，而不是依赖"对值做 nil 检查"。`int` 不存在"零值还是缺省"的歧义。
+- `Option` 对值类型（`int` / `string` / `struct{}`）与指针类型一视同仁 —— 它携带独立的 `present` 标志位，而不是依赖"对值做 nil 检查"。`int` 不存在"零值还是缺省"的歧义。
 - 不会让 `Result[T]` 之类需要 `(T, error)` 形态的组合子和"是否缺席"耦合到一起。
 
 ### 构造
 
 | 工厂 | 语义 |
 |---|---|
-| `Empty[T any]() Optional[T]` | 不携带值；零值 `Optional[T]{}` 等价。 |
-| `Of[T any](value T) Optional[T]` | 携带 `value`；**对 typed nil（如 `nil *Foo` 作为指针型 `T`）会 panic**。 |
-| `OfNullable[T any](value T) Optional[T]` | 用 Go 的 nil 语义判断：对指针 / map / slice / chan / func / interface 的 nil 返回 `Empty`，否则 `Of(value)`。 |
+| `Empty[T any]() Option[T]` | 不携带值；零值 `Option[T]{}` 等价。 |
+| `Of[T any](value T) Option[T]` | 携带 `value`；**对 typed nil（如 `nil *Foo` 作为指针型 `T`）会 panic**。 |
+| `OfNullable[T any](value T) Option[T]` | 用 Go 的 nil 语义判断：对指针 / map / slice / chan / func / interface 的 nil 返回 `Empty`，否则 `Of(value)`。 |
 
 > 选 `Of` 还是 `OfNullable` 取决于 `T` 的语义：值类型用 `Of`；指针型 / 接口型用 `OfNullable`。
 
@@ -70,10 +70,10 @@ import "github.com/qianwj/typed/adt"
 
 | 方法 | 缺席时行为 |
 |---|---|
-| `Get() T` | **panic**（「Get on empty Optional」）。 |
+| `Get() T` | **panic**（「Get on empty Option」）。 |
 | `OrElse(default T) T` | 返回 `default`；`default` 总是被求值。 |
 | `OrElseGet(f func() T) T` | 返回 `f()`；仅缺席时调用。 |
-| `OrElseThrow(errMsg string) (T, error)` | 缺席时返回 `(零值, errors.New(errMsg))`；出席时返回 `(value, nil)`。**不 panic**，名字沿用 Java `Optional.orElseThrow` 的约定，但遵循 Go 显式 `(T, error)`。 |
+| `OrElseThrow(errMsg string) (T, error)` | 缺席时返回 `(零值, errors.New(errMsg))`；出席时返回 `(value, nil)`。**不 panic**，名字沿用 Java `Option.orElseThrow` 的约定，但遵循 Go 显式 `(T, error)`。 |
 
 ### 副作用
 
@@ -86,9 +86,9 @@ import "github.com/qianwj/typed/adt"
 
 | 方法 | 说明 |
 |---|---|
-| `Filter(predicate func(T) bool) Optional[T]` | 出席且 `predicate(value) == true` 时返回自身；否则返回 `Empty`。缺席时不会调用 `predicate`。 |
-| `Map[R](f func(T) R) Optional[R]` | 缺席返回 `Empty[R]`，**不会调用** `f`。 |
-| `FlatMap[R](f func(T) Optional[R]) Optional[R]` | 缺席时**不会调用** `f`；`f` 自身返回 `Optional[R]` 时直接采用。 |
+| `Filter(predicate func(T) bool) Option[T]` | 出席且 `predicate(value) == true` 时返回自身；否则返回 `Empty`。缺席时不会调用 `predicate`。 |
+| `Map[R](f func(T) R) Option[R]` | 缺席返回 `Empty[R]`，**不会调用** `f`。 |
+| `FlatMap[R](f func(T) Option[R]) Option[R]` | 缺席时**不会调用** `f`；`f` 自身返回 `Option[R]` 时直接采用。 |
 
 ### 例子
 
@@ -155,7 +155,7 @@ v := empty.OrElseGet(func() int { return compute() }) // 仅此处调用 compute
 
 | 方法 | 说明 |
 |---|---|
-| `Optional() Optional[T]` | 成功 → present `Optional`；失败 → absent `Optional`，error 被丢掉。仅在调用方已经决定可以丢弃 error 时使用。 |
+| `Option() Option[T]` | 成功 → present `Option`；失败 → absent `Option`，error 被丢掉。仅在调用方已经决定可以丢弃 error 时使用。 |
 
 ### 链式 transform
 
@@ -208,12 +208,12 @@ Go 的 `(T, error)` 在单点调用处很顺手，但一旦值要在多个中间
 
 | 方法 | 说明 |
 |---|---|
-| `Left() Optional[L]` | `IsLeft()` 时 present，`IsRight()` 时 absent。 |
-| `Right() Optional[R]` | `IsRight()` 时 present，`IsLeft()` 时 absent。 |
+| `Left() Option[L]` | `IsLeft()` 时 present，`IsRight()` 时 absent。 |
+| `Right() Option[R]` | `IsRight()` 时 present，`IsLeft()` 时 absent。 |
 | `LeftOrZero() L` | 返回 `Left` 值，`Right` 时返回 `L` 零值。读错一侧无所谓时用这个。 |
 | `RightOrZero() R` | `LeftOrZero` 的镜像。 |
 
-安全访问器返回 `Optional`，这样调用方可以和别处已有的同套组合子链式拼装。
+安全访问器返回 `Option`，这样调用方可以和别处已有的同套组合子链式拼装。
 
 ### 组合子
 
@@ -244,20 +244,20 @@ msg := result.Fold(
 
 | 场景 | 用 |
 | --- | --- |
-| 可能缺值，没有附带失败细节 | `Optional[T]` |
+| 可能缺值，没有附带失败细节 | `Option[T]` |
 | 成功返回值，或失败返回 error | `Result[T]` |
 | 两种不同的成功 / 失败类别，或两种值类型 | `Either[L, R]` |
 
-`Optional` 是零或一。`Result` 是成功或失败（失败总带标准 `error`）。`Either` 是通用的——两个分支可以是任何类型，包括两种不同的 error 类型，如果想在标准 `error` 之上做错误分类。
+`Option` 是零或一。`Result` 是成功或失败（失败总带标准 `error`）。`Either` 是通用的——两个分支可以是任何类型，包括两种不同的 error 类型，如果想在标准 `error` 之上做错误分类。
 
 实际使用：
 
-- `Map[K]V.Get(key)` 可能 miss → `Optional[V]`。
+- `Map[K]V.Get(key)` 可能 miss → `Option[V]`。
 - 数据库查询返回一行或错误 → `Result[Row]`。
 - 可能返回 `T` 或配置错误的函数 → `Either[ConfigError, T]`。
 
 ## 相关阅读
 
-- [`collections`](../collections/README-cn.md) 里所有「可能缺席」的访问器都返回 `adtOptional[T]`：`ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`，`Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back`，`Stream.First` / `Last` / `Find`。
+- [`collections`](../collections/README-cn.md) 里所有「可能缺席」的访问器都返回 `adtOption[T]`：`ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`，`Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back`，`Stream.First` / `Last` / `Find`。
 - [`utils/json`](../utils/json/README-cn.md) 用 `adtResult[T]` 作为编解码返回值。
 - [`reactivex.Single[T]`](../reactivex/README-cn.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README-cn.md#maybet) —— 终止事件是 `Either` 形态的 reactive 容器。

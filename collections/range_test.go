@@ -177,7 +177,7 @@ func TestRangeWithReduce(t *testing.T) {
 	}
 }
 
-// TestRangeFirstAndLast confirms the Optional-based terminals
+// TestRangeFirstAndLast confirms the Option-based terminals
 // work: First is the smallest value, Last is end - 1.
 func TestRangeFirstAndLast(t *testing.T) {
 	first := Range(10, 20).First()
@@ -190,7 +190,7 @@ func TestRangeFirstAndLast(t *testing.T) {
 	}
 }
 
-// TestRangeFirstOnEmpty confirms the absent-Optional branch:
+// TestRangeFirstOnEmpty confirms the absent-Option branch:
 // Range(5, 5).First must be absent.
 func TestRangeFirstOnEmpty(t *testing.T) {
 	first := Range(5, 5).First()

@@ -3,7 +3,7 @@
 // (T, error) shape.
 //
 // The wrapper exists for one reason: typed error handling. The
-// project's other utilities (adt.Optional, adt.Result) keep
+// project's other utilities (adt.Option, adt.Result) keep
 // the (T, error) shape but make it fluent; calling adt.Success
 // or adt.Failure at every JSON boundary lets a pipeline read
 // as one chain instead of scattering (val, err) := ...; if err != nil

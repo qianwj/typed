@@ -4,7 +4,7 @@
 //
 // The three types in this package are:
 //
-//   - [Optional][T] — zero-or-one of a single type. The typed
+//   - [Option][T] — zero-or-one of a single type. The typed
 //     alternative to `(T, bool)`.
 //   - [Result][T]   — success carrying T, or failure carrying a
 //     non-nil error. The typed alternative to `(T, error)`.
@@ -14,10 +14,10 @@
 // Why a single package? The three types share the same vocabulary
 // (present / absent / success / failure / left / right) and they
 // cross-reference each other in idiomatic ways —
-// [Result.Optional] returns an [Optional], and
-// [Either.Right] returns an [Optional]. Co-locating them in one
+// [Result.Option] returns an [Option], and
+// [Either.Right] returns an [Option]. Co-locating them in one
 // package makes those relationships visible at the call site
-// (`adt.Optional`, `adt.Result`, `adt.Either`) without the
+// (`adt.Option`, `adt.Result`, `adt.Either`) without the
 // import-by-import friction of separate sub-packages.
 //
 // Why a separate module? They are value types, not utilities in
@@ -25,20 +25,20 @@
 // module gives them a distinct import path so consumers can depend
 // on the value types without pulling in unrelated `utils/*` code.
 //
-// # Optional[T]
+// # Option[T]
 //
-// Optional is not an interface, which lets its methods declare
+// Option is not an interface, which lets its methods declare
 // their own type parameters (Map[R]) under Go 1.27's generic
 // methods.
 //
 // Why not the standard `(T, bool)` shape?
 //
-//   - An explicit Optional makes the call site self-documenting
+//   - An explicit Option makes the call site self-documenting
 //     and lets combinators chain without scattering boolean
 //     checks at every step.
-//   - Optional is designed to work for any T, including value
+//   - Option is designed to work for any T, including value
 //     types such as int, string and struct{}, not just
-//     pointer-like ones. This is why Optional carries a separate
+//     pointer-like ones. This is why Option carries a separate
 //     present flag rather than relying on a nil check on the
 //     value.
 package adt
@@ -49,67 +49,67 @@ import (
 	"github.com/qianwj/typed/utils/objects"
 )
 
-// Optional[T] is a container that may or may not hold a value of type T.
+// Option[T] is a container that may or may not hold a value of type T.
 //
-// An Optional is either present (carrying a T) or absent (no value).
-// The zero value of Optional is absent and is equivalent to Empty[T]().
-// Optional values must not be copied after creation; the safe usage is
+// An Option is either present (carrying a T) or absent (no value).
+// The zero value of Option is absent and is equivalent to Empty[T]().
+// Option values must not be copied after creation; the safe usage is
 // to obtain them through one of the constructors (Empty, Of, OfNullable)
 // and then consume them through the methods.
-type Optional[T any] struct {
+type Option[T any] struct {
 	value   T
 	present bool
 }
 
-// Empty returns an absent Optional[T].
+// Empty returns an absent Option[T].
 //
 // Calling Empty on a value type such as int is the idiomatic way to say
 // "no result" and is preferred over using a sentinel like 0 or "".
-func Empty[T any]() Optional[T] {
-	return Optional[T]{}
+func Empty[T any]() Option[T] {
+	return Option[T]{}
 }
 
-// Of returns a present Optional[T] holding value.
+// Of returns a present Option[T] holding value.
 //
 // Of panics if value is a typed nil (e.g. a nil *Foo passed as a
 // pointer-typed T). Use OfNullable when the underlying T is a
 // reference type and nil is a meaningful value.
-func Of[T any](value T) Optional[T] {
-	return Optional[T]{value: value, present: true}
+func Of[T any](value T) Option[T] {
+	return Option[T]{value: value, present: true}
 }
 
-// OfNullable returns an Optional[T] that is absent when value is nil
+// OfNullable returns an Option[T] that is absent when value is nil
 // (in the sense of Go's nil: nil pointer, nil slice, nil map, nil
 // channel, nil function, nil interface) and present otherwise.
 //
 // OfNullable is the right choice for pointer-like Ts. For value types
 // (int, string, struct, …) use Of directly: there is no nil to test.
-func OfNullable[T any](value T) Optional[T] {
+func OfNullable[T any](value T) Option[T] {
 	if objects.IsNil(value) {
-		return Optional[T]{}
+		return Option[T]{}
 	}
-	return Optional[T]{value: value, present: true}
+	return Option[T]{value: value, present: true}
 }
 
-// IsPresent reports whether the Optional holds a value.
-func (o Optional[T]) IsPresent() bool {
+// IsPresent reports whether the Option holds a value.
+func (o Option[T]) IsPresent() bool {
 	return o.present
 }
 
-// IsEmpty reports whether the Optional is absent.
+// IsEmpty reports whether the Option is absent.
 // IsEmpty is the logical negation of IsPresent.
-func (o Optional[T]) IsEmpty() bool {
+func (o Option[T]) IsEmpty() bool {
 	return !o.present
 }
 
 // Get returns the underlying value.
 //
-// Get panics if the Optional is absent. Use Get together with
+// Get panics if the Option is absent. Use Get together with
 // IsPresent, or prefer OrElse / OrElseGet / OrElseThrow when the
 // absent branch is expected.
-func (o Optional[T]) Get() T {
+func (o Option[T]) Get() T {
 	if !o.present {
-		panic("adt.Get on empty Optional")
+		panic("adt.Get on empty Option")
 	}
 	return o.value
 }
@@ -118,7 +118,7 @@ func (o Optional[T]) Get() T {
 //
 // OrElse evaluates defaultValue eagerly. Use OrElseGet if computing the
 // fallback is expensive.
-func (o Optional[T]) OrElse(defaultValue T) T {
+func (o Option[T]) OrElse(defaultValue T) T {
 	if o.present {
 		return o.value
 	}
@@ -126,8 +126,8 @@ func (o Optional[T]) OrElse(defaultValue T) T {
 }
 
 // OrElseGet returns the underlying value if present, otherwise the
-// result of calling f. f is only invoked when the Optional is absent.
-func (o Optional[T]) OrElseGet(f func() T) T {
+// result of calling f. f is only invoked when the Option is absent.
+func (o Option[T]) OrElseGet(f func() T) T {
 	if o.present {
 		return o.value
 	}
@@ -136,12 +136,12 @@ func (o Optional[T]) OrElseGet(f func() T) T {
 
 // OrElseThrow returns the underlying value if present, otherwise an
 // error built from errMsg via errors.New. The second return value is
-// nil when the Optional is present.
+// nil when the Option is present.
 //
-// OrElseThrow does not panic; the name follows the Java Optional
+// OrElseThrow does not panic; the name follows the Java Option
 // convention of "throw if empty" but is adapted to Go's explicit
 // (T, error) return shape.
-func (o Optional[T]) OrElseThrow(errMsg string) (T, error) {
+func (o Option[T]) OrElseThrow(errMsg string) (T, error) {
 	if o.present {
 		return o.value, nil
 	}
@@ -149,18 +149,18 @@ func (o Optional[T]) OrElseThrow(errMsg string) (T, error) {
 	return zero, errors.New(errMsg)
 }
 
-// IfPresent invokes f with the underlying value if the Optional is
-// present. If the Optional is absent f is not called.
-func (o Optional[T]) IfPresent(f func(T)) {
+// IfPresent invokes f with the underlying value if the Option is
+// present. If the Option is absent f is not called.
+func (o Option[T]) IfPresent(f func(T)) {
 	if o.present {
 		f(o.value)
 	}
 }
 
-// IfPresentOrElse invokes present with the value if the Optional is
+// IfPresentOrElse invokes present with the value if the Option is
 // present, otherwise invokes absent. Exactly one of the two callbacks
 // runs.
-func (o Optional[T]) IfPresentOrElse(present func(T), absent func()) {
+func (o Option[T]) IfPresentOrElse(present func(T), absent func()) {
 	if o.present {
 		present(o.value)
 		return
@@ -168,42 +168,42 @@ func (o Optional[T]) IfPresentOrElse(present func(T), absent func()) {
 	absent()
 }
 
-// Filter returns this Optional if it is present and the value matches
-// predicate, otherwise an absent Optional. Filter does not call
+// Filter returns this Option if it is present and the value matches
+// predicate, otherwise an absent Option. Filter does not call
 // predicate when the receiver is absent.
-func (o Optional[T]) Filter(predicate func(T) bool) Optional[T] {
+func (o Option[T]) Filter(predicate func(T) bool) Option[T] {
 	if !o.present {
-		return Optional[T]{}
+		return Option[T]{}
 	}
 	if predicate(o.value) {
 		return o
 	}
-	return Optional[T]{}
+	return Option[T]{}
 }
 
 // Map applies f to the underlying value if present and returns a
-// present Optional[R] with the result. If the receiver is absent the
-// returned Optional[R] is also absent and f is not invoked.
+// present Option[R] with the result. If the receiver is absent the
+// returned Option[R] is also absent and f is not invoked.
 //
 // Map changes the element type via its own R parameter, which is only
-// possible because Optional is a concrete generic type (Go 1.27
+// possible because Option is a concrete generic type (Go 1.27
 // generic methods).
-func (o Optional[T]) Map[R any](f func(T) R) Optional[R] {
+func (o Option[T]) Map[R any](f func(T) R) Option[R] {
 	if !o.present {
-		return Optional[R]{}
+		return Option[R]{}
 	}
-	return Optional[R]{value: f(o.value), present: true}
+	return Option[R]{value: f(o.value), present: true}
 }
 
 // FlatMap applies f to the underlying value if present and returns
-// the Optional[R] produced by f. If the receiver is absent the
-// returned Optional[R] is absent and f is not invoked.
+// the Option[R] produced by f. If the receiver is absent the
+// returned Option[R] is absent and f is not invoked.
 //
 // FlatMap is the natural combinator for "if present, run a function
-// that itself returns an Optional".
-func (o Optional[T]) FlatMap[R any](f func(T) Optional[R]) Optional[R] {
+// that itself returns an Option".
+func (o Option[T]) FlatMap[R any](f func(T) Option[R]) Option[R] {
 	if !o.present {
-		return Optional[R]{}
+		return Option[R]{}
 	}
 	return f(o.value)
 }

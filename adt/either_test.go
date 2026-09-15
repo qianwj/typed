@@ -10,7 +10,7 @@ var (
 )
 
 // leftOrRight returns (value, present) — same shape as (T, bool) but
-// via Optional, which is what Either's safe accessors return.
+// via Option, which is what Either's safe accessors return.
 func leftOrRight[L, R any](e Either[L, R]) (L, bool) {
 	opt := e.Left()
 	if !opt.IsPresent() {
@@ -175,7 +175,7 @@ func TestFoldOnlyOneCallbackRuns(t *testing.T) {
 
 func TestRoundTripThroughOption(t *testing.T) {
 	t.Parallel()
-	// Verify the Optional combinators compose with Either's safe
+	// Verify the Option combinators compose with Either's safe
 	// accessors.
 	r := Right[error, int](123)
 	opt := r.Right()
@@ -183,7 +183,7 @@ func TestRoundTripThroughOption(t *testing.T) {
 		t.Fatal("Right.Right() not present")
 	}
 	if opt.Map(func(n int) int { return n + 1 }).Get() != 124 {
-		t.Errorf("Optional Map on Right.Right() failed")
+		t.Errorf("Option Map on Right.Right() failed")
 	}
 
 	l := Left[error, int](errSample)

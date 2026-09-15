@@ -12,7 +12,7 @@ import (
 
 // tryTakeUnboundedOr is a small helper for tests that want the
 // (value, present) shape. Returns the dequeued value and true on
-// success, or the zero value and false on an empty Optional.
+// success, or the zero value and false on an empty Option.
 func tryTakeUnboundedOr[T any](t *testing.T, q *UnboundedBlockingQueue[T], wantZeroForReport T) (T, bool) {
 	t.Helper()
 	opt := q.TryPoll()

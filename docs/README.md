@@ -23,7 +23,7 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 
 ### Abstractions
 
-- 🟢 [`adt`](./adt/README.md) — `Optional[T]`, a value that may be absent.
+- 🟢 [`adt`](./adt/README.md) — `Option[T]`, a value that may be absent.
 - 🟡 [`adt`](./adt/README.md) — `Result[T]`, success / failure, and bridges to and from `(T, error)`.
 - 🟰 [`utils/objects`](./utils/objects/README.md) — `IsNil` / `Equals`, with `Equal(T) bool` dispatch and nil-vs-empty normalisation.
 - 📦 [`utils/json`](./utils/json/README.md) — `Encode` / `Decode`, a `Result`-style codec on top of `encoding/json/v2`.

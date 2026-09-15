@@ -174,4 +174,4 @@ kind := match.Type(payload).
 ## 与其他包的关系
 
 - `control.Repeat(n, f)` 是 `collections.Range(0, n).ForEach(f)` 的命令式等价（少一次 `Stream` 分配），见 [`collections`](../collections/README-cn.md)。
-- `match.Case` 与 `Option` / `Result` 互补：拿不准"到底命中什么"用模式匹配，单纯"值可能是 X"用 `Optional`，"操作可能失败"用 `Result`，见 [`adt`](../adt/README-cn.md) / [`adt`](../adt/README-cn.md)。
+- `match.Case` 与 `Option` / `Result` 互补：拿不准"到底命中什么"用模式匹配，单纯"值可能是 X"用 `Option`，"操作可能失败"用 `Result`，见 [`adt`](../adt/README-cn.md) / [`adt`](../adt/README-cn.md)。

@@ -343,12 +343,12 @@ func (s *HashSet[T]) SortBy(less func(x, y T) int) *lists.ArrayList[T] {
 }
 
 // MinBy returns the smallest value under less wrapped in a present
-// adt.Optional[T], or an absent Optional when the set is empty.
+// adt.Option[T], or an absent Option when the set is empty.
 //
-// MinBy uses adt.Optional[T] rather than (T, bool) so the
+// MinBy uses adt.Option[T] rather than (T, bool) so the
 // "find and get" path is symmetric with Find and chains naturally
 // with adt.Map / adt.FlatMap.
-func (s *HashSet[T]) MinBy(less func(x, y T) int) adt.Optional[T] {
+func (s *HashSet[T]) MinBy(less func(x, y T) int) adt.Option[T] {
 	var (
 		best  T
 		found bool
@@ -366,10 +366,10 @@ func (s *HashSet[T]) MinBy(less func(x, y T) int) adt.Optional[T] {
 }
 
 // MaxBy returns the largest value under less wrapped in a present
-// adt.Optional[T], or an absent Optional when the set is empty.
+// adt.Option[T], or an absent Option when the set is empty.
 //
 // See MinBy for the rationale.
-func (s *HashSet[T]) MaxBy(less func(x, y T) int) adt.Optional[T] {
+func (s *HashSet[T]) MaxBy(less func(x, y T) int) adt.Option[T] {
 	var (
 		best  T
 		found bool
@@ -408,13 +408,13 @@ func (s *HashSet[T]) None(p func(T) bool) bool {
 }
 
 // Find returns an arbitrary matching value wrapped in a present
-// Optional, or an absent Optional when no value satisfies p.
+// Option, or an absent Option when no value satisfies p.
 // Because HashSet is unordered, the matching value is not
 // deterministic when multiple values satisfy p.
 //
 // See ArrayList.Find for the rationale behind returning
-// Optional[T] rather than (T, bool).
-func (s *HashSet[T]) Find(p func(T) bool) adt.Optional[T] {
+// Option[T] rather than (T, bool).
+func (s *HashSet[T]) Find(p func(T) bool) adt.Option[T] {
 	for _, value := range s.Collect() {
 		if p(value) {
 			return adt.Of(value)
