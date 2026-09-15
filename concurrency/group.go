@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/qianwj/typed/utils/option"
 )
 
 // Mode selects the failure policy of a [Group].
@@ -254,7 +256,7 @@ func (e *BestEffortError) Error() string {
 		return e.Errors[0].Error()
 	}
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "concurrency: %d tasks failed: ", len(e.Errors))
+	_, _ = fmt.Fprintf(&sb, "concurrency: %d tasks failed: ", len(e.Errors))
 	for i, err := range e.Errors {
 		if i > 0 {
 			sb.WriteString("; ")
@@ -270,4 +272,22 @@ func (e *BestEffortError) Error() string {
 // causes Is to return true.
 func (e *BestEffortError) Unwrap() []error {
 	return e.Errors
+}
+
+// Get returns the i-th task error in completion order as an
+// [option.Optional]. The result is present when 0 <= i < len(e.Errors)
+// and empty otherwise (no panic, no out-of-range signal — same
+// "absent value is observable via IsEmpty" rule as
+// [BoundedBlockingQueue.TryPoll]).
+//
+// Most callers won't need this: [errors.Is] / [errors.As] walk every
+// element via [BestEffortError.Unwrap] without indexing. Get exists
+// for the rare case where the caller wants positional access — for
+// example, formatting "task #3 failed: ..." while leaving the rest
+// for errors.Is.
+func (e *BestEffortError) Get(i int) option.Optional[error] {
+	if i >= 0 && i < len(e.Errors) {
+		return option.Of(e.Errors[i])
+	}
+	return option.Empty[error]()
 }
