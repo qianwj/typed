@@ -32,37 +32,21 @@ The package ships these types today:
   has no "unbounded buffered channel". `PushWithContext` is a thin
   ctx-check over `Push`; `PollWithContext` uses a one-shot watcher
   goroutine that broadcasts the cond on `ctx.Done()`.
+- **`Group`** — structured concurrency with two failure policies.
+  Built directly on `sync.WaitGroup` (no `errgroup` dependency). In
+  `Strict` mode (default) any task error cancels the group's ctx and
+  `Wait()` returns that error; in `BestEffort` mode tasks run to
+  completion and `Wait()` returns nil if at least one task succeeded
+  or a `*BestEffortError` aggregating all failures otherwise.
+  `SetLimit` / `WithLimit(n)` caps concurrent tasks via a semaphore
+  channel.
 
-Both types share the same API conventions and pass `-race` clean.
+All three share the same API conventions and pass `-race` clean.
 
 ## Tier 1 — synchronization primitives
 
-These three are small and address gaps in the standard library's
-"goroutine coordination" surface. They will land as a single PR so
-the new types can be exercised together in the package's stress
-tests.
-
-### `Group` — structured concurrency
-
-An `errgroup`-style helper: spawn N goroutines, propagate ctx
-cancellation when any returns an error, return the first error from
-`Wait()`. Go's `sync` has no equivalent; `golang.org/x/sync/errgroup`
-is the de facto standard but is untyped, has rough edges around
-ctx, and has an awkward `SetLimit` (mutates after `Go` has been
-called). A typed wrapper fits the toolkit.
-
-```go
-type Group struct { /* ... */ }
-
-func NewGroup(ctx context.Context) *Group
-func (g *Group) Go(fn func(ctx context.Context) error)
-func (g *Group) Wait() error
-func (g *Group) SetLimit(n int) // bound concurrent goroutines; must be called before Go
-```
-
-Typical use: fan out independent tasks, gather the first error,
-cancel siblings on ctx propagation. Replaces the
-`sync.WaitGroup + context + recover` boilerplate.
+These two are small and address gaps in the standard library's
+"goroutine coordination" surface.
 
 ### `Semaphore` — counting semaphore
 

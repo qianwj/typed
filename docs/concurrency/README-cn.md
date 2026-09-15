@@ -2,10 +2,11 @@
 
 `concurrency` 是与 Go 标准库互补的并发原语包,沿用本工具集一贯的写法:具体泛型类型、不绕 `any`、不用反射。
 
-当前版本提供两个类型:
+当前版本提供三个类型:
 
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
 - `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
+- `Group` —— 结构化并发,两种失败策略可选:`Strict`(任何任务失败即失败)和 `BestEffort`(任务全部跑完,至少一个成功就算成功)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
 
 > 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。本包接下来的计划见 [Roadmap](./roadmap.md)。
 
@@ -23,6 +24,7 @@
   - [与 `chan T` 的对比](#与-chan-t-的对比)
   - [示例](#示例)
 - [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
+- [`Group`](#group)
 - [Benchmark](#benchmark)
 - [与其他包的关系](#与其他包的关系)
 
@@ -259,6 +261,90 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | 背压 | 内建(由 capacity 决定) | 无——`Push` 不会失败 |
 
 需要背压就用 `BoundedBlockingQueue`。需要 `Push` 永远成功、且有别的机制(worker 数量、下游队列等)防止生产者把进程内存耗光,用 `UnboundedBlockingQueue`。
+
+---
+
+## `Group`
+
+`Group` 是一个 typed 的结构化并发 helper:起 N 个 goroutine、等全部完成、返回一个 error。两种失败策略可以通过 [`WithMode`](#modes)选择。
+
+### 构造
+
+```go
+// NewGroup(parent context.Context, opts ...Option) *Group
+g := concurrency.NewGroup(ctx)
+g := concurrency.NewGroup(ctx,
+    concurrency.WithMode(concurrency.BestEffort),
+    concurrency.WithLimit(8),
+)
+```
+
+nil 的 parent ctx 等价于 `context.Background`。
+
+### 阻塞 API
+
+| 方法 | 行为 |
+| --- | --- |
+| `Go(fn func(ctx context.Context) error)` | 起一个任务。如果设置了 limit 而且已满,会阻塞等出空位。 |
+| `Wait() error` | 等所有任务结束。返回最能描述结果的 error——见 [`Strict` 模式](#strict-模式) 和 [`BestEffort` 模式](#besteffort-模式)。 |
+| `SetLimit(n int)` | 限制并发任务数为 n。n ≤ 0 表示无限制。必须在任何 `Go` 之前调用;之后调用会 panic。`WithLimit` 选项是构造期的等价物。 |
+
+`Go` 可以从多个 goroutine 安全并发调用。第一个 error 之后继续调 `Go` 还是会起 goroutine,只是返回值不会再影响 `Wait` 的结果(`Strict` 模式下)。
+
+### 模式
+
+模式在构造时通过 `WithMode(m)` 设置,后续不可变。
+
+#### Strict 模式
+
+默认。匹配 `golang.org/x/sync/errgroup` 语义:任何任务返回非 nil error 时,group 的 ctx 被取消,兄弟任务看到取消并 abort,`Wait()` 返回那个 error。如果多个任务失败,**只返回第一个**,后续失败被忽略。
+
+```go
+g := concurrency.NewGroup(ctx) // 默认 Strict
+g.Go(migrateUser)              // 如果这个失败...
+g.Go(migrateAccount)            // ...这个会被取消
+err := g.Wait()                 // err 是 migrateUser 的 error(或 nil)
+```
+
+#### BestEffort 模式
+
+无论兄弟任务是否失败,所有任务都会跑完。group 的 ctx **不会**因任务 error 而取消。`Wait()` 返回:
+
+- 至少一个任务成功 → `nil`
+- 父 ctx 在首个任务成功前被取消 → 父 ctx 的 error(**不**包成 `BestEffortError`,这样用户不会看到一堆重复的 `context.Canceled`)
+- 所有任务都失败 + 父 ctx 还活着 → 一个 [`*BestEffortError`](#bestefforterror) 包了所有失败
+- 没起任何任务 → `nil`
+
+```go
+g := concurrency.NewGroup(ctx, concurrency.WithMode(concurrency.BestEffort))
+g.Go(refreshA)
+g.Go(refreshB)
+g.Go(refreshC)
+err := g.Wait() // 任意一个成功就 nil;三个全挂才返回 *BestEffortError
+```
+
+#### `BestEffortError`
+
+```go
+type BestEffortError struct {
+    Errors []error // 按完成顺序排列的每任务 error;不会为空
+}
+
+func (e *BestEffortError) Error() string
+func (e *BestEffortError) Unwrap() []error // errors.Is / errors.As 可以遍历所有底层 error
+```
+
+`BestEffortError` 实现标准 `Unwrap() []error` 契约,调用方可以用 `errors.Is(err, targetErr)` 在所有收集的 error 里找某个具体失败。
+
+### 状态查询
+
+没有——`Group` 设计上用完即丢。`Wait()` 是唯一的观测点。
+
+### 内存模型
+
+- **底层并发原语。** `sync.WaitGroup` 负责"等全部",`sync.Mutex` 保护结果状态,设了 limit 时还有一个 buffered `chan struct{}` 当计数信号量。无外部依赖;不用 `errgroup`,不用 `x/sync`。
+- **每操作分配。** 构造时一次 `context.WithCancel`。每次 `Go` 捕获 goroutine 闭包并 Add 到 WaitGroup。热路径上无其他分配。
+- **为什么不用 `errgroup`?** `errgroup` 是显然的选择,但它的 API 不好适配我们的签名(它不把 ctx 传给 `fn`、`SetLimit` 必须先于 `Go` 调用、它的 `Wait` 只返一个 error,适合 `Strict` 但不适合 `BestEffort`)。直接基于 `sync.WaitGroup` 写行数差不多,而且我们对两种模式都有完全控制权。
 
 ---
 

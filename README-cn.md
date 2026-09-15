@@ -60,6 +60,7 @@ profiles := lists.ArrayListOf(users...).
 - 🧠 **更智能的相等** —— `objects.Equals[T]` 理解 `func (T) Equal(T) bool`、对 nil/空集合做归一化,对 typed nil 指针 nil 安全。
 - 🪶 **有界内存** —— `ArrayList` 用 head-offset 布局并周期性压缩,`Stack.Pop` 和 `Remove*` 路径把释放的槽位清零,被弹出的引用不会因底层数组残留。
 - 🧵 **有界与无界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞,底层是单个 `chan T`。`concurrency.UnboundedBlockingQueue[T]` 是它的兄弟类型,`Push` 永不阻塞,底层是环形缓冲区 + mutex + cond。两者都暴露了带 context 的变体(`PushWithContext` / `PollWithContext`)。
+- 🧵 **结构化并发** —— `concurrency.Group` 是 `errgroup` 风格的 helper,带两种失败策略:`Strict`(任何任务失败即失败,ctx 取消兄弟) 和 `BestEffort`(任务全部跑完,至少一个成功就算成功)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
 
 ## 安装
 
@@ -190,6 +191,8 @@ use(v)
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
 | `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `option.Optional[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
+| `UnboundedBlockingQueue[T]` | `concurrency` | 无界 FIFO;`Push` 永不阻塞,`Poll` 在空队列时阻塞。底层是环形缓冲区 + `sync.Mutex` + `*sync.Cond`。API 表面和 `BoundedBlockingQueue` 一致。 |
+| `Group` | `concurrency` | `errgroup` 风格的结构化并发,两种失败策略 —— `Strict`(任何任务失败即失败,ctx 取消兄弟)与 `BestEffort`(任务跑完,至少一个成功才算成功,否则返回 `*BestEffortError`)。直接构建在 `sync.WaitGroup` 上,零外部依赖。 |
 
 ## 文档导航
 
@@ -265,7 +268,7 @@ adults := lists.ArrayListOf(users...).
 
 任何集合类型都不支持并发修改。Go 的标准做法 —— 单 goroutine 持有集合,通信走 channel —— 继续适用。`Stream` 默认不并行;普通的 `Map` 不会悄悄变成并发的。Typed 不引入新的并发模型,沿用 Go 显式并发的路子。
 
-少数场景下,工具集自己的 API 比 `chan T` 更顺手:非阻塞探测(`TryPush` / `TryPoll`)、带 context 的阻塞(`PushWithContext` / `PollWithContext`)、非阻塞读返回 `Optional`、或者一个泛型签名就能讲清“固定容量的阻塞队列”。这时 [`concurrency` 包](./docs/concurrency/README-cn.md) 提供了 [`BoundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#boundedblockingqueuet)(`chan T` 的薄包装,每操作开销基本为零)和 [`UnboundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#unboundedblockingqueuet)(环形缓冲区 + mutex + cond,因为 Go runtime 没有“无界 buffered channel”)。需要容量做背压用 `BoundedBlockingQueue`;需要 `Push` 永不阻塞用 `UnboundedBlockingQueue`。
+少数场景下,工具集自己的 API 比 `chan T` 更顺手:非阻塞探测(`TryPush` / `TryPoll`)、带 context 的阻塞(`PushWithContext` / `PollWithContext`)、非阻塞读返回 `Optional`、一个泛型签名就能讲清“固定容量的阻塞队列”、或者 `errgroup` 风格的 typed 结构化并发。这时 [`concurrency` 包](./docs/concurrency/README-cn.md) 提供了 [`BoundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#boundedblockingqueuet)(`chan T` 的薄包装,每操作开销基本为零)、[`UnboundedBlockingQueue[T]`](./docs/concurrency/README-cn.md#unboundedblockingqueuet)(环形缓冲区 + mutex + cond,因为 Go runtime 没有“无界 buffered channel”)和 [`Group`](./docs/concurrency/README-cn.md#group)(直接构建在 `sync.WaitGroup` 上的 strict 或 best-effort 结构化并发)。需要容量做背压用 `BoundedBlockingQueue`;需要 `Push` 永不阻塞用 `UnboundedBlockingQueue`;需要并发编排且不想自己写 `sync.WaitGroup + context + recover` 模板时用 `Group`。
 
 ## 错误处理
 

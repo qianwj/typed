@@ -93,6 +93,11 @@ profiles := lists.ArrayListOf(users...).
   is the sibling that never blocks `Push`; ring buffer + mutex + cond
   under the hood. Both expose context-aware variants
   (`PushWithContext` / `PollWithContext`).
+- 🧵 **Structured concurrency** — `concurrency.Group` is an
+  `errgroup`-style helper with two failure policies: `Strict` (any
+  task error fails the group, ctx cancels siblings) and `BestEffort`
+  (tasks run to completion; succeeds if any succeed). Built on
+  `sync.WaitGroup` directly, no external dependencies.
 
 ## Install
 
@@ -246,6 +251,8 @@ use(v)
 | Type | Source | Notes |
 | --- | --- | --- |
 | `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `option.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
+| `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
+| `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; succeeds if any succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
 
 ## Documentation
 
@@ -350,16 +357,21 @@ follows Go's explicit one.
 For the rare case where the toolkit's own surface area is a better fit
 than `chan T` — non-blocking probes (`TryPush` / `TryPoll`), context-aware
 blocking (`PushWithContext` / `PollWithContext`), an `Optional`-based
-return for non-blocking reads, or a single generic type to express
-"a fixed-capacity blocking queue" — the [`concurrency`
+return for non-blocking reads, a single generic type to express "a
+fixed-capacity blocking queue", or `errgroup`-style structured
+concurrency with a typed `fn(ctx)` signature — the [`concurrency`
 package](./docs/concurrency/README.md) ships
 [`BoundedBlockingQueue[T]`](./docs/concurrency/README.md#boundedblockingqueuet)
 (a thin wrapper around `chan T`, so per-op overhead is essentially
-zero) and [`UnboundedBlockingQueue[T]`](./docs/concurrency/README.md#unboundedblockingqueuet)
+zero), [`UnboundedBlockingQueue[T]`](./docs/concurrency/README.md#unboundedblockingqueuet)
 (ring buffer + mutex + cond, since the Go runtime has no "unbounded
-buffered channel"). Reach for `BoundedBlockingQueue` when you want
+buffered channel"), and [`Group`](./docs/concurrency/README.md#group)
+(strict or best-effort structured concurrency on top of
+`sync.WaitGroup`). Reach for `BoundedBlockingQueue` when you want
 backpressure via capacity; reach for `UnboundedBlockingQueue` when
-`Push` must never block.
+`Push` must never block; reach for `Group` when you have a fan-out
+of goroutines and want the first error or "at least one success"
+without writing the boilerplate yourself.
 
 ## Error handling
 

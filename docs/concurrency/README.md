@@ -4,10 +4,11 @@
 
 Concurrency primitives that complement Go's standard library, written in the same style as the rest of the toolkit: concrete generic types, no `any` round-trips, no reflective tricks.
 
-Right now the package ships two types:
+Right now the package ships three types:
 
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
 - `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
+- `Group` — structured concurrency with two failure policies: `Strict` (any task error fails the group) and `BestEffort` (tasks run to completion; succeed if any succeed). Built on `sync.WaitGroup`, no external dependencies.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md). For what's planned next in this package, see the [Roadmap](./roadmap.md).
 
@@ -25,6 +26,7 @@ Right now the package ships two types:
   - [Comparison with `chan T`](#comparison-with-chan-t)
   - [Examples](#examples)
 - [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
+- [`Group`](#group)
 - [Benchmarks](#benchmarks)
 - [See also](#see-also)
 
@@ -283,6 +285,90 @@ There is no `Capacity()` — the queue is unbounded by definition. If you want b
 | Backpressure | built-in (capacity) | none — `Push` cannot fail |
 
 Use `BoundedBlockingQueue` when you need backpressure. Use `UnboundedBlockingQueue` when you need `Push` to always succeed and you have an external mechanism (worker count, downstream queue, etc.) to stop producers from running the process out of memory.
+
+---
+
+## `Group`
+
+`Group` is a typed structured-concurrency helper: spawn N goroutines, wait for all of them, and return one error. Two failure policies are selectable via [`WithMode`](#modes):
+
+### Construction
+
+```go
+// NewGroup(parent context.Context, opts ...Option) *Group
+g := concurrency.NewGroup(ctx)
+g := concurrency.NewGroup(ctx,
+    concurrency.WithMode(concurrency.BestEffort),
+    concurrency.WithLimit(8),
+)
+```
+
+A nil parent ctx is treated as `context.Background`.
+
+### Blocking variants
+
+| Method | Behaviour |
+| --- | --- |
+| `Go(fn func(ctx context.Context) error)` | Spawn a task. Blocks if the limit is set and reached (waits for a slot to free up). |
+| `Wait() error` | Wait for every spawned task to return. Returns the error that best describes the outcome — see [`Strict` mode](#strict-mode) and [`BestEffort` mode](#besteffort-mode). |
+| `SetLimit(n int)` | Cap concurrent tasks at n. n ≤ 0 removes the limit. Must be called before any `Go`; panics otherwise. The `WithLimit` option is the construction-time equivalent. |
+
+Go is safe to call from multiple goroutines concurrently. Calls to `Go` after the first error still spawn their goroutines; their results simply don't influence `Wait`'s` return value in `Strict` mode.
+
+### Modes
+
+The mode is set at construction via `WithMode(m)` and is immutable for the life of the group.
+
+#### Strict mode
+
+The default. Matches `golang.org/x/sync/errgroup` semantics: when any task returns a non-nil error, the group's ctx is canceled, siblings see the cancellation and abort, and `Wait()` returns that error. If multiple tasks fail, only the **first** error is returned; subsequent failures are ignored.
+
+```go
+g := concurrency.NewGroup(ctx) // Strict by default
+g.Go(migrateUser)              // if this fails...
+g.Go(migrateAccount)            // ...this one is canceled
+err := g.Wait()                 // err is migrateUser's error (or nil)
+```
+
+#### BestEffort mode
+
+All tasks run to completion regardless of siblings' failures. The group's ctx is **not** canceled on a task error. `Wait()` returns:
+
+- `nil` if at least one task succeeded.
+- The parent ctx's error if the parent was canceled before any task succeeded (returned bare, **not** wrapped in a `BestEffortError`, so the user doesn't see a wrapper around three identical `context.Canceled` values).
+- A [`*BestEffortError`](#bestefforterror) wrapping every failed task if all tasks failed and the parent ctx is still live.
+- `nil` if no tasks were spawned.
+
+```go
+g := concurrency.NewGroup(ctx, concurrency.WithMode(concurrency.BestEffort))
+g.Go(refreshA)
+g.Go(refreshB)
+g.Go(refreshC)
+err := g.Wait() // nil if any of A/B/C succeeded; *BestEffortError only if all three failed
+```
+
+#### `BestEffortError`
+
+```go
+type BestEffortError struct {
+    Errors []error // per-task errors in completion order; always non-empty
+}
+
+func (e *BestEffortError) Error() string
+func (e *BestEffortError) Unwrap() []error // errors.Is / errors.As can walk all underlying errors
+```
+
+`BestEffortError` implements the standard `Unwrap() []error` contract, so callers can use `errors.Is(err, targetErr)` to find a specific failure across all collected errors.
+
+### Observability
+
+None — `Group` is meant to be used once and discarded. `Wait()` is the only inspection point.
+
+### Memory model
+
+- **Backing concurrency.** `sync.WaitGroup` for "wait for all", `sync.Mutex` to guard the result state, and (if a limit is configured) a buffered `chan struct{}` as a counting semaphore. No external dependencies; no `errgroup`, no `x/sync`.
+- **Per-op allocations.** One `context.WithCancel` derived ctx at construction. Each `Go` call captures the goroutine closure and adds to the WaitGroup. No other allocations on the hot path.
+- **Why not `errgroup`?** `errgroup` is the obvious implementation choice, but its API is awkward to adapt to ours (it doesn't pass ctx to `fn`, its `SetLimit` must be called before any `Go` and panics otherwise, and its `Wait` returns a single error which is fine for `Strict` but awkward for `BestEffort`). Building directly on `sync.WaitGroup` is about the same line count and gives us full control over both modes.
 
 ## See also
 
