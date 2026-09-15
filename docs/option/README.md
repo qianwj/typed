@@ -1,5 +1,7 @@
 # `typed/utils/option` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
+
 `Optional[T]`, an explicit container for a value of `T` that may be absent. It is a struct, not an interface, so its methods can declare their own type parameters (`Map[R]`, `FlatMap[R]`) — a Go 1.27+ generic-method feature.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).

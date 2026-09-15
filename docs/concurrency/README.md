@@ -1,5 +1,7 @@
 # `typed/concurrency` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=concurrency)](https://codecov.io/gh/qianwj/typed)
+
 Concurrency primitives that complement Go's standard library, written in the same style as the rest of the toolkit: concrete generic types, no `any` round-trips, no reflective tricks.
 
 Right now the package ships one type:

@@ -1,5 +1,7 @@
 # `typed/reactivex` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=reactivex)](https://codecov.io/gh/qianwj/typed)
+
 Typed, subscription-explicit, demand-driven, configurable-backpressure asynchronous event streams. This package is unrelated to the `Stream` in [`collections`](../collections/README.md): `Stream` is synchronous, single-consumer; `reactivex` handles subscription lifetimes, asynchronous inputs, and multicast.
 
 Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan[R]` declare their own type parameters.

@@ -1,5 +1,7 @@
 # `typed/control` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=control)](https://codecov.io/gh/qianwj/typed)
+
 Control-flow helpers. Two sub-packages:
 
 - [`control`](#control) — `Repeat` / `RepeatE`, concise "do this N times" loop primitives.

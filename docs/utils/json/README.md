@@ -1,5 +1,7 @@
 # `typed/utils/json` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
+
 `Result`-style JSON codec backed by [`encoding/json/v2`](https://pkg.go.dev/encoding/json/v2).
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).

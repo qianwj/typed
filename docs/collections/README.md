@@ -1,5 +1,7 @@
 # `typed/collections` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=collections)](https://codecov.io/gh/qianwj/typed)
+
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
 - `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Optional[T]`.

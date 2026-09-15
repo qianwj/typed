@@ -1,5 +1,7 @@
 # `typed/utils/objects` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
+
 Helpers for working with dynamically typed Go values.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).

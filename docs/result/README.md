@@ -1,5 +1,7 @@
 # `typed/utils/result` — Typed
 
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
+
 `Result[T]`, an explicit container for the outcome of an operation that may fail: a success carrying a value of type `T`, or a failure carrying a non-nil `error`. It is a struct, not an interface — that lets `Map[R]` / `FlatMap[R]` declare their own type parameters (Go 1.27+ generic methods).
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
