@@ -287,7 +287,6 @@ nil 的 parent ctx 等价于 `context.Background`。
 | --- | --- |
 | `Go(fn func(ctx context.Context) error)` | 起一个任务。如果设置了 limit 而且已满,会阻塞等出空位。 |
 | `Wait() error` | 等所有任务结束。返回最能描述结果的 error——见 [`Strict` 模式](#strict-模式) 和 [`BestEffort` 模式](#besteffort-模式)。 |
-| `SetLimit(n int)` | 限制并发任务数为 n。n ≤ 0 表示无限制。必须在任何 `Go` 之前调用;之后调用会 panic。`WithLimit` 选项是构造期的等价物。 |
 
 `Go` 可以从多个 goroutine 安全并发调用。第一个 error 之后继续调 `Go` 还是会起 goroutine,只是返回值不会再影响 `Wait` 的结果(`Strict` 模式下)。
 

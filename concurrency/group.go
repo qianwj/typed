@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"sync/atomic"
 )
 
 // Mode selects the failure policy of a [Group].
@@ -68,9 +67,7 @@ func WithMode(m Mode) Option {
 
 // WithLimit caps the number of concurrently-running tasks spawned via
 // [Group.Go] at n. Calls to [Group.Go] beyond the cap block until a slot
-// is freed. A non-positive n means no limit. [WithLimit] must be supplied
-// at construction; [Group.SetLimit] covers the equivalent runtime API
-// for callers that need to defer the decision.
+// is freed. A non-positive n means no limit.
 func WithLimit(n int) Option {
 	return func(c *groupConfig) { c.limit = n }
 }
@@ -95,11 +92,6 @@ type Group struct {
 
 	mu    sync.Mutex
 	state groupState
-
-	// started becomes true the first time Go is called. It guards
-	// SetLimit, which is only valid before any goroutine has launched
-	// (matches golang.org/x/sync/errgroup semantics).
-	started atomic.Bool
 }
 
 // groupState is the result-tracking half of Group, protected by mu.
@@ -156,7 +148,6 @@ func NewGroup(parent context.Context, opts ...Option) *Group {
 // after the first error are still accepted (the goroutines run); they
 // just have no effect on [Group.Wait]'s return value.
 func (g *Group) Go(fn func(ctx context.Context) error) {
-	g.started.Store(true)
 	g.wg.Add(1)
 
 	if g.sem != nil {
@@ -239,26 +230,6 @@ func (g *Group) Wait() error {
 	default:
 		return &BestEffortError{Errors: g.state.errs}
 	}
-}
-
-// SetLimit caps the number of tasks that may run concurrently. Calls to
-// [Group.Go] beyond the cap block until a slot is freed. n <= 0 removes
-// any previously-set limit.
-//
-// SetLimit must be called before any [Group.Go] (matches
-// golang.org/x/sync/errgroup semantics); calling it after a task has been
-// spawned panics, because the limit at construction time and the
-// concurrency cap are not designed to be mutated once goroutines are in
-// flight.
-func (g *Group) SetLimit(n int) {
-	if g.started.Load() {
-		panic("concurrency: Group.SetLimit called after Go")
-	}
-	if n <= 0 {
-		g.sem = nil
-		return
-	}
-	g.sem = make(chan struct{}, n)
 }
 
 // BestEffortError aggregates the errors from a [Group] running in

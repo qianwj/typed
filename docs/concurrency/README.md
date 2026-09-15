@@ -311,7 +311,6 @@ A nil parent ctx is treated as `context.Background`.
 | --- | --- |
 | `Go(fn func(ctx context.Context) error)` | Spawn a task. Blocks if the limit is set and reached (waits for a slot to free up). |
 | `Wait() error` | Wait for every spawned task to return. Returns the error that best describes the outcome — see [`Strict` mode](#strict-mode) and [`BestEffort` mode](#besteffort-mode). |
-| `SetLimit(n int)` | Cap concurrent tasks at n. n ≤ 0 removes the limit. Must be called before any `Go`; panics otherwise. The `WithLimit` option is the construction-time equivalent. |
 
 Go is safe to call from multiple goroutines concurrently. Calls to `Go` after the first error still spawn their goroutines; their results simply don't influence `Wait`'s` return value in `Strict` mode.
 

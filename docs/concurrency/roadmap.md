@@ -36,10 +36,11 @@ The package ships these types today:
   Built directly on `sync.WaitGroup` (no `errgroup` dependency). In
   `Strict` mode (default) any task error cancels the group's ctx and
   `Wait()` returns that error; in `BestEffort` mode tasks run to
-  completion and `Wait()` returns nil if at least one task succeeded
-  or a `*BestEffortError` aggregating all failures otherwise.
-  `SetLimit` / `WithLimit(n)` caps concurrent tasks via a semaphore
-  channel.
+  completion and `Wait()` returns nil if every task succeeded, the
+  bare single error if exactly one task failed, or a
+  `*BestEffortError` aggregating all failures otherwise.
+  `WithLimit(n)` (set at construction) caps concurrent tasks via a
+  semaphore channel.
 
 All three share the same API conventions and pass `-race` clean.
 

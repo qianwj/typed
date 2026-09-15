@@ -273,14 +273,14 @@ func TestGroup_BestEffort_ParentCtxCancelCollectsCtxErrs(t *testing.T) {
 	}
 }
 
-// --- SetLimit ------------------------------------------------------------
+// --- WithLimit -----------------------------------------------------------
 
-func TestGroup_SetLimit_BlocksExcessGo(t *testing.T) {
+func TestGroup_WithLimit_BlocksExcessGo(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background(), WithLimit(2))
 
 	var (
-		running atomic.Int32
+		running    atomic.Int32
 		maxRunning atomic.Int32
 	)
 
@@ -311,7 +311,7 @@ func TestGroup_SetLimit_BlocksExcessGo(t *testing.T) {
 	}
 }
 
-func TestGroup_SetLimit_AtConstructionViaWithLimit(t *testing.T) {
+func TestGroup_WithLimit_OneTaskRuns(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background(), WithLimit(1))
 
@@ -326,38 +326,6 @@ func TestGroup_SetLimit_AtConstructionViaWithLimit(t *testing.T) {
 	}
 	if !ran.Load() {
 		t.Fatal("task never ran")
-	}
-}
-
-func TestGroup_SetLimit_AfterGoPanics(t *testing.T) {
-	t.Parallel()
-	g := NewGroup(context.Background())
-	g.Go(func(ctx context.Context) error { return nil })
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("expected panic, got none")
-		}
-	}()
-	g.SetLimit(2)
-}
-
-func TestGroup_SetLimit_ZeroRemovesLimit(t *testing.T) {
-	t.Parallel()
-	g := NewGroup(context.Background(), WithLimit(1))
-	g.SetLimit(0)
-
-	// After SetLimit(0), more than 1 task should be able to run
-	// concurrently. We don't measure concurrency here, just confirm
-	// nothing panics and Wait returns nil.
-	for i := 0; i < 10; i++ {
-		g.Go(func(ctx context.Context) error {
-			time.Sleep(5 * time.Millisecond)
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
-		t.Fatalf("Wait = %v, want nil", err)
 	}
 }
 
