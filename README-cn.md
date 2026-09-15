@@ -67,6 +67,7 @@ profiles := lists.ArrayListOf(users...).
 ```bash
 go get github.com/qianwj/typed/collections
 go get github.com/qianwj/typed/utils/option
+go get github.com/qianwj/typed/utils/either
 go get github.com/qianwj/typed/utils/result
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
@@ -164,6 +165,7 @@ use(v)
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
 | `option.Optional[T]` | `utils/option` | 存在 / 缺失的值,不依赖对 `T` 的 nil 检查。 |
+| `either.Either[L, R]` | `utils/either` | tagged-union 值类型;约定 `Left` = 失败、`Right` = 成功。安全访问器返回 `Optional`;`Fold` 是选分支的规范组合子。 |
 | `result.Result[T]` | `utils/result` | 成功 / 失败;`Unwrap` 返回 `(T, error)`,`Wrap` 是从 `(T, error)` 到 `Result[T]` 的正向桥,`Recover` 是错误感知的 fallback,总返回 `T`。 |
 | `json.Encode[T] / Decode[T]` | `utils/json` | 基于 `encoding/json/v2` 的 `Result` 风格编解码。 |
 | `objects.Equaler`(接口,可选用) | `utils/objects` | 提示接口 `Equal(any) bool`;`Equals` 不要求类型实现它。 |
@@ -182,6 +184,8 @@ use(v)
 | --- | --- | --- |
 | `reactivex.Observable[T]`、`Publisher[T]`、`Subscriber[T]` | `reactivex` | 强类型异步流,显式需求(`Subscription.Request(n)`)与 `OnError` / `OnComplete` 终止信号。 |
 | `reactivex.Subject[T]` | `reactivex` | 热多播发布者 + 订阅者;通过 `WithBuffer` / `WithOverflow` 配置。 |
+| `reactivex.Single[T]` | `reactivex` | reactive 容器,恰好发一个值或一个 error。`Await` / `Subscribe` 分别对应阻塞 / 回调消费;`Map` / `FlatMap` / `Zip` / `AndThen` 用于组合。 |
+| `reactivex.Maybe[T]` | `reactivex` | reactive 容器,发零或一个值,或一个 error —— 三种终止状态(success / complete / error)。 |
 | `reactivex.OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`。 |
 | 源:`Just` / `FromSlice` / `FromChannel` / `FromChannelWithOptions` / `FromSeq` / `Create` / `Interval` | `reactivex` | 冷、热源构造器。 |
 | 算子:`Map[R]`、`Filter`、`Take`、`Skip`、`Scan[R]`、`Reduce` | `reactivex` | 全部为包装型,自身不启 goroutine、不带队列。 |

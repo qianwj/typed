@@ -23,6 +23,8 @@ Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan
   - [`OverflowStrategy`](#overflowstrategy)
   - [`BackpressureOption`](#backpressureoption)
 - [`Subject[T]`](#subjectt)
+- [`Single[T]`](#singlet)
+- [`Maybe[T]`](#maybet)
 - [Examples](#examples)
 - [See also](#see-also)
 
@@ -199,6 +201,116 @@ func (s *Subject[T]) OnComplete()
 
 > `OnSubscribe` currently does **not** automatically request from upstream, and downstream demand is not aggregated into upstream requests. When using `Subject` as a `Subscriber`, call `Request` on the returned upstream subscription explicitly. Only the most recently supplied upstream handle is retained.
 
+## `Single[T]`
+
+`Single[T]` is a reactive container that emits **exactly one** value or **exactly one** error. It is the typed equivalent of a Future combined with a reactive subscription model.
+
+Compared to `Observable[T]`:
+
+- **Cardinality is fixed at 1.** A `Single` terminates with `OnSuccess(T)` or `OnError(error)`; there is no "no value arrived" state, so callers never have to distinguish "the result is still pending" from "no result will ever arrive".
+- **No demand tracking.** At most one value is delivered, so the subscriber does not call `Request`.
+- **No per-subscription replay.** `fn` runs once and the result is cached; every subscriber sees the same outcome. Use `Observable` if you want a fresh execution per subscriber.
+
+```go
+type Single[T any] struct { /* ... */ }
+
+func NewSingle[T any](fn func() (T, error)) *Single[T]
+
+// Reactive subscription
+func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
+
+// Blocking consumption
+func (s *Single[T]) Await() (T, error)
+func (s *Single[T]) AwaitWithContext(ctx context.Context) (T, error)
+
+// Non-blocking check
+func (s *Single[T]) Done() bool
+
+// Composition
+func (s *Single[T]) Map[R any](f func(T) R) *Single[R]
+func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R]
+func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Single[R]
+func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
+```
+
+### Composition
+
+| Operator | Behaviour |
+| --- | --- |
+| `Map` | Apply `f(value)` on success; pass errors through unchanged. `f` must be infallible. |
+| `FlatMap` | On success, run `f(value)` and return the resulting `Single`. The chain produces a fresh `Single`; the inner `Single` runs only if the outer succeeded. |
+| `Zip` | Wait for both this `Single` and `other`, then run `combine(left, right)`. The first error wins. |
+| `AndThen` | On success, run `next` and return its result. The original value is discarded; use `FlatMap` if `next` depends on it. |
+
+### Comparison with `Observable`
+
+| | `Observable[T]` | `Single[T]` |
+| --- | --- | --- |
+| Cardinality | 0..N | exactly 1 |
+| Terminal states | `OnNext*` then `OnComplete` or `OnError` | `OnSuccess(T)` or `OnError(error)` |
+| Demand tracking | yes (`Request`) | no |
+| Per-subscription replay | yes (source iterates again) | no (cached result) |
+| Blocking consumption | `ToSlice`, `ForEach` | `Await` |
+
+### Use cases
+
+- **Cache warm-up**: `var cfg = reactivex.NewSingle(loadConfig)` — multiple callers `Await` the same `Single`, the underlying fn runs once.
+- **One-shot async computation** with a typed return (HTTP fetch on demand, expensive calculation).
+- **Bridge from a callback-based API** to a typed value.
+
+## `Maybe[T]`
+
+`Maybe[T]` generalises `Single` by adding a third terminal state: the producer may legitimately complete **without a value**. It models "looked up the key, no entry" or "scanned the queue, no message pending" — cases where absence is a normal outcome rather than an error.
+
+Terminal states:
+
+- `OnSuccess(T)` — exactly one value delivered.
+- `OnComplete()` — no value delivered; the absence is normal.
+- `OnError(err)` — abnormal termination.
+
+```go
+type Maybe[T any] struct { /* ... */ }
+
+func NewMaybe[T any](fn func() (T, bool, error)) *Maybe[T]
+// present == true → OnSuccess; present == false → OnComplete.
+// err != nil → OnError (present is ignored).
+
+func (m *Maybe[T]) Subscribe(
+    onSuccess func(T),
+    onComplete func(),
+    onError func(error),
+) Subscription
+
+func (m *Maybe[T]) Await() (T, bool, error)
+func (m *Maybe[T]) AwaitWithContext(ctx context.Context) (T, bool, error)
+
+func (m *Maybe[T]) Done() bool
+
+func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R]
+func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R]
+func (m *Maybe[T]) Zip[U, R any](other *Maybe[U], combine func(T, U) R) *Maybe[R]
+func (m *Maybe[T]) AndThen[R any](next *Maybe[R]) *Maybe[R]
+```
+
+### Composition
+
+All operators propagate the three states: `Map` / `FlatMap` / `Zip` / `AndThen` pass `OnComplete` through unchanged (the user's `f` is not invoked on the complete-without-value branch). Errors always short-circuit the chain.
+
+### Comparison with `Single` and `Observable`
+
+| | `Observable[T]` | `Single[T]` | `Maybe[T]` |
+| --- | --- | --- | --- |
+| Cardinality | 0..N | exactly 1 | 0 or 1 |
+| Terminal states | complete / error | success / error | success / complete / error |
+| Await return | n/a (use `ToSlice`) | `(T, error)` | `(T, bool, error)` |
+| Best for | streams of events | a guaranteed result | an optional result |
+
+### Use cases
+
+- **Cache lookup** — hit returns `Some(value)`, miss returns `None`.
+- **Pull from a queue** with timeout — got a message or got nothing.
+- **Database row fetch** by primary key — row exists or doesn't.
+
 ## Examples
 
 ```go
@@ -240,3 +352,4 @@ subj.ForEach(ctx, onMsg, onErr, onDone) // start one subscription
 - For synchronous, single-consumer iteration use the `Stream` in [`collections`](../collections/README.md).
 - For one-shot success / failure use [`utils/result`](../result/README.md); subscription-level errors are reported through `OnError`.
 - For "single value that may be absent" use [`utils/option`](../option/README.md).
+- For the typed tagged-union result container (Left = failure, Right = success) use [`utils/either`](../either/README.md).

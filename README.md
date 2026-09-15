@@ -105,6 +105,7 @@ profiles := lists.ArrayListOf(users...).
 ```bash
 go get github.com/qianwj/typed/collections
 go get github.com/qianwj/typed/utils/option
+go get github.com/qianwj/typed/utils/either
 go get github.com/qianwj/typed/utils/result
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
@@ -225,6 +226,7 @@ use(v)
 | Type | Source | Notes |
 | --- | --- | --- |
 | `option.Optional[T]` | `utils/option` | Present / absent value, no nil check on `T`. |
+| `either.Either[L, R]` | `utils/either` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Optional`. `Fold` for the canonical branch-pick pattern. |
 | `result.Result[T]` | `utils/result` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
 | `json.Encode[T] / Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
 | `objects.Equaler` (interface, optional) | `utils/objects` | Hint interface `Equal(any) bool`; not required for `Equals` to dispatch. |
@@ -243,6 +245,8 @@ use(v)
 | --- | --- | --- |
 | `reactivex.Observable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Subscription.Request(n)`) and `OnError` / `OnComplete` terminals. |
 | `reactivex.Subject[T]` | `reactivex` | Hot multicast publisher and subscriber; configured with `WithBuffer` / `WithOverflow`. |
+| `reactivex.Single[T]` | `reactivex` | Reactive container that emits exactly one value or one error. `Await` / `Subscribe` for blocking / callback consumption; `Map` / `FlatMap` / `Zip` / `AndThen` for composition. |
+| `reactivex.Maybe[T]` | `reactivex` | Reactive container that emits zero-or-one value or one error — three terminal states (success / complete / error). |
 | `reactivex.OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`. |
 | Sources: `Just`, `FromSlice`, `FromChannel`, `FromChannelWithOptions`, `FromSeq`, `Create`, `Interval` | `reactivex` | Cold and hot source constructors. |
 | Operators: `Map[R]`, `Filter`, `Take`, `Skip`, `Scan[R]`, `Reduce` | `reactivex` | All wrapping-style; no goroutines or queues of their own. |
