@@ -6,7 +6,7 @@
 
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
 - `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
-- `Group` —— 结构化并发,两种失败策略可选:`Strict`(任何任务失败即失败)和 `BestEffort`(任务全部跑完,至少一个成功就算成功)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
+- `Group` —— 结构化并发,两种失败策略可选:`Strict`(任何任务失败即失败,ctx 取消兄弟)和 `BestEffort`(任务全部跑完,只有全部成功才成功,否则返回聚合后的 error)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
 
 > 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。本包接下来的计划见 [Roadmap](./roadmap.md)。
 
@@ -310,17 +310,18 @@ err := g.Wait()                 // err 是 migrateUser 的 error(或 nil)
 
 无论兄弟任务是否失败,所有任务都会跑完。group 的 ctx **不会**因任务 error 而取消。`Wait()` 返回:
 
-- 至少一个任务成功 → `nil`
-- 父 ctx 在首个任务成功前被取消 → 父 ctx 的 error(**不**包成 `BestEffortError`,这样用户不会看到一堆重复的 `context.Canceled`)
-- 所有任务都失败 + 父 ctx 还活着 → 一个 [`*BestEffortError`](#bestefforterror) 包了所有失败
-- 没起任何任务 → `nil`
+- 全部任务成功(包括没起任何任务的平凡情况)→ `nil`
+- 恰好一个任务失败 → 这个错误的裸值
+- 其他情况 → 一个 [`*BestEffortError`](#bestefforterror) 包了所有失败
+
+父 ctx 被取消不会改变返回 error 的形状:正在跑的任务会返回 `ctx.Err()`,这些 error 和其他失败一样被收集——没有"父 ctx 取消"的特殊处理路径。
 
 ```go
 g := concurrency.NewGroup(ctx, concurrency.WithMode(concurrency.BestEffort))
 g.Go(refreshA)
 g.Go(refreshB)
 g.Go(refreshC)
-err := g.Wait() // 任意一个成功就 nil;三个全挂才返回 *BestEffortError
+err := g.Wait() // 三个全成功才 nil;任何一个失败就返回 *BestEffortError
 ```
 
 #### `BestEffortError`

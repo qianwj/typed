@@ -60,7 +60,7 @@ profiles := lists.ArrayListOf(users...).
 - 🧠 **更智能的相等** —— `objects.Equals[T]` 理解 `func (T) Equal(T) bool`、对 nil/空集合做归一化,对 typed nil 指针 nil 安全。
 - 🪶 **有界内存** —— `ArrayList` 用 head-offset 布局并周期性压缩,`Stack.Pop` 和 `Remove*` 路径把释放的槽位清零,被弹出的引用不会因底层数组残留。
 - 🧵 **有界与无界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞,底层是单个 `chan T`。`concurrency.UnboundedBlockingQueue[T]` 是它的兄弟类型,`Push` 永不阻塞,底层是环形缓冲区 + mutex + cond。两者都暴露了带 context 的变体(`PushWithContext` / `PollWithContext`)。
-- 🧵 **结构化并发** —— `concurrency.Group` 是 `errgroup` 风格的 helper,带两种失败策略:`Strict`(任何任务失败即失败,ctx 取消兄弟) 和 `BestEffort`(任务全部跑完,至少一个成功就算成功)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
+- 🧵 **结构化并发** —— `concurrency.Group` 是 `errgroup` 风格的 helper,带两种失败策略:`Strict`(任何任务失败即失败,ctx 取消兄弟) 和 `BestEffort`(任务全部跑完,只有全部成功才成功,否则返回聚合后的 error)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
 
 ## 安装
 
@@ -192,7 +192,7 @@ use(v)
 | --- | --- | --- |
 | `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `option.Optional[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
 | `UnboundedBlockingQueue[T]` | `concurrency` | 无界 FIFO;`Push` 永不阻塞,`Poll` 在空队列时阻塞。底层是环形缓冲区 + `sync.Mutex` + `*sync.Cond`。API 表面和 `BoundedBlockingQueue` 一致。 |
-| `Group` | `concurrency` | `errgroup` 风格的结构化并发,两种失败策略 —— `Strict`(任何任务失败即失败,ctx 取消兄弟)与 `BestEffort`(任务跑完,至少一个成功才算成功,否则返回 `*BestEffortError`)。直接构建在 `sync.WaitGroup` 上,零外部依赖。 |
+| `Group` | `concurrency` | `errgroup` 风格的结构化并发,两种失败策略 —— `Strict`(任何任务失败即失败,ctx 取消兄弟)与 `BestEffort`(任务跑完,只有全部成功才成功,否则返回 `*BestEffortError`)。直接构建在 `sync.WaitGroup` 上,零外部依赖。 |
 
 ## 文档导航
 

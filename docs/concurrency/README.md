@@ -8,7 +8,7 @@ Right now the package ships three types:
 
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
 - `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
-- `Group` — structured concurrency with two failure policies: `Strict` (any task error fails the group) and `BestEffort` (tasks run to completion; succeed if any succeed). Built on `sync.WaitGroup`, no external dependencies.
+- `Group` — structured concurrency with two failure policies: `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns aggregated errors). Built on `sync.WaitGroup`, no external dependencies.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md). For what's planned next in this package, see the [Roadmap](./roadmap.md).
 
@@ -334,17 +334,18 @@ err := g.Wait()                 // err is migrateUser's error (or nil)
 
 All tasks run to completion regardless of siblings' failures. The group's ctx is **not** canceled on a task error. `Wait()` returns:
 
-- `nil` if at least one task succeeded.
-- The parent ctx's error if the parent was canceled before any task succeeded (returned bare, **not** wrapped in a `BestEffortError`, so the user doesn't see a wrapper around three identical `context.Canceled` values).
-- A [`*BestEffortError`](#bestefforterror) wrapping every failed task if all tasks failed and the parent ctx is still live.
-- `nil` if no tasks were spawned.
+- `nil` if every task succeeded (including the trivial case of zero tasks spawned).
+- The bare single task error if exactly one task failed.
+- A [`*BestEffortError`](#bestefforterror) wrapping every failed task otherwise.
+
+Parent-ctx cancellation does not change the shape of the returned error: any task that was still running when the parent ctx was canceled simply returns `ctx.Err()` as its error, and those errors are collected just like any other failure — there is no separate "parent canceled" fast path.
 
 ```go
 g := concurrency.NewGroup(ctx, concurrency.WithMode(concurrency.BestEffort))
 g.Go(refreshA)
 g.Go(refreshB)
 g.Go(refreshC)
-err := g.Wait() // nil if any of A/B/C succeeded; *BestEffortError only if all three failed
+err := g.Wait() // nil only if all three succeeded; *BestEffortError if any failed
 ```
 
 #### `BestEffortError`

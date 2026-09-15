@@ -15,19 +15,26 @@ type Mode int
 
 const (
 	// Strict mode (default) is the standard "errgroup" semantics: when any
-	// task returns a non-nil error, the group's ctx is canceled, siblings
-	// see the cancellation and abort, and [Group.Wait] returns that error.
-	// Subsequent calls to [Group.Go] after the first error still spawn
-	// goroutines but their results are ignored by [Group.Wait].
+	// task returns a non-nil error, the group's ctx is canceled, the
+	// in-flight siblings see the cancellation and abort, and [Group.Wait]
+	// returns that error. Subsequent calls to [Group.Go] after the first
+	// error still spawn goroutines but their results are ignored by
+	// [Group.Wait].
 	Strict Mode = iota
 
-	// BestEffort mode runs all tasks to completion regardless of
-	// siblings' failures. The group's ctx is NOT canceled on a task
-	// error, so all goroutines run to their natural end (or until the
-	// parent ctx is canceled). [Group.Wait] returns nil if at least one
-	// task succeeded, the parent ctx error if the parent was canceled
-	// while no task had succeeded yet, or a [*BestEffortError] wrapping
-	// every failed task otherwise.
+	// BestEffort mode runs every task to its natural end (or until the
+	// parent ctx is canceled), regardless of how many siblings fail. The
+	// group's ctx is NOT canceled on a task error. [Group.Wait] blocks
+	// until all spawned tasks have returned, then returns:
+	//   - nil if every task succeeded (including the trivial case of
+	//     zero tasks spawned);
+	//   - the bare single task error if exactly one task failed;
+	//   - a [*BestEffortError] wrapping every failed task otherwise.
+	//
+	// Parent-ctx cancellation does not change the shape of the returned
+	// error: any task that was still running when the parent ctx was
+	// canceled simply returns ctx.Err() as its error, and those errors
+	// are collected just like any other failure.
 	BestEffort
 )
 
@@ -83,9 +90,8 @@ type Group struct {
 	// concurrency cap.
 	sem chan struct{}
 
-	parentCtx context.Context
-	ctx       context.Context // derived from parentCtx, canceled by cancel()
-	cancel    context.CancelFunc
+	ctx    context.Context // derived from parent in NewGroup, canceled by cancel()
+	cancel context.CancelFunc
 
 	mu    sync.Mutex
 	state groupState
@@ -96,15 +102,15 @@ type Group struct {
 	started atomic.Bool
 }
 
-// groupState is the result-tracking half of Group. protected by mu.
+// groupState is the result-tracking half of Group, protected by mu.
 //
 // In Strict mode, only firstErr matters; errs is always nil.
 // In BestEffort mode, firstErr is always nil and errs accumulates every
-// failed task. successCount counts how many tasks returned nil.
+// failed task in completion order. len(errs)==0 at Wait time means every
+// task succeeded (or no task was spawned) → Wait returns nil.
 type groupState struct {
-	firstErr     error
-	errs         []error
-	successCount int
+	firstErr error
+	errs     []error
 }
 
 // NewGroup returns a fresh Group whose derived ctx is canceled either by
@@ -125,10 +131,9 @@ func NewGroup(parent context.Context, opts ...Option) *Group {
 	ctx, cancel := context.WithCancel(parent)
 
 	g := &Group{
-		cfg:       cfg,
-		parentCtx: parent,
-		ctx:       ctx,
-		cancel:    cancel,
+		cfg:    cfg,
+		ctx:    ctx,
+		cancel: cancel,
 	}
 	if cfg.limit > 0 {
 		g.sem = make(chan struct{}, cfg.limit)
@@ -143,9 +148,9 @@ func NewGroup(parent context.Context, opts ...Option) *Group {
 // In [Strict] mode, when fn returns a non-nil error, the group's ctx is
 // canceled (siblings see it), and [Group.Wait] will return that error.
 //
-// In [BestEffort] mode, the ctx is NOT canceled. The error is recorded
-// and [Group.Wait] will return a [*BestEffortError] only if ALL tasks
-// failed.
+// In [BestEffort] mode, the ctx is NOT canceled. Every error is
+// recorded; [Group.Wait] returns nil only if every task succeeded, and
+// a bare error or [*BestEffortError] otherwise.
 //
 // Go is safe to call from multiple goroutines concurrently. Calls to Go
 // after the first error are still accepted (the goroutines run); they
@@ -178,26 +183,26 @@ func (g *Group) handleResult(err error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	// In Strict mode, the first error wins. Subsequent errors don't
-	// change firstErr (it's already the "first") and we don't bother
-	// canceling again (it's a no-op). Skip the record to keep the
-	// first error stable and avoid extra work.
-	if g.cfg.mode == Strict && g.state.firstErr != nil {
-		return
-	}
-
 	if err == nil {
-		g.state.successCount++
+		// Success: nothing to record in either mode. In BestEffort
+		// mode, len(errs)==0 at Wait time means "all succeeded",
+		// which collapses to nil.
 		return
 	}
 
 	if g.cfg.mode == Strict {
+		// First error wins; cancel siblings. Subsequent errors are
+		// ignored (the first one is already stable in firstErr and
+		// ctx is already canceled).
+		if g.state.firstErr != nil {
+			return
+		}
 		g.state.firstErr = err
 		g.cancel()
 		return
 	}
 
-	// BestEffort
+	// BestEffort: every failure is recorded.
 	g.state.errs = append(g.state.errs, err)
 }
 
@@ -206,10 +211,9 @@ func (g *Group) handleResult(err error) {
 //
 //   - In [Strict] mode: the first task error, or nil if every task
 //     succeeded (including the trivial case of zero tasks).
-//   - In [BestEffort] mode: nil if at least one task succeeded; the
-//     parent ctx's error if the parent was canceled before any task
-//     succeeded; or a [*BestEffortError] wrapping every failed task
-//     when all tasks failed and the parent ctx is still live.
+//   - In [BestEffort] mode: nil if every task succeeded; the bare
+//     single task error if exactly one task failed; a [*BestEffortError]
+//     wrapping every failed task if more than one task failed.
 //
 // Wait is safe to call multiple times; subsequent calls return the
 // same value once all tasks have finished.
@@ -220,27 +224,21 @@ func (g *Group) Wait() error {
 	defer g.mu.Unlock()
 
 	if g.cfg.mode == Strict {
-		if g.state.firstErr != nil {
-			return g.state.firstErr
-		}
-		return nil
+		return g.state.firstErr
 	}
 
-	// BestEffort
-	if g.state.successCount > 0 {
+	// BestEffort.
+	switch len(g.state.errs) {
+	case 0:
+		// Every task succeeded (or no task was spawned).
 		return nil
-	}
-	if err := g.parentCtx.Err(); err != nil {
-		return err
-	}
-	if len(g.state.errs) == 0 {
-		// No tasks at all. Treat as success.
-		return nil
-	}
-	if len(g.state.errs) == 1 {
+	case 1:
+		// Common case: exactly one failure. Return the bare error
+		// so errors.Is / errors.As match without unwrapping.
 		return g.state.errs[0]
+	default:
+		return &BestEffortError{Errors: g.state.errs}
 	}
-	return &BestEffortError{Errors: g.state.errs}
 }
 
 // SetLimit caps the number of tasks that may run concurrently. Calls to

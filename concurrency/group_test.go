@@ -137,7 +137,7 @@ func TestGroup_BestEffort_AllSucceedReturnsNil(t *testing.T) {
 	}
 }
 
-func TestGroup_BestEffort_OneSuccessReturnsNil(t *testing.T) {
+func TestGroup_BestEffort_OneSuccessStillReturnsAggregatedError(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background(), WithMode(BestEffort))
 
@@ -145,8 +145,16 @@ func TestGroup_BestEffort_OneSuccessReturnsNil(t *testing.T) {
 	g.Go(func(ctx context.Context) error { return nil })
 	g.Go(func(ctx context.Context) error { return errors.New("b failed") })
 
-	if err := g.Wait(); err != nil {
-		t.Fatalf("Wait = %v, want nil (one task succeeded)", err)
+	err := g.Wait()
+	if err == nil {
+		t.Fatal("Wait = nil, want *BestEffortError (any failure aggregates)")
+	}
+	var be *BestEffortError
+	if !errors.As(err, &be) {
+		t.Fatalf("Wait err = %v, want *BestEffortError", err)
+	}
+	if len(be.Errors) != 2 {
+		t.Fatalf("BestEffortError.Errors has %d entries, want 2", len(be.Errors))
 	}
 }
 
@@ -223,8 +231,9 @@ func TestGroup_BestEffort_FailureDoesNotCancelSiblings(t *testing.T) {
 		return errors.New("third failed")
 	})
 
-	if err := g.Wait(); err != nil {
-		t.Fatalf("Wait = %v, want nil (second succeeded)", err)
+	// Two failures → *BestEffortError; we only assert siblings ran.
+	if err := g.Wait(); err == nil {
+		t.Fatalf("Wait = nil, want *BestEffortError (two tasks failed)")
 	}
 	if !secondRan.Load() {
 		t.Fatalf("second task did not run (was canceled by sibling error)")
@@ -234,7 +243,7 @@ func TestGroup_BestEffort_FailureDoesNotCancelSiblings(t *testing.T) {
 	}
 }
 
-func TestGroup_BestEffort_ParentCtxCancelReturnsCtxErr(t *testing.T) {
+func TestGroup_BestEffort_ParentCtxCancelCollectsCtxErrs(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
 	g := NewGroup(ctx, WithMode(BestEffort))
@@ -249,13 +258,18 @@ func TestGroup_BestEffort_ParentCtxCancelReturnsCtxErr(t *testing.T) {
 	cancel()
 
 	err := g.Wait()
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("Wait err = %v, want context.Canceled", err)
+	// Every task returned ctx.Err() → *BestEffortError wrapping them.
+	// errors.Is must still match via the standard Unwrap() []error
+	// contract.
+	var be *BestEffortError
+	if !errors.As(err, &be) {
+		t.Fatalf("Wait err = %v, want *BestEffortError", err)
 	}
-	// Important: must NOT be a *BestEffortError — we want the parent
-	// ctx error, not a wrapper around three identical ctx.Err()s.
-	if _, ok := err.(*BestEffortError); ok {
-		t.Fatalf("parent-ctx-cancel Wait returned *BestEffortError, want bare ctx err")
+	if len(be.Errors) != 3 {
+		t.Fatalf("BestEffortError.Errors has %d entries, want 3", len(be.Errors))
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("errors.Is(err, context.Canceled) = false, want true (via Unwrap)")
 	}
 }
 
@@ -410,8 +424,16 @@ func TestGroup_Stress_BestEffortMixedSuccessAndFailure(t *testing.T) {
 		})
 	}
 
-	if err := g.Wait(); err != nil {
-		t.Fatalf("Wait = %v, want nil (half tasks succeeded)", err)
+	err := g.Wait()
+	if err == nil {
+		t.Fatal("Wait = nil, want *BestEffortError (half tasks failed)")
+	}
+	var be *BestEffortError
+	if !errors.As(err, &be) {
+		t.Fatalf("Wait err = %v, want *BestEffortError", err)
+	}
+	if len(be.Errors) != N/2 {
+		t.Fatalf("BestEffortError.Errors has %d entries, want %d", len(be.Errors), N/2)
 	}
 	if got := successCount.Load(); got != N/2 {
 		t.Errorf("successCount = %d, want %d", got, N/2)

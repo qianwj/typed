@@ -96,8 +96,9 @@ profiles := lists.ArrayListOf(users...).
 - 🧵 **Structured concurrency** — `concurrency.Group` is an
   `errgroup`-style helper with two failure policies: `Strict` (any
   task error fails the group, ctx cancels siblings) and `BestEffort`
-  (tasks run to completion; succeeds if any succeed). Built on
-  `sync.WaitGroup` directly, no external dependencies.
+  (tasks run to completion; only succeeds if all succeed, otherwise
+  returns the aggregated errors). Built on `sync.WaitGroup` directly,
+  no external dependencies.
 
 ## Install
 
@@ -252,7 +253,7 @@ use(v)
 | --- | --- | --- |
 | `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `option.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
 | `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
-| `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; succeeds if any succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
+| `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
 
 ## Documentation
 
@@ -370,7 +371,7 @@ buffered channel"), and [`Group`](./docs/concurrency/README.md#group)
 `sync.WaitGroup`). Reach for `BoundedBlockingQueue` when you want
 backpressure via capacity; reach for `UnboundedBlockingQueue` when
 `Push` must never block; reach for `Group` when you have a fan-out
-of goroutines and want the first error or "at least one success"
+of goroutines and want the first error or the aggregated failures
 without writing the boilerplate yourself.
 
 ## Error handling
