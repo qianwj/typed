@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // Mode selects the failure policy of a [Group].
@@ -275,7 +275,7 @@ func (e *BestEffortError) Unwrap() []error {
 }
 
 // Get returns the i-th task error in completion order as an
-// [option.Optional]. The result is present when 0 <= i < len(e.Errors)
+// [adt.Optional]. The result is present when 0 <= i < len(e.Errors)
 // and empty otherwise (no panic, no out-of-range signal — same
 // "absent value is observable via IsEmpty" rule as
 // [BoundedBlockingQueue.TryPoll]).
@@ -285,9 +285,9 @@ func (e *BestEffortError) Unwrap() []error {
 // for the rare case where the caller wants positional access — for
 // example, formatting "task #3 failed: ..." while leaving the rest
 // for errors.Is.
-func (e *BestEffortError) Get(i int) option.Optional[error] {
+func (e *BestEffortError) Get(i int) adt.Optional[error] {
 	if i >= 0 && i < len(e.Errors) {
-		return option.Of(e.Errors[i])
+		return adt.Of(e.Errors[i])
 	}
-	return option.Empty[error]()
+	return adt.Empty[error]()
 }

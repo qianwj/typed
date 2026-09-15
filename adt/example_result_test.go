@@ -1,16 +1,16 @@
-package result_test
+package adt_test
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // ExampleResult_Recover shows the error-aware fallback that always
 // returns a T: the chain does not have to thread a (T, error) out.
 func ExampleResult_Recover() {
-	port := result.Wrap(lookupPort()).
+	port := adt.Wrap(lookupPort()).
 		Recover(func(error) int { return 8080 })
 	fmt.Println("port:", port)
 	// Output: port: 8080
@@ -19,7 +19,7 @@ func ExampleResult_Recover() {
 // ExampleResult_MapError shows how to enrich an error before it
 // surfaces to the caller, keeping the rest of the chain typed.
 func ExampleResult_MapError() {
-	_, err := result.Wrap(lookupPort()).
+	_, err := adt.Wrap(lookupPort()).
 		MapError(func(err error) error { return fmt.Errorf("config: %w", err) }).
 		Unwrap()
 	if err != nil {
@@ -31,7 +31,7 @@ func ExampleResult_MapError() {
 // ExampleResult_Map demonstrates chaining a successful Result into a
 // transformation while preserving error short-circuit.
 func ExampleResult_Map() {
-	sum := result.Success(40).
+	sum := adt.Success(40).
 		Map(func(n int) int { return n + 2 }).
 		OrElse(-1)
 	fmt.Println(sum)

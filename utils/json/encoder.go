@@ -3,11 +3,11 @@ package json
 import (
 	"encoding/json/v2"
 
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // Encode serialises a value of type T into a JSON byte slice and
-// returns it as a result.Result[[]byte].
+// returns it as a adt.Result[[]byte].
 //
 // The success path holds the JSON-encoded bytes:
 //
@@ -21,7 +21,7 @@ import (
 // that need to distinguish JSON errors from other errors can
 // use errors.Is / errors.As against the v2 error types.
 //
-// Encode is implemented in terms of result.Wrap: a single
+// Encode is implemented in terms of adt.Wrap: a single
 // ([]byte, error) pair from json.Marshal is wrapped into a
 // Result without an explicit if-err check.
 //
@@ -78,6 +78,6 @@ import (
 // "null". An unencodable value (function, channel, complex
 // number) returns a Failure with a *json.UnsupportedTypeError
 // or the v2 equivalent.
-func Encode[T any](t T, opts ...json.Options) result.Result[[]byte] {
-	return result.Wrap(json.Marshal(t, opts...))
+func Encode[T any](t T, opts ...json.Options) adt.Result[[]byte] {
+	return adt.Wrap(json.Marshal(t, opts...))
 }

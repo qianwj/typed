@@ -23,14 +23,14 @@
 
 ### 抽象
 
-- 🟢 [`utils/option`](./option/README-cn.md) —— `Optional[T]`,可能缺席的值。
-- 🟡 [`utils/result`](./result/README-cn.md) —— `Result[T]`,成功 / 失败以及与 `(T, error)` 互转的桥。
+- 🟢 [`adt`](./adt/README-cn.md) —— `Optional[T]`,可能缺席的值。
+- 🟡 [`adt`](./adt/README-cn.md) —— `Result[T]`,成功 / 失败以及与 `(T, error)` 互转的桥。
 - 🟰 [`utils/objects`](./utils/objects/README-cn.md) —— `IsNil` / `Equals`(含 `Equal(T) bool` 分派与 nil/空归一化)。
 - 📦 [`utils/json`](./utils/json/README-cn.md) —— `Encode` / `Decode`,基于 `encoding/json/v2` 的 `Result` 风格编解码。
 
 ## 阅读路径
 
-- 🆕 **第一次接触 Typed** —— 从 [`collections`](./collections/README-cn.md) 看 `ArrayList` / `LinkedList` / `Stream` 的不可变 transform 风格,再到 [`utils/option`](./option/README-cn.md) / [`utils/result`](./result/README-cn.md) 看缺席 / 失败的表达。
+- 🆕 **第一次接触 Typed** —— 从 [`collections`](./collections/README-cn.md) 看 `ArrayList` / `LinkedList` / `Stream` 的不可变 transform 风格,再到 [`adt`](./adt/README-cn.md) / [`adt`](./adt/README-cn.md) 看缺席 / 失败的表达。
 - ⚡ **需要异步或多订阅** —— 跳到 [`reactivex`](./reactivex/README-cn.md)。
 - 🧭 **需要按值或类型做 dispatch** —— 跳到 [`control`](./control/README-cn.md)。
 - 🚦 **需要带背压的有界生产/消费队列** —— 跳到 [`concurrency`](./concurrency/README-cn.md)。

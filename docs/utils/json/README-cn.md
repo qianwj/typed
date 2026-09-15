@@ -17,19 +17,19 @@
 ```go
 import (
     "github.com/qianwj/typed/utils/json"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
     jsonopts "github.com/go-json-experiment/json/options" // 可选
 )
 ```
 
-## `Encode[T any](t T, opts ...json.Options) result.Result[[]byte]`
+## `Encode[T any](t T, opts ...json.Options) adt.Result[[]byte]`
 
 把值 `t` 序列化为 JSON 字节切片并以 `Result[[]byte]` 返回：
 
 - 成功路径：携带 JSON 字节。
 - 失败路径：携带 `encoding/json/v2` 的错误（**未包装**）。需要区分 JSON 错误时用 `errors.Is` / `errors.As` 对照 v2 错误类型。
 
-`Encode` 内部用 `result.Wrap` 适配 `json.Marshal` 的 `([]byte, error)`，所以一次调用就拿到 `Result` —— 调用点不需要 `if err != nil`。
+`Encode` 内部用 `adt.Wrap` 适配 `json.Marshal` 的 `([]byte, error)`，所以一次调用就拿到 `Result` —— 调用点不需要 `if err != nil`。
 
 ### 选项
 
@@ -53,7 +53,7 @@ v2 选项不是 v1 `json.Marshal` 的 tag（如 `MarshalJSON` / `UnmarshalJSON`�
 
 与 v1 不同，v2 默认**不做** HTML 转义。值中含 `<` / `>` / `&` 时会被原样写出。需要 HTML 转义时请单独跑一遍转义步骤，或显式给 v1 风格选项。
 
-## `Decode[T any](data []byte) result.Result[T]`
+## `Decode[T any](data []byte) adt.Result[T]`
 
 把 `data` 解码到类型 `T` 并以 `Result[T]` 返回。
 
@@ -74,7 +74,7 @@ use(cfg)
 ```go
 import (
     "github.com/qianwj/typed/utils/json"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
 )
 
 type User struct {
@@ -92,4 +92,4 @@ name := decoded.Map(func(u User) string { return u.Name }).
 
 ## 与其他包的关系
 
-- 错误与成功流用 [`utils/result`](../../result/README-cn.md)；本包只通过 `Result[T]` 与外界交互。
+- 错误与成功流用 [`adt`](../../adt/README-cn.md)；本包只通过 `Result[T]` 与外界交互。

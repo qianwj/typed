@@ -304,6 +304,6 @@ collections.Range[int](0, 5).
 
 ## See also
 
-- Most return values are `option.Optional[T]`; see [`option`](../option/README.md).
-- The error flow uses `result.Result[T]`; see [`result`](../result/README.md).
+- Most return values are `option.Optional[T]`; see [`adt`](../adt/README.md).
+- The error flow uses `result.Result[T]`; see [`adt`](../adt/README.md).
 - For asynchronous / multi-subscriber scenarios, use `reactivex.Observable[T]`; see [`reactivex`](../reactivex/README.md). The `Stream` here is a synchronous, single-consumer model — the two do not interoperate.

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // ---------- success path: primitive targets ----------
@@ -504,6 +504,6 @@ func TestDecodeIntoResultFromResult(t *testing.T) {
 	}
 	// Use the result package's own helpers if errors.Is does
 	// not find the wrapped error.
-	_ = result.Failure[int](sentinel)
+	_ = adt.Failure[int](sentinel)
 	t.Fatalf("errors.Is did not find sentinel in the wrapped error: %v", r.Error())
 }

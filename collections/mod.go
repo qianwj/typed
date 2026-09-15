@@ -17,7 +17,7 @@
 //
 // Stack.Pop, Stack.Peek, Queue.Pop, Queue.Peek, Deque.Front,
 // Deque.Back, Deque.PopFront, and Deque.PopBack return
-// option.Optional[T] rather than the (T, bool) shape, matching
+// adt.Optional[T] rather than the (T, bool) shape, matching
 // the convention established by ArrayList.First / Last / Find
 // and the rest of the project: a present Optional on a hit,
 // an absent one on a miss. This lets callers chain OrElse /
@@ -43,9 +43,9 @@
 // Why have a separate Queue at all if ArrayList does the same
 // thing? Two reasons: naming, and return-type uniformity.
 // ArrayList's queue-style operations are named Add /
-// RemoveFirst / Get(0) and now also return option.Optional[T];
+// RemoveFirst / Get(0) and now also return adt.Optional[T];
 // Queue's are named Push / Pop / Peek and return the same
-// option.Optional[T]. After the Get → Optional change, the
+// adt.Optional[T]. After the Get → Optional change, the
 // distinction is mostly naming, but Queue still pays its way:
 // it is the natural focal point for FIFO-only consumers and
 // the place to add FIFO-specific helpers in the future.

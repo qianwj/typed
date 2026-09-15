@@ -1,17 +1,17 @@
-package option_test
+package adt_test
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // ExampleOptional_OrElse shows the simplest way to turn an absent
 // Optional into a fallback value without unpacking the (T, bool) shape.
 func ExampleOptional_OrElse() {
-	present := option.Of(42)
-	absent := option.Empty[int]()
+	present := adt.Of(42)
+	absent := adt.Empty[int]()
 	fmt.Println(present.OrElse(-1))
 	fmt.Println(absent.OrElse(-1))
 	// Output:
@@ -23,7 +23,7 @@ func ExampleOptional_OrElse() {
 // transformation, with the result collapsing to absent on an absent
 // input.
 func ExampleOptional_Map() {
-	mapped := option.Of("  hello  ").
+	mapped := adt.Of("  hello  ").
 		Map(strings.TrimSpace).
 		Map(strings.ToUpper)
 	fmt.Println(mapped.Get())
@@ -33,13 +33,13 @@ func ExampleOptional_Map() {
 // ExampleOptional_FlatMap composes two Optional-returning operations
 // into one chain without manual IsPresent / Get dance.
 func ExampleOptional_FlatMap() {
-	parse := func(s string) option.Optional[int] {
+	parse := func(s string) adt.Optional[int] {
 		if s == "" {
-			return option.Empty[int]()
+			return adt.Empty[int]()
 		}
-		return option.Of(len(s))
+		return adt.Of(len(s))
 	}
-	chain := option.Of("typed").FlatMap(parse)
+	chain := adt.Of("typed").FlatMap(parse)
 	fmt.Println(chain.Get(), chain.OrElse(0))
 	// Output: 5 5
 }

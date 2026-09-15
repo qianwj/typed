@@ -5,7 +5,7 @@ package concurrency
 import (
 	"context"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // BoundedBlockingQueue is a fixed-capacity FIFO blocking queue.
@@ -14,7 +14,7 @@ import (
 // three things on top of the channel primitives:
 //
 //   - A [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] pair
-//     that returns an [option.Optional] (matching the toolkit convention
+//     that returns an [adt.Optional] (matching the toolkit convention
 //     from `Stack.Pop` / `Queue.Pop` / `Deque.PopFront`).
 //   - Context-aware [BoundedBlockingQueue.PushWithContext] /
 //     [BoundedBlockingQueue.PollWithContext] for cancellation, deadlines,
@@ -49,7 +49,7 @@ import (
 //     cancellation, deadlines, and shutdown signals propagate cleanly.
 //   - [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] —
 //     the non-blocking variants. They never wait and return a `bool`
-//     (for Push) or an [option.Optional] (for Poll) so the caller can
+//     (for Push) or an [adt.Optional] (for Poll) so the caller can
 //     branch on backpressure or absence.
 //
 // Blocking semantics:
@@ -153,14 +153,14 @@ func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) (T, error
 }
 
 // TryPoll attempts to dequeue without blocking.
-// It returns the dequeued value as an [option.Optional]; the result is empty
+// It returns the dequeued value as an [adt.Optional]; the result is empty
 // when the queue is empty.
-func (q *BoundedBlockingQueue[T]) TryPoll() option.Optional[T] {
+func (q *BoundedBlockingQueue[T]) TryPoll() adt.Optional[T] {
 	select {
 	case v := <-q.ch:
-		return option.Of(v)
+		return adt.Of(v)
 	default:
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 }
 

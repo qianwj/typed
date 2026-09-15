@@ -66,9 +66,9 @@ profiles := lists.ArrayListOf(users...).
 
 ```bash
 go get github.com/qianwj/typed/collections
-go get github.com/qianwj/typed/utils/option
-go get github.com/qianwj/typed/utils/either
-go get github.com/qianwj/typed/utils/result
+go get github.com/qianwj/typed/adt
+go get github.com/qianwj/typed/adt
+go get github.com/qianwj/typed/adt
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
 go get github.com/qianwj/typed/concurrency
@@ -84,8 +84,8 @@ go get github.com/qianwj/typed/utils/json
 import (
     "github.com/qianwj/typed/collections"
     "github.com/qianwj/typed/collections/lists"
-    "github.com/qianwj/typed/utils/option"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
+    "github.com/qianwj/typed/adt"
 )
 
 // 立即执行的 transform
@@ -103,7 +103,7 @@ s.Push(1); s.Push(2); s.Push(3)
 top := s.Pop().OrElse(0) // 3
 
 // Result: 把 (T, error) 串成组合子链
-v, err := result.Wrap(loadConfig(path)).
+v, err := adt.Wrap(loadConfig(path)).
     MapError(func(err error) error { return fmt.Errorf("config %s: %w", path, err) }).
     Map(func(b []byte) Config { return parseConfig(b) }).
     Unwrap()
@@ -132,7 +132,7 @@ use(v)
 
 - **类型安全优先。** 优先使用 Go 泛型,尽量避免 `any`、反射和运行时类型断言。`Optional[T]` 用显式的 `present` 标志位,而不是依赖 nil 检查,所以它对值类型(`int`、`string`、`struct{}` 等)也有效。
 - **具体类型优先于接口。** `ArrayList[T]` 等都是具体泛型类型,不是接口。Go 1.27 的泛型方法(`Map[R]`、`FlatMap[R]`、`Reduce[R]`)只能在具体接收者上工作;接口无法让这些方法返回接口类型,会破坏链式调用。
-- **基于 Optional 的访问。** 任何可能"缺失"的访问器都返回 `option.Optional[T]` 而不是 `(T, bool)`。这一约定在 `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`、`LinkedList`、`Stack`、`Queue`、`Deque` 中保持一致。
+- **基于 Optional 的访问。** 任何可能"缺失"的访问器都返回 `adt.Optional[T]` 而不是 `(T, bool)`。这一约定在 `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`、`LinkedList`、`Stack`、`Queue`、`Deque` 中保持一致。
 - **有界内存。** `ArrayList` 使用 head offset 布局并周期性压缩,所以长期从头部排空的列表的保留容量,被"在飞元素的高水位 + 64"这个常数所界定,而不是被该列表曾经达到过的历史最大值所界定。`Stack.Pop`、`ArrayList.RemoveFirst / RemoveLast`、`Deque.PopFront / PopBack` 会把释放的槽位清零,以便运行时的可达性扫描不会让被弹出元素的引用继续存活。
 - **可选惰性。** 集合操作是立即执行的;`Stream[T]` 是显式的惰性层,基于 Go 的 `iter.Seq[T]` 实现。
 - **可组合性。** 集合、迭代器和 `Stream` 可以组合成新的数据源;`Stream()` 的快照契约保证源集合的后续变更不会泄漏到进行中的管道。
@@ -164,9 +164,9 @@ use(v)
 
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
-| `option.Optional[T]` | `utils/option` | 存在 / 缺失的值,不依赖对 `T` 的 nil 检查。 |
-| `either.Either[L, R]` | `utils/either` | tagged-union 值类型;约定 `Left` = 失败、`Right` = 成功。安全访问器返回 `Optional`;`Fold` 是选分支的规范组合子。 |
-| `result.Result[T]` | `utils/result` | 成功 / 失败;`Unwrap` 返回 `(T, error)`,`Wrap` 是从 `(T, error)` 到 `Result[T]` 的正向桥,`Recover` 是错误感知的 fallback,总返回 `T`。 |
+| `adt.Optional[T]` | `adt` | 存在 / 缺失的值,不依赖对 `T` 的 nil 检查。 |
+| `adt.Either[L, R]` | `adt` | tagged-union 值类型;约定 `Left` = 失败、`Right` = 成功。安全访问器返回 `Optional`;`Fold` 是选分支的规范组合子。 |
+| `adt.Result[T]` | `adt` | 成功 / 失败;`Unwrap` 返回 `(T, error)`,`Wrap` 是从 `(T, error)` 到 `Result[T]` 的正向桥,`Recover` 是错误感知的 fallback,总返回 `T`。 |
 | `json.Encode[T] / Decode[T]` | `utils/json` | 基于 `encoding/json/v2` 的 `Result` 风格编解码。 |
 | `objects.Equaler`(接口,可选用) | `utils/objects` | 提示接口 `Equal(any) bool`;`Equals` 不要求类型实现它。 |
 | `objects.IsNil[T]`、`objects.Equals[T]` | `utils/objects` | 基于反射的 nil 检查和相等分派(支持 typed nil、`func (T) Equal(T) bool`、`time.Time.Equal`)。 |
@@ -194,7 +194,7 @@ use(v)
 
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `option.Optional[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
+| `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `adt.Optional[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
 | `UnboundedBlockingQueue[T]` | `concurrency` | 无界 FIFO;`Push` 永不阻塞,`Poll` 在空队列时阻塞。底层是环形缓冲区 + `sync.Mutex` + `*sync.Cond`。API 表面和 `BoundedBlockingQueue` 一致。 |
 | `Group` | `concurrency` | `errgroup` 风格的结构化并发,两种失败策略 —— `Strict`(任何任务失败即失败,ctx 取消兄弟)与 `BestEffort`(任务跑完,只有全部成功才成功,否则返回 `*BestEffortError`)。直接构建在 `sync.WaitGroup` 上,零外部依赖。 |
 
@@ -207,8 +207,8 @@ use(v)
 - [control](./docs/control/README-cn.md) —— `Repeat` / `RepeatE` 与 `control/match`
 - [reactivex](./docs/reactivex/README-cn.md) —— `Observable` / `Subject` / 背压 / 算子
 - [concurrency](./docs/concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`(阻塞 + 非阻塞,固定容量)
-- [utils/option](./docs/option/README-cn.md) —— `Optional[T]`
-- [utils/result](./docs/result/README-cn.md) —— `Result[T]`
+- [adt](./docs/adt/README-cn.md) —— `Optional[T]`
+- [adt](./docs/adt/README-cn.md) —— `Result[T]`
 - [utils/objects](./docs/utils/objects/README-cn.md) —— `IsNil` / `Equals`
 - [utils/json](./docs/utils/json/README-cn.md) —— `Encode` / `Decode`,基于 `encoding/json/v2`
 
@@ -233,7 +233,7 @@ use(v)
 | `reduce` | `Reduce` |
 | `collect(toList())` | `Collect` |
 | `forEach` | `ForEach` |
-| `Optional.of` / `ofNullable` | `option.Of` / `option.OfNullable` |
+| `Optional.of` / `ofNullable` | `adt.Of` / `adt.OfNullable` |
 | `Optional.orElse` | `OrElse` |
 | `Stream` lazy | `Stream[T]` |
 | `IntStream.range` | `Range(start, end) Stream[T]` |
@@ -279,10 +279,10 @@ adults := lists.ArrayListOf(users...).
 `Result[T]` 是类型化的 `(T, error)` 载体:
 
 ```go
-v, err := result.Success(42).Unwrap()
+v, err := adt.Success(42).Unwrap()
 if err != nil { return err }
 
-port, _ := result.Wrap(lookupPort()).
+port, _ := adt.Wrap(lookupPort()).
     Recover(func(err error) int { return 8080 }).
     Unwrap() // err 始终为 nil
 ```
@@ -373,7 +373,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 review 流程会顺畅得多。
 
 - **按 module 划定范围。** 每个顶层包(`collections`、`control`、
-  `reactivex`、`concurrency`、`utils/option`、`utils/result`、
+  `reactivex`、`concurrency`、`adt`、`adt`、
   `utils/objects`、`utils/json`)都是 **独立的 Go module**,拥有各自的
   tag 前缀(见 [稳定性与 SemVer](#稳定性与-semver))。跨多个 module 的
   修改,必须在 PR 描述里明确点出,并说明为什么需要跨 module 联动;否则

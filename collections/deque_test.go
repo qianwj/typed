@@ -340,7 +340,7 @@ func TestDequeOpsAreConstantTime(t *testing.T) {
 // ---------- Optional integration ----------
 
 // TestDequeReturnsOptionValues exercises the type contract of
-// the access methods: every accessor returns option.Optional[T]
+// the access methods: every accessor returns adt.Optional[T]
 // with a present value on a hit and an absent value on a miss.
 func TestDequeReturnsOptionValues(t *testing.T) {
 	for _, name := range []string{"PopFront", "PopBack", "Front", "Back"} {
@@ -393,7 +393,7 @@ func TestDequeReturnsOptionValues(t *testing.T) {
 
 // TestDequeChaining shows that Optional-based chaining works
 // out of the box, which is the main reason Deque returns
-// option.Optional[T] instead of (T, bool).
+// adt.Optional[T] instead of (T, bool).
 func TestDequeChaining(t *testing.T) {
 	d := NewDeque[int]()
 	d.PushBack(3)

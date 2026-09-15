@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // tryTakeOr is a small helper for tests that want the (value, present) shape.
@@ -336,7 +336,7 @@ loop:
 }
 
 // TestTryPollReturnsOptional is a small sanity check on the return type —
-// it locks in that TryPoll returns option.Optional[T] (and therefore an
+// it locks in that TryPoll returns adt.Optional[T] (and therefore an
 // absent value is observable via IsEmpty, not via a zero T).
 func TestTryPollReturnsOptional(t *testing.T) {
 	t.Parallel()
@@ -357,8 +357,8 @@ func TestTryPollReturnsOptional(t *testing.T) {
 	}
 
 	// Sanity: the empty factory also looks the same.
-	if e := option.Empty[int](); !e.IsEmpty() {
-		t.Fatal("option.Empty[int]() should be empty")
+	if e := adt.Empty[int](); !e.IsEmpty() {
+		t.Fatal("adt.Empty[int]() should be empty")
 	}
 }
 

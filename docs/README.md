@@ -23,14 +23,14 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 
 ### Abstractions
 
-- 🟢 [`utils/option`](./option/README.md) — `Optional[T]`, a value that may be absent.
-- 🟡 [`utils/result`](./result/README.md) — `Result[T]`, success / failure, and bridges to and from `(T, error)`.
+- 🟢 [`adt`](./adt/README.md) — `Optional[T]`, a value that may be absent.
+- 🟡 [`adt`](./adt/README.md) — `Result[T]`, success / failure, and bridges to and from `(T, error)`.
 - 🟰 [`utils/objects`](./utils/objects/README.md) — `IsNil` / `Equals`, with `Equal(T) bool` dispatch and nil-vs-empty normalisation.
 - 📦 [`utils/json`](./utils/json/README.md) — `Encode` / `Decode`, a `Result`-style codec on top of `encoding/json/v2`.
 
 ## Reading paths
 
-- 🆕 **New to Typed** — start with [`collections`](./collections/README.md) to see the immutable-transform style of `ArrayList` / `LinkedList` / `Stream`, then read [`utils/option`](./option/README.md) and [`utils/result`](./result/README.md) for the absent / failure story.
+- 🆕 **New to Typed** — start with [`collections`](./collections/README.md) to see the immutable-transform style of `ArrayList` / `LinkedList` / `Stream`, then read [`adt`](./adt/README.md) and [`adt`](./adt/README.md) for the absent / failure story.
 - ⚡ **Asynchronous or multi-subscriber behavior** — jump to [`reactivex`](./reactivex/README.md).
 - 🧭 **Value- or type-based dispatch** — jump to [`control`](./control/README.md).
 - 🚦 **Bounded producer / consumer queue with backpressure** — jump to [`concurrency`](./concurrency/README.md).

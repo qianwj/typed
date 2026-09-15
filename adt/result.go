@@ -1,46 +1,3 @@
-// Package result provides Result[T], a small value type that
-// represents the outcome of an operation that may fail: a success
-// carrying a value of type T, or a failure carrying a non-nil error.
-//
-// Result is not an interface, which lets its methods declare their
-// own type parameters (Map[R]) under Go 1.27's generic methods.
-//
-// Why not the standard `(T, error)` shape?
-//
-//   - An explicit Result makes the call site self-documenting and
-//     lets combinators chain without scattering `if err != nil`
-//     blocks at every step.
-//   - The shape is intentionally simpler than a generic Result[T, E]:
-//     the error channel is always a standard error, which keeps the
-//     interop with regular Go code free of custom-error boxing.
-//
-// # Bridge to Optional
-//
-// Result.Optional returns an option.Optional[T]: a success becomes a
-// present Optional, a failure becomes an absent one (and the error is
-// dropped). This is the one-way bridge from this package to
-// github.com/qianwj/typed/utils/option; Result depends on option,
-// not the other way around.
-//
-// # Bridge from (T, error)
-//
-// Result.Wrap is the forward bridge from Go's standard `(T, error)`
-// shape into Result[T]. It replaces the conventional
-//
-//	if err != nil { return result.Failure[T](err) }
-//	return result.Success(value)
-//
-// ladder with a single return. Unwrap is the reverse bridge
-// (Result[T] → (T, error)), for handing control back to
-// ordinary Go error handling at the end of a chain. Wrap and
-// Unwrap together make the Result and (T, error) shapes
-// interchangeable; the rest of the API is built on top.
-package result
-
-import (
-	"github.com/qianwj/typed/utils/option"
-)
-
 // Result[T] is the outcome of an operation that may fail.
 //
 // A Result is either a success carrying a value of type T, or a
@@ -51,6 +8,48 @@ import (
 // Result is meant to be used where the caller wants to thread both
 // the value and the error through a chain of combinators (Map,
 // FlatMap, OrElse) without writing repeated `if err != nil` blocks.
+//
+// # Bridge to Optional
+//
+// Result.Optional returns an [Optional][T]: a success becomes a
+// present Optional, a failure becomes an absent one (and the error
+// is dropped). This is the one-way bridge from Result to Optional;
+// Optional is a more general zero-or-one container.
+//
+// # Bridge from (T, error)
+//
+// Wrap is the forward bridge from Go's standard `(T, error)`
+// shape into Result[T]. It replaces the conventional
+//
+//	if err != nil { return result.Failure[T](err) }
+//	return result.Success(value)
+//
+// ladder with a single return. Unwrap is the reverse bridge
+// (Result[T] → (T, error)), for handing control back to
+// ordinary Go error handling at the end of a chain. Wrap and
+// Unwrap together make the Result and (T, error) shapes
+// interchangeable; the rest of the API is built on top.
+//
+// Result is not an interface, which lets its methods declare
+// their own type parameters (Map[R]) under Go 1.27's generic
+// methods.
+//
+// Why not the standard `(T, error)` shape?
+//
+//   - An explicit Result makes the call site self-documenting and
+//     lets combinators chain without scattering `if err != nil`
+//     blocks at every step.
+//   - The shape is intentionally simpler than a generic Result[T, E]:
+//     the error channel is always a standard error, which keeps the
+//     interop with regular Go code free of custom-error boxing.
+package adt
+
+// Result[T] is the outcome of an operation that may fail.
+//
+// A Result is either a success carrying a value of type T, or a
+// failure carrying a non-nil error. The zero value of Result is a
+// failure with a nil error; callers should always build results
+// through Success / Failure and inspect them through the methods.
 type Result[T any] struct {
 	value T
 	err   error
@@ -65,7 +64,7 @@ func Success[T any](value T) Result[T] {
 // err is nil; a Result with a nil error must be built via Success.
 func Failure[T any](err error) Result[T] {
 	if err == nil {
-		panic("result.Failure: nil error")
+		panic("adt.Failure: nil error")
 	}
 	return Result[T]{err: err}
 }
@@ -78,13 +77,13 @@ func Failure[T any](err error) Result[T] {
 //	// Before:
 //	profile, err := loadProfile(id)
 //	if err != nil {
-//	    return result.Failure[Profile](err)
+//	    return adt.Failure[Profile](err)
 //	}
-//	return result.Success(profile)
+//	return adt.Success(profile)
 //
 //	// After:
 //	profile, err := loadProfile(id)
-//	return result.Wrap(profile, err)
+//	return adt.Wrap(profile, err)
 //
 // The contract is:
 //
@@ -104,12 +103,12 @@ func Failure[T any](err error) Result[T] {
 // value of err at the call site:
 //
 //	// Both produce the same success Result:
-//	result.Success(42)
-//	result.Wrap(42, nil)
+//	adt.Success(42)
+//	adt.Wrap(42, nil)
 //
 //	// Both produce the same failure Result:
-//	result.Failure[int](errors.New("x"))
-//	result.Wrap(0, errors.New("x"))
+//	adt.Failure[int](errors.New("x"))
+//	adt.Wrap(0, errors.New("x"))
 //
 // Wrap is the right shape for two specific call sites:
 //
@@ -182,11 +181,11 @@ func (r Result[T]) Unwrap() (T, error) {
 // a failed Result into an absent Optional. The error is dropped, so
 // Optional is only appropriate when the caller has already decided
 // that the error channel can be discarded.
-func (r Result[T]) Optional() option.Optional[T] {
+func (r Result[T]) Optional() Optional[T] {
 	if r.err != nil {
-		return option.Empty[T]()
+		return Empty[T]()
 	}
-	return option.Of(r.value)
+	return Of(r.value)
 }
 
 // OrElse returns the success value if the Result is a success,
@@ -266,7 +265,7 @@ func (r Result[T]) FlatMap[R any](f func(T) Result[R]) Result[R] {
 // MapError is useful for wrapping low-level errors with a higher-level
 // description before handing the Result up the call stack:
 //
-//	Failure[int](errors.New("disk full")).
+//	adt.Failure[int](errors.New("disk full")).
 //	    MapError(func(e error) error { return fmt.Errorf("save profile: %w", e) })
 func (r Result[T]) MapError(f func(error) error) Result[T] {
 	if r.err == nil {

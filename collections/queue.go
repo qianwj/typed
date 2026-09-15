@@ -3,7 +3,7 @@ package collections
 import (
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // Queue[T] is a First-In-First-Out container of T, implemented as
@@ -49,26 +49,26 @@ func (q *Queue[T]) Push(value T) {
 }
 
 // Pop removes and returns the front element wrapped in a present
-// option.Optional[T], or an absent Optional if the Queue is
+// adt.Optional[T], or an absent Optional if the Queue is
 // empty.
 //
 // Pop delegates to ArrayList.RemoveFirst, which under the
 // head-offset layout is O(1): the front slot is zeroed, head is
 // bumped, and the discarded prefix is folded back to zero once
 // it grows past 64 elements.
-func (q *Queue[T]) Pop() option.Optional[T] {
+func (q *Queue[T]) Pop() adt.Optional[T] {
 	return q.items.RemoveFirst()
 }
 
 // Peek returns the front element wrapped in a present
-// option.Optional[T], or an absent Optional if the Queue is
+// adt.Optional[T], or an absent Optional if the Queue is
 // empty. Peek delegates to ArrayList.Get(0) and is O(1).
 //
 // Peek does not modify the Queue: the same call repeated yields
 // the same value, and Size is unchanged.
-func (q *Queue[T]) Peek() option.Optional[T] {
+func (q *Queue[T]) Peek() adt.Optional[T] {
 	if q.items.IsEmpty() {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	return q.items.Get(0)
 }

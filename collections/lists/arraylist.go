@@ -28,7 +28,7 @@ import (
 
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // ---------- ArrayList ----------
@@ -355,44 +355,44 @@ func (a *ArrayList[T]) RemoveAt(index int) T {
 }
 
 // RemoveFirst removes and returns the first element wrapped in a present
-// option.Optional[T], or an absent Optional if the list is empty.
+// adt.Optional[T], or an absent Optional if the list is empty.
 //
 // RemoveFirst is O(1) under the head-offset layout: it advances
 // head, zeroes the freed slot to release any reference it held,
 // and triggers a periodic compaction when the discarded prefix
 // grows past a threshold.
 //
-// RemoveFirst returns option.Optional[T] rather than (T, bool) so
+// RemoveFirst returns adt.Optional[T] rather than (T, bool) so
 // the result is symmetric with First / Last / Find, with
 // LinkedList.RemoveFirst, and with Stack.Pop and Queue.Pop.
-func (a *ArrayList[T]) RemoveFirst() option.Optional[T] {
+func (a *ArrayList[T]) RemoveFirst() adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	v := a.items[a.head]
 	var zero T
 	a.items[a.head] = zero
 	a.head++
 	a.compactIfNeeded()
-	return option.Of(v)
+	return adt.Of(v)
 }
 
 // RemoveLast removes and returns the last element wrapped in a
-// present option.Optional[T], or an absent Optional if the list
+// present adt.Optional[T], or an absent Optional if the list
 // is empty.
 //
 // RemoveLast is O(1): it shrinks the slice by one and zeroes
 // the vacated slot. See RemoveFirst for the Optional rationale.
-func (a *ArrayList[T]) RemoveLast() option.Optional[T] {
+func (a *ArrayList[T]) RemoveLast() adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	last := a.head + a.size() - 1
 	v := a.items[last]
 	var zero T
 	a.items[last] = zero
 	a.items = a.items[:last]
-	return option.Of(v)
+	return adt.Of(v)
 }
 
 // Clear removes all elements from the list. Clear resets the head
@@ -430,7 +430,7 @@ func (a *ArrayList[T]) Collect() []T {
 //
 // MarshalJSON delegates to utils/json.Encode, the project-
 // wide wrapper around encoding/json/v2 that returns a
-// result.Result[[]byte]. The wrapper is invoked via Unwrap to
+// adt.Result[[]byte]. The wrapper is invoked via Unwrap to
 // recover the ([]byte, error) shape that the standard
 // json.Marshaler interface requires. An ArrayList whose
 // element type T satisfies json.Marshaler (or v2's marshaler
@@ -487,11 +487,11 @@ func (a *ArrayList[T]) IsEmpty() bool {
 
 // Get returns the value at index i, or the zero value and false if i is
 // out of range. Get is O(1) on ArrayList since the data is contiguous.
-func (a *ArrayList[T]) Get(i int) option.Optional[T] {
+func (a *ArrayList[T]) Get(i int) adt.Optional[T] {
 	if i < 0 || i >= a.size() {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(a.items[a.head+i])
+	return adt.Of(a.items[a.head+i])
 }
 
 // ForEach invokes visit on every element in the live range.
@@ -504,14 +504,14 @@ func (a *ArrayList[T]) ForEach(visit func(T)) {
 // First returns the first element wrapped in a present Optional,
 // or an absent Optional if the ArrayList is empty.
 //
-// First returns option.Optional[T] rather than the (T, bool) shape
+// First returns adt.Optional[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
-// (OrElse, Map, FlatMap, …) without first unpacking the result.
-func (a *ArrayList[T]) First() option.Optional[T] {
+// (OrElse, Map, FlatMap, …) without first unpacking the adt.
+func (a *ArrayList[T]) First() adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(a.items[a.head])
+	return adt.Of(a.items[a.head])
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -519,11 +519,11 @@ func (a *ArrayList[T]) First() option.Optional[T] {
 //
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool).
-func (a *ArrayList[T]) Last() option.Optional[T] {
+func (a *ArrayList[T]) Last() adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(a.items[a.head+a.size()-1])
+	return adt.Of(a.items[a.head+a.size()-1])
 }
 
 // Any reports whether at least one element satisfies p.
@@ -557,13 +557,13 @@ func (a *ArrayList[T]) None(p func(T) bool) bool {
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool). Find is a short-circuiting terminal-style
 // operation: it stops at the first match.
-func (a *ArrayList[T]) Find(p func(T) bool) option.Optional[T] {
+func (a *ArrayList[T]) Find(p func(T) bool) adt.Optional[T] {
 	for _, v := range a.items[a.head:] {
 		if p(v) {
-			return option.Of(v)
+			return adt.Of(v)
 		}
 	}
-	return option.Empty[T]()
+	return adt.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.
@@ -588,14 +588,14 @@ func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
 }
 
 // MinBy returns the smallest element under less wrapped in a present
-// option.Optional[T], or an absent Optional when the ArrayList is empty.
+// adt.Optional[T], or an absent Optional when the ArrayList is empty.
 //
-// MinBy uses option.Optional[T] rather than (T, bool) so the
+// MinBy uses adt.Optional[T] rather than (T, bool) so the
 // "find and get" path is symmetric with First / Last / Find and
-// chains naturally with option.Map / option.FlatMap.
-func (a *ArrayList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
+// chains naturally with adt.Map / adt.FlatMap.
+func (a *ArrayList[T]) MinBy(less func(x, y T) int) adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -603,16 +603,16 @@ func (a *ArrayList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 			best = v
 		}
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }
 
 // MaxBy returns the largest element under less wrapped in a present
-// option.Optional[T], or an absent Optional when the ArrayList is empty.
+// adt.Optional[T], or an absent Optional when the ArrayList is empty.
 //
 // See MinBy for the rationale.
-func (a *ArrayList[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
+func (a *ArrayList[T]) MaxBy(less func(x, y T) int) adt.Optional[T] {
 	if a.size() == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -620,5 +620,5 @@ func (a *ArrayList[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 			best = v
 		}
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }

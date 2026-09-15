@@ -91,7 +91,7 @@ func TestGroup_Strict_GoAfterErrorStillRuns(t *testing.T) {
 	g.Go(func(ctx context.Context) error { return errSentinel })
 
 	// Calling Go after the first failure should still spawn the
-	// goroutine; it just shouldn't change the Wait result.
+	// goroutine; it just shouldn't change the Wait adt.
 	g.Go(func(ctx context.Context) error {
 		<-ctx.Done()
 		return nil

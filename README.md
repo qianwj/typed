@@ -104,9 +104,9 @@ profiles := lists.ArrayListOf(users...).
 
 ```bash
 go get github.com/qianwj/typed/collections
-go get github.com/qianwj/typed/utils/option
-go get github.com/qianwj/typed/utils/either
-go get github.com/qianwj/typed/utils/result
+go get github.com/qianwj/typed/adt
+go get github.com/qianwj/typed/adt
+go get github.com/qianwj/typed/adt
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
 go get github.com/qianwj/typed/concurrency
@@ -123,8 +123,8 @@ use. Requires **Go 1.27+** for generic methods on concrete types.
 import (
     "github.com/qianwj/typed/collections"
     "github.com/qianwj/typed/collections/lists"
-    "github.com/qianwj/typed/utils/option"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
+    "github.com/qianwj/typed/adt"
 )
 
 // Eager transform
@@ -142,7 +142,7 @@ s.Push(1); s.Push(2); s.Push(3)
 top := s.Pop().OrElse(0) // 3
 
 // Result: thread a (T, error) through combinators
-v, err := result.Wrap(loadConfig(path)).
+v, err := adt.Wrap(loadConfig(path)).
     MapError(func(err error) error { return fmt.Errorf("config %s: %w", path, err) }).
     Map(func(b []byte) Config { return parseConfig(b) }).
     Unwrap()
@@ -178,7 +178,7 @@ use(v)
   (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) only work on concrete
   receivers; an interface would break fluent chaining.
 - **Optional-based access.** Every accessor that can fail by absence
-  returns `option.Optional[T]` rather than `(T, bool)`. The convention
+  returns `adt.Optional[T]` rather than `(T, bool)`. The convention
   is uniform across `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`, `LinkedList`, `Stack`, `Queue`, and `Deque`.
 - **Bounded memory.** `ArrayList` uses a head-offset layout with
   periodic compaction so the retained capacity of a long-running
@@ -225,9 +225,9 @@ use(v)
 
 | Type | Source | Notes |
 | --- | --- | --- |
-| `option.Optional[T]` | `utils/option` | Present / absent value, no nil check on `T`. |
-| `either.Either[L, R]` | `utils/either` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Optional`. `Fold` for the canonical branch-pick pattern. |
-| `result.Result[T]` | `utils/result` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
+| `adt.Optional[T]` | `adt` | Present / absent value, no nil check on `T`. |
+| `adt.Either[L, R]` | `adt` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Optional`. `Fold` for the canonical branch-pick pattern. |
+| `adt.Result[T]` | `adt` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
 | `json.Encode[T] / Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
 | `objects.Equaler` (interface, optional) | `utils/objects` | Hint interface `Equal(any) bool`; not required for `Equals` to dispatch. |
 | `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch (handles typed nil, `func (T) Equal(T) bool`, `time.Time.Equal`). |
@@ -255,7 +255,7 @@ use(v)
 
 | Type | Source | Notes |
 | --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `option.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
+| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `adt.Optional[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
 | `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
 | `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
 
@@ -268,8 +268,8 @@ Per-package API reference and examples, in English and Chinese:
 - [control](./docs/control/README.md) — `Repeat` / `RepeatE` and `control/match`
 - [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
 - [concurrency](./docs/concurrency/README.md) — `BoundedBlockingQueue[T]` (blocking + non-blocking, fixed capacity)
-- [utils/option](./docs/option/README.md) — `Optional[T]`
-- [utils/result](./docs/result/README.md) — `Result[T]`
+- [adt](./docs/adt/README.md) — `Optional[T]`
+- [adt](./docs/adt/README.md) — `Result[T]`
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
 - [utils/json](./docs/utils/json/README.md) — `Encode` / `Decode` on `encoding/json/v2`
 
@@ -297,7 +297,7 @@ to their Typed counterpart.
 | `reduce` | `Reduce` |
 | `collect(toList())` | `Collect` |
 | `forEach` | `ForEach` |
-| `Optional.of` / `ofNullable` | `option.Of` / `option.OfNullable` |
+| `Optional.of` / `ofNullable` | `adt.Of` / `adt.OfNullable` |
 | `Optional.orElse` | `OrElse` |
 | `Stream` lazy | `Stream[T]` |
 | `IntStream.range` | `Range(start, end) Stream[T]` |
@@ -383,10 +383,10 @@ without writing the boilerplate yourself.
 `Result[T]` is the typed `(T, error)` carrier:
 
 ```go
-v, err := result.Success(42).Unwrap()
+v, err := adt.Success(42).Unwrap()
 if err != nil { return err }
 
-port, _ := result.Wrap(lookupPort()).
+port, _ := adt.Wrap(lookupPort()).
     Recover(func(err error) int { return 8080 }).
     Unwrap() // err is always nil
 ```
@@ -529,7 +529,7 @@ opening a pull request, please skim the principles below so the review goes
 faster for everyone.
 
 - **Scope per module.** Each top-level package (`collections`, `control`,
-  `reactivex`, `concurrency`, `utils/option`, `utils/result`,
+  `reactivex`, `concurrency`, `adt`, `adt`,
   `utils/objects`, `utils/json`) ships as an **independent Go module** and
   has its own version tag prefix (see [Stability and SemVer](#stability-and-semver)).
   A PR that touches more than one module should call that out explicitly

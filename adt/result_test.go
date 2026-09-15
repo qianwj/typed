@@ -1,17 +1,17 @@
-package result_test
+package adt_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // TestResultSuccess documents the basic success path and that the
 // success value can be a zero value (the absent/present distinction
 // is not needed here because err plays that role).
 func TestResultSuccess(t *testing.T) {
-	r := result.Success(42)
+	r := adt.Success(42)
 	if !r.IsSuccess() {
 		t.Fatal("Success(42) should be a success")
 	}
@@ -30,7 +30,7 @@ func TestResultSuccess(t *testing.T) {
 // retrievable and Value must panic.
 func TestResultFailure(t *testing.T) {
 	sentinel := errors.New("boom")
-	r := result.Failure[int](sentinel)
+	r := adt.Failure[int](sentinel)
 
 	if r.IsSuccess() {
 		t.Fatal("Failure(...) should not be a success")
@@ -62,7 +62,7 @@ func TestResultValuePanic(t *testing.T) {
 			t.Fatalf("unexpected panic error: %v", err)
 		}
 	}()
-	_ = result.Failure[int](errors.New("boom")).Value()
+	_ = adt.Failure[int](errors.New("boom")).Value()
 }
 
 // TestResultFailurePanicOnNil documents that Failure rejects a nil
@@ -74,7 +74,7 @@ func TestResultFailurePanicOnNil(t *testing.T) {
 			t.Fatal("Failure(nil) should panic")
 		}
 	}()
-	_ = result.Failure[int](nil)
+	_ = adt.Failure[int](nil)
 }
 
 // TestResultOptional covers the bridge from Result to Optional.
@@ -82,13 +82,13 @@ func TestResultFailurePanicOnNil(t *testing.T) {
 // and the error is dropped.
 func TestResultOptional(t *testing.T) {
 	t.Run("success becomes present", func(t *testing.T) {
-		o := result.Success(7).Optional()
+		o := adt.Success(7).Optional()
 		if !o.IsPresent() || o.Get() != 7 {
 			t.Fatalf("got %v, want present 7", o)
 		}
 	})
 	t.Run("failure becomes empty", func(t *testing.T) {
-		o := result.Failure[int](errors.New("boom")).Optional()
+		o := adt.Failure[int](errors.New("boom")).Optional()
 		if o.IsPresent() {
 			t.Fatalf("got %v, want empty", o)
 		}
@@ -99,10 +99,10 @@ func TestResultOptional(t *testing.T) {
 // OrElse and confirms the default value is evaluated eagerly (the
 // call site pays for constructing it even on success).
 func TestResultOrElse(t *testing.T) {
-	if got := result.Success(1).OrElse(99); got != 1 {
+	if got := adt.Success(1).OrElse(99); got != 1 {
 		t.Fatalf("OrElse on success: got %d, want 1", got)
 	}
-	if got := result.Failure[int](errors.New("x")).OrElse(99); got != 99 {
+	if got := adt.Failure[int](errors.New("x")).OrElse(99); got != 99 {
 		t.Fatalf("OrElse on failure: got %d, want 99", got)
 	}
 }
@@ -113,7 +113,7 @@ func TestResultOrElse(t *testing.T) {
 func TestResultOrElseGet(t *testing.T) {
 	t.Run("success skips fallback", func(t *testing.T) {
 		called := false
-		got := result.Success(1).OrElseGet(func() int {
+		got := adt.Success(1).OrElseGet(func() int {
 			called = true
 			return 99
 		})
@@ -125,7 +125,7 @@ func TestResultOrElseGet(t *testing.T) {
 		}
 	})
 	t.Run("failure runs fallback", func(t *testing.T) {
-		got := result.Failure[int](errors.New("x")).OrElseGet(func() int { return 7 })
+		got := adt.Failure[int](errors.New("x")).OrElseGet(func() int { return 7 })
 		if got != 7 {
 			t.Fatalf("got %d, want 7", got)
 		}
@@ -139,7 +139,7 @@ func TestResultOrElseGet(t *testing.T) {
 func TestResultRecover(t *testing.T) {
 	t.Run("success skips recovery", func(t *testing.T) {
 		called := false
-		got := result.Success(7).Recover(func(error) int {
+		got := adt.Success(7).Recover(func(error) int {
 			called = true
 			return 99
 		})
@@ -152,7 +152,7 @@ func TestResultRecover(t *testing.T) {
 	})
 	t.Run("failure hands the error to recovery", func(t *testing.T) {
 		sentinel := errors.New("disk full")
-		got := result.Failure[int](sentinel).Recover(func(err error) int {
+		got := adt.Failure[int](sentinel).Recover(func(err error) int {
 			if errors.Is(err, sentinel) {
 				return -1
 			}
@@ -165,8 +165,8 @@ func TestResultRecover(t *testing.T) {
 	t.Run("recovery decides based on error type", func(t *testing.T) {
 		// A realistic pattern: distinct sentinel values for
 		// distinct error categories.
-		notFound := result.Failure[int](errors.New("not found"))
-		denied := result.Failure[int](errors.New("denied"))
+		notFound := adt.Failure[int](errors.New("not found"))
+		denied := adt.Failure[int](errors.New("denied"))
 
 		recover := func(err error) int {
 			switch err.Error() {
@@ -190,18 +190,18 @@ func TestResultRecover(t *testing.T) {
 		// Smoke test: combine Recover with FlatMap and MapError
 		// to show it sits at the end of a chain as a final
 		// value extraction step.
-		parse := func(s string) result.Result[int] {
+		parse := func(s string) adt.Result[int] {
 			if s == "" {
-				return result.Failure[int](errors.New("empty"))
+				return adt.Failure[int](errors.New("empty"))
 			}
 			v, err := atoi(s)
 			if err != nil {
-				return result.Failure[int](err)
+				return adt.Failure[int](err)
 			}
-			return result.Success(v)
+			return adt.Success(v)
 		}
-		double := func(n int) result.Result[int] {
-			return result.Success(n * 2)
+		double := func(n int) adt.Result[int] {
+			return adt.Success(n * 2)
 		}
 
 		got := parse("12").FlatMap(double).Recover(func(err error) int {
@@ -230,7 +230,7 @@ func TestResultRecover(t *testing.T) {
 // ordinary Go error handling.
 func TestResultUnwrap(t *testing.T) {
 	t.Run("success returns value and nil error", func(t *testing.T) {
-		v, err := result.Success(42).Unwrap()
+		v, err := adt.Success(42).Unwrap()
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -240,7 +240,7 @@ func TestResultUnwrap(t *testing.T) {
 	})
 	t.Run("failure returns zero value and the error", func(t *testing.T) {
 		sentinel := errors.New("boom")
-		v, err := result.Failure[int](sentinel).Unwrap()
+		v, err := adt.Failure[int](sentinel).Unwrap()
 		if !errors.Is(err, sentinel) {
 			t.Fatalf("got error %v, want %v", err, sentinel)
 		}
@@ -259,7 +259,7 @@ func TestResultUnwrap(t *testing.T) {
 			return 99, nil
 		}
 
-		v, err := result.Failure[int](errors.New("primary failed")).Unwrap()
+		v, err := adt.Failure[int](errors.New("primary failed")).Unwrap()
 		if err != nil {
 			v, err = loadFromCache()
 		}
@@ -276,7 +276,7 @@ func TestResultUnwrap(t *testing.T) {
 // are propagated without invoking f.
 func TestResultMap(t *testing.T) {
 	t.Run("success applies f and changes type", func(t *testing.T) {
-		got := result.Success(7).Map(func(n int) string { return itoa(n) })
+		got := adt.Success(7).Map(func(n int) string { return itoa(n) })
 		if !got.IsSuccess() || got.Value() != "7" {
 			t.Fatalf("got %v, want Success(\"7\")", got)
 		}
@@ -284,7 +284,7 @@ func TestResultMap(t *testing.T) {
 	t.Run("failure propagates without calling f", func(t *testing.T) {
 		sentinel := errors.New("nope")
 		called := false
-		got := result.Failure[int](sentinel).Map(func(int) string {
+		got := adt.Failure[int](sentinel).Map(func(int) string {
 			called = true
 			return "x"
 		})
@@ -305,8 +305,8 @@ func TestResultMap(t *testing.T) {
 // where the inner Result is itself a failure.
 func TestResultFlatMap(t *testing.T) {
 	t.Run("success delegates to f", func(t *testing.T) {
-		got := result.Success(5).FlatMap(func(n int) result.Result[string] {
-			return result.Success(itoa(n))
+		got := adt.Success(5).FlatMap(func(n int) adt.Result[string] {
+			return adt.Success(itoa(n))
 		})
 		if !got.IsSuccess() || got.Value() != "5" {
 			t.Fatalf("got %v, want Success(\"5\")", got)
@@ -314,8 +314,8 @@ func TestResultFlatMap(t *testing.T) {
 	})
 	t.Run("inner failure surfaces", func(t *testing.T) {
 		sentinel := errors.New("inner")
-		got := result.Success(5).FlatMap(func(int) result.Result[string] {
-			return result.Failure[string](sentinel)
+		got := adt.Success(5).FlatMap(func(int) adt.Result[string] {
+			return adt.Failure[string](sentinel)
 		})
 		if got.IsSuccess() {
 			t.Fatal("got Success, want Failure")
@@ -327,9 +327,9 @@ func TestResultFlatMap(t *testing.T) {
 	t.Run("outer failure short-circuits", func(t *testing.T) {
 		sentinel := errors.New("outer")
 		called := false
-		got := result.Failure[int](sentinel).FlatMap(func(int) result.Result[string] {
+		got := adt.Failure[int](sentinel).FlatMap(func(int) adt.Result[string] {
 			called = true
-			return result.Success("x")
+			return adt.Success("x")
 		})
 		if !errors.Is(got.Error(), sentinel) {
 			t.Fatalf("got %v, want %v", got.Error(), sentinel)
@@ -345,7 +345,7 @@ func TestResultFlatMap(t *testing.T) {
 func TestResultMapError(t *testing.T) {
 	t.Run("success unchanged", func(t *testing.T) {
 		called := false
-		r := result.Success(7).MapError(func(error) error {
+		r := adt.Success(7).MapError(func(error) error {
 			called = true
 			return errors.New("unused")
 		})
@@ -357,7 +357,7 @@ func TestResultMapError(t *testing.T) {
 		}
 	})
 	t.Run("failure error is wrapped", func(t *testing.T) {
-		r := result.Failure[int](errors.New("disk")).MapError(
+		r := adt.Failure[int](errors.New("disk")).MapError(
 			func(e error) error { return errors.New("save: " + e.Error()) },
 		)
 		if r.IsSuccess() {
@@ -374,21 +374,21 @@ func TestResultMapError(t *testing.T) {
 // pattern shown in the design doc.
 func TestResultChained(t *testing.T) {
 	// Parse a string into an int. The empty string is a failure.
-	parse := func(s string) result.Result[int] {
+	parse := func(s string) adt.Result[int] {
 		if s == "" {
-			return result.Failure[int](errors.New("empty input"))
+			return adt.Failure[int](errors.New("empty input"))
 		}
 		v, err := atoi(s)
 		if err != nil {
-			return result.Failure[int](err)
+			return adt.Failure[int](err)
 		}
-		return result.Success(v)
+		return adt.Success(v)
 	}
 
 	// Take a successful int, double it. Doubling a negative is
 	// still success; the caller decides whether negative is
 	// allowed in the next step.
-	double := func(n int) result.Result[int] { return result.Success(n * 2) }
+	double := func(n int) adt.Result[int] { return adt.Success(n * 2) }
 
 	got := parse("12").FlatMap(double)
 	if !got.IsSuccess() || got.Value() != 24 {
@@ -410,53 +410,13 @@ func TestResultChained(t *testing.T) {
 	}
 }
 
-// ---------- helpers ----------
-
-// itoa and atoi are tiny stand-ins for strconv to keep the test
-// file's import surface small and to make the assertions obvious.
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var buf [20]byte
-	i := len(buf)
-	for n > 0 {
-		i--
-		buf[i] = byte('0' + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
-}
-
-func atoi(s string) (int, error) {
-	if s == "" {
-		return 0, errors.New("empty")
-	}
-	n := 0
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return 0, errors.New("not a number")
-		}
-		n = n*10 + int(r-'0')
-	}
-	return n, nil
-}
-
 // ---------- Wrap ----------
 
 // TestResultWrapSuccessNilErr confirms that Wrap(value, nil)
 // produces a success carrying value, the same as
 // Success(value).
 func TestResultWrapSuccessNilErr(t *testing.T) {
-	r := result.Wrap(42, nil)
+	r := adt.Wrap(42, nil)
 	if !r.IsSuccess() {
 		t.Fatal("Wrap(42, nil): IsSuccess = false, want true")
 	}
@@ -477,7 +437,7 @@ func TestResultWrapSuccessNilErr(t *testing.T) {
 // through the Result API.
 func TestResultWrapFailureNonNilErr(t *testing.T) {
 	sentinel := errors.New("wrap failure")
-	r := result.Wrap(99, sentinel)
+	r := adt.Wrap(99, sentinel)
 	if r.IsSuccess() {
 		t.Fatal("Wrap(99, err): IsSuccess = true, want false")
 	}
@@ -494,7 +454,7 @@ func TestResultWrapFailureNonNilErr(t *testing.T) {
 // This is the case where Wrap differs from Failure: a zero
 // value with a nil err is unambiguously a success.
 func TestResultWrapZeroValueSuccess(t *testing.T) {
-	r := result.Wrap(0, nil)
+	r := adt.Wrap(0, nil)
 	if !r.IsSuccess() {
 		t.Fatal("Wrap(0, nil): IsSuccess = false, want true (zero value with nil err is success)")
 	}
@@ -506,12 +466,12 @@ func TestResultWrapZeroValueSuccess(t *testing.T) {
 // TestResultWrapObservationalIgnoresValueOnFailure confirms
 // that the value parameter is unreachable through the Result
 // API when err is non-nil. This is the property that lets
-// callers write `return result.Wrap(r, err)` after a (T, error)
+// callers write `return adt.Wrap(r, err)` after a (T, error)
 // call without first checking which branch they are in.
 func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
 	err := errors.New("ignored-value test")
-	withIgnored := result.Wrap(42, err)
-	withZero := result.Wrap(0, err)
+	withIgnored := adt.Wrap(42, err)
+	withZero := adt.Wrap(0, err)
 	// Both must be observationally identical: same error,
 	// same Unwrap output, same Optional, same Map / OrElse.
 	if !errors.Is(withIgnored.Error(), withZero.Error()) {
@@ -543,13 +503,13 @@ func TestResultWrapObservationalIgnoresValueOnFailure(t *testing.T) {
 func TestResultWrapMatchesSuccessAndFailure(t *testing.T) {
 	cases := []struct {
 		name    string
-		wrapped result.Result[int]
-		plain   result.Result[int]
+		wrapped adt.Result[int]
+		plain   adt.Result[int]
 	}{
-		{"nil err, value 42", result.Wrap(42, nil), result.Success(42)},
-		{"nil err, value 0", result.Wrap(0, nil), result.Success(0)},
-		{"err, value 99", result.Wrap(99, errors.New("x")), result.Failure[int](errors.New("x"))},
-		{"err, value 0", result.Wrap(0, errors.New("x")), result.Failure[int](errors.New("x"))},
+		{"nil err, value 42", adt.Wrap(42, nil), adt.Success(42)},
+		{"nil err, value 0", adt.Wrap(0, nil), adt.Success(0)},
+		{"err, value 99", adt.Wrap(99, errors.New("x")), adt.Failure[int](errors.New("x"))},
+		{"err, value 0", adt.Wrap(0, errors.New("x")), adt.Failure[int](errors.New("x"))},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -572,7 +532,7 @@ func TestResultWrapMatchesSuccessAndFailure(t *testing.T) {
 // half of the (T, error) bridge and Unwrap is the reverse
 // half: Wrap + Unwrap round-trips.
 func TestResultWrapWithUnwrap(t *testing.T) {
-	v, err := result.Wrap(42, nil).Unwrap()
+	v, err := adt.Wrap(42, nil).Unwrap()
 	if err != nil {
 		t.Fatalf("Unwrap on success: err = %v, want nil", err)
 	}
@@ -581,7 +541,7 @@ func TestResultWrapWithUnwrap(t *testing.T) {
 	}
 
 	sentinel := errors.New("bridge test")
-	v, err = result.Wrap(0, sentinel).Unwrap()
+	v, err = adt.Wrap(0, sentinel).Unwrap()
 	if !errors.Is(err, sentinel) {
 		t.Fatalf("Unwrap on failure: err = %v, want %v", err, sentinel)
 	}
@@ -595,12 +555,12 @@ func TestResultWrapWithUnwrap(t *testing.T) {
 // success transforms the value; Map on a failure propagates
 // the error.
 func TestResultWrapComposesWithMap(t *testing.T) {
-	success := result.Wrap(21, nil).Map(func(n int) int { return n * 2 })
+	success := adt.Wrap(21, nil).Map(func(n int) int { return n * 2 })
 	if v := success.Value(); v != 42 {
 		t.Fatalf("Map on success: got %d, want 42", v)
 	}
 
-	failure := result.Wrap(0, errors.New("map test")).
+	failure := adt.Wrap(0, errors.New("map test")).
 		Map(func(n int) int { return n * 2 })
 	if !failure.IsFailure() {
 		t.Fatal("Map on failure: should remain a failure")
@@ -610,13 +570,13 @@ func TestResultWrapComposesWithMap(t *testing.T) {
 // TestResultWrapComposesWithOrElse confirms that Wrap-built
 // results participate in OrElse and OrElseGet.
 func TestResultWrapComposesWithOrElse(t *testing.T) {
-	if v := result.Wrap(42, nil).OrElse(0); v != 42 {
+	if v := adt.Wrap(42, nil).OrElse(0); v != 42 {
 		t.Fatalf("OrElse on success: got %d, want 42", v)
 	}
-	if v := result.Wrap(0, errors.New("orelse test")).OrElse(99); v != 99 {
+	if v := adt.Wrap(0, errors.New("orelse test")).OrElse(99); v != 99 {
 		t.Fatalf("OrElse on failure: got %d, want 99 (fallback)", v)
 	}
-	if v := result.Wrap(0, errors.New("orelseget test")).
+	if v := adt.Wrap(0, errors.New("orelseget test")).
 		OrElseGet(func() int { return 100 }); v != 100 {
 		t.Fatalf("OrElseGet on failure: got %d, want 100", v)
 	}
@@ -626,7 +586,7 @@ func TestResultWrapComposesWithOrElse(t *testing.T) {
 // error-aware fallback chain works on a Wrap-built failure:
 // Recover runs the fallback and returns the fallback T.
 func TestResultWrapComposesWithRecover(t *testing.T) {
-	got := result.Wrap(0, errors.New("recover test")).
+	got := adt.Wrap(0, errors.New("recover test")).
 		Recover(func(err error) int {
 			if err == nil {
 				t.Fatal("Recover: f called with nil error")
@@ -639,7 +599,7 @@ func TestResultWrapComposesWithRecover(t *testing.T) {
 
 	// Recover on a Wrap-built success returns the original
 	// value, untouched.
-	got = result.Wrap(42, nil).
+	got = adt.Wrap(42, nil).
 		Recover(func(err error) int {
 			t.Fatal("Recover: f called on success")
 			return 0
@@ -654,7 +614,7 @@ func TestResultWrapComposesWithRecover(t *testing.T) {
 // collapses Success / Failure: success → present Optional,
 // failure → absent Optional (error dropped).
 func TestResultWrapComposesWithOptional(t *testing.T) {
-	present := result.Wrap(42, nil).Optional()
+	present := adt.Wrap(42, nil).Optional()
 	if !present.IsPresent() {
 		t.Fatal("Optional on success: should be present")
 	}
@@ -662,7 +622,7 @@ func TestResultWrapComposesWithOptional(t *testing.T) {
 		t.Fatalf("Optional on success: got %d, want 42", v)
 	}
 
-	absent := result.Wrap(0, errors.New("optional test")).Optional()
+	absent := adt.Wrap(0, errors.New("optional test")).Optional()
 	if absent.IsPresent() {
 		t.Fatal("Optional on failure: should be absent")
 	}
@@ -685,13 +645,13 @@ func TestResultWrapPracticalAdapter(t *testing.T) {
 	}
 
 	// Wrap the success into a chain.
-	okResult := result.Wrap(double(21)) // 42, nil
+	okResult := adt.Wrap(double(21)) // 42, nil
 	if v := okResult.Map(func(n int) int { return n + 1 }).Value(); v != 43 {
 		t.Fatalf("Wrap(success).Map: got %d, want 43", v)
 	}
 
 	// Wrap the failure into a chain that falls back.
-	badResult := result.Wrap(double(-1)) // 0, error
+	badResult := adt.Wrap(double(-1)) // 0, error
 	if v := badResult.OrElse(99); v != 99 {
 		t.Fatalf("Wrap(failure).OrElse: got %d, want 99 (fallback)", v)
 	}

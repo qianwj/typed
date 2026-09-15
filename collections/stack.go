@@ -2,7 +2,7 @@ package collections
 
 import (
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // Stack[T] is a Last-In-First-Out container of T, backed by a
@@ -39,7 +39,7 @@ func (s *Stack[T]) Push(value T) {
 }
 
 // Pop removes and returns the top element wrapped in a present
-// option.Optional[T], or an absent Optional if the Stack is
+// adt.Optional[T], or an absent Optional if the Stack is
 // empty.
 //
 // Pop explicitly zeroes the popped slot before shortening the
@@ -56,27 +56,27 @@ func (s *Stack[T]) Push(value T) {
 // that all finalizers run. With the previous (non-zeroing) Pop
 // the finalizers would never fire, because the backing array
 // kept the popped pointers alive through out-of-range slots.
-func (s *Stack[T]) Pop() option.Optional[T] {
+func (s *Stack[T]) Pop() adt.Optional[T] {
 	n := len(s.items) - 1
 	if n < 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	item := s.items[n]
 	var zero T
 	s.items[n] = zero
 	s.items = s.items[:n]
-	return option.Of(item)
+	return adt.Of(item)
 }
 
 // Peek returns the top element wrapped in a present
-// option.Optional[T], or an absent Optional if the Stack is
+// adt.Optional[T], or an absent Optional if the Stack is
 // empty. Peek does not modify the Stack: the same call
 // repeated yields the same value, and Size is unchanged.
-func (s *Stack[T]) Peek() option.Optional[T] {
+func (s *Stack[T]) Peek() adt.Optional[T] {
 	if len(s.items) == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(s.items[len(s.items)-1])
+	return adt.Of(s.items[len(s.items)-1])
 }
 
 // Size returns the number of elements currently in the Stack.
@@ -110,7 +110,7 @@ func (s *Stack[T]) Clear() {
 //
 // MarshalJSON delegates to utils/json.Encode, the project-wide
 // wrapper around encoding/json/v2 that returns a
-// result.Result[[]byte]. The wrapper is invoked via Unwrap to
+// adt.Result[[]byte]. The wrapper is invoked via Unwrap to
 // recover the ([]byte, error) shape that the standard
 // json.Marshaler interface requires. A Stack whose element
 // type T satisfies json.Marshaler (or v2's marshaler variant)

@@ -333,7 +333,7 @@ func TestStackClearReleasesPointerElements(t *testing.T) {
 // ---------- Optional integration ----------
 
 // TestStackPopReturnsOptionValues verifies the type contract:
-// Pop returns option.Optional[T] with a present value when the
+// Pop returns adt.Optional[T] with a present value when the
 // stack is non-empty and an absent value when it is empty.
 func TestStackPopReturnsOptionValues(t *testing.T) {
 	s := NewStack[int]()

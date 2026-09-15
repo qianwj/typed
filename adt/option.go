@@ -1,6 +1,31 @@
-// Package option provides Optional[T], a small value type that
-// represents "a value of T that may be absent", plus a few
-// combinators that keep call sites readable.
+// Package adt provides typed algebraic data types — value types
+// that explicitly model "present vs absent" or "success vs failure"
+// or "this variant vs that variant".
+//
+// The three types in this package are:
+//
+//   - [Optional][T] — zero-or-one of a single type. The typed
+//     alternative to `(T, bool)`.
+//   - [Result][T]   — success carrying T, or failure carrying a
+//     non-nil error. The typed alternative to `(T, error)`.
+//   - [Either][L, R] — exactly one of two values. The general
+//     tagged-union primitive that the first two specialise.
+//
+// Why a single package? The three types share the same vocabulary
+// (present / absent / success / failure / left / right) and they
+// cross-reference each other in idiomatic ways —
+// [Result.Optional] returns an [Optional], and
+// [Either.Right] returns an [Optional]. Co-locating them in one
+// package makes those relationships visible at the call site
+// (`adt.Optional`, `adt.Result`, `adt.Either`) without the
+// import-by-import friction of separate sub-packages.
+//
+// Why a separate module? They are value types, not utilities in
+// the same sense as [objects.IsNil] or a JSON codec; the `adt`
+// module gives them a distinct import path so consumers can depend
+// on the value types without pulling in unrelated `utils/*` code.
+//
+// # Optional[T]
 //
 // Optional is not an interface, which lets its methods declare
 // their own type parameters (Map[R]) under Go 1.27's generic
@@ -16,7 +41,7 @@
 //     pointer-like ones. This is why Optional carries a separate
 //     present flag rather than relying on a nil check on the
 //     value.
-package option
+package adt
 
 import (
 	"errors"
@@ -84,7 +109,7 @@ func (o Optional[T]) IsEmpty() bool {
 // absent branch is expected.
 func (o Optional[T]) Get() T {
 	if !o.present {
-		panic("option.Get on empty Optional")
+		panic("adt.Get on empty Optional")
 	}
 	return o.value
 }

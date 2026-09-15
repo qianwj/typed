@@ -1,21 +1,21 @@
 // Package json provides a thin wrapper over encoding/json/v2 that
-// returns the project's result.Result[T] instead of the standard
+// returns the project's adt.Result[T] instead of the standard
 // (T, error) shape.
 //
 // The wrapper exists for one reason: typed error handling. The
-// project's other utilities (option.Optional, result.Result) keep
-// the (T, error) shape but make it fluent; calling result.Success
-// or result.Failure at every JSON boundary lets a pipeline read
+// project's other utilities (adt.Optional, adt.Result) keep
+// the (T, error) shape but make it fluent; calling adt.Success
+// or adt.Failure at every JSON boundary lets a pipeline read
 // as one chain instead of scattering (val, err) := ...; if err != nil
 // checks at every level.
 //
 // The package exposes two operations:
 //
 //   - Decode turns JSON-encoded bytes into a value of type T,
-//     returning result.Result[T]. A Success carries the decoded
+//     returning adt.Result[T]. A Success carries the decoded
 //     value; a Failure carries the underlying json/v2 error.
 //   - Encode turns a value of type T into JSON-encoded bytes,
-//     returning result.Result[[]byte]. A Success carries the
+//     returning adt.Result[[]byte]. A Success carries the
 //     bytes; a Failure carries the underlying json/v2 error.
 //
 // Decode and Encode are inverses: a value encoded by Encode
@@ -32,11 +32,11 @@ package json
 import (
 	"encoding/json/v2"
 
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // Decode parses the JSON-encoded data into a value of type T and
-// returns it as a result.Result[T].
+// returns it as a adt.Result[T].
 //
 // The success path holds the decoded value:
 //
@@ -50,7 +50,7 @@ import (
 // other errors can use errors.Is / errors.As against the v2
 // error types.
 //
-// Decode is implemented in terms of result.Wrap: a single
+// Decode is implemented in terms of adt.Wrap: a single
 // (value, err) pair from json.Unmarshal is wrapped into a
 // Result without an explicit if-err check.
 //
@@ -89,8 +89,8 @@ import (
 // exported fields), slices, maps with string keys, and any
 // pointer to a value of those types. The wrapper does not
 // impose any constraint beyond the json package's own.
-func Decode[T any](data []byte) result.Result[T] {
+func Decode[T any](data []byte) adt.Result[T] {
 	var r T
 	err := json.Unmarshal(data, &r)
-	return result.Wrap(r, err)
+	return adt.Wrap(r, err)
 }

@@ -236,5 +236,5 @@ subj.ForEach(ctx, onMsg, onErr, onDone) // 启动一个订阅
 ## 与其他包的关系
 
 - 同步、单次消费请用 [`collections`](../collections/README-cn.md) 的 `Stream`。
-- 一次性的成功 / 失败用 [`result`](../result/README-cn.md)；订阅级错误通过 `OnError` 报出。
-- 单值"可能缺席"用 [`option`](../option/README-cn.md)。
+- 一次性的成功 / 失败用 [`adt`](../adt/README-cn.md)；订阅级错误通过 `OnError` 报出。
+- 单值"可能缺席"用 [`adt`](../adt/README-cn.md)。

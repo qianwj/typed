@@ -6,7 +6,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // UnboundedBlockingQueue is an unbounded FIFO blocking queue.
@@ -46,7 +46,7 @@ import (
 //     [UnboundedBlockingQueue.PollWithContext] — the context-aware variants.
 //   - [UnboundedBlockingQueue.TryPush] / [UnboundedBlockingQueue.TryPoll] —
 //     the non-blocking variants. `TryPush` always succeeds because the
-//     queue is unbounded; `TryPoll` returns an [option.Optional].
+//     queue is unbounded; `TryPoll` returns an [adt.Optional].
 //
 // The zero value is not usable; construct one with
 // [NewUnboundedBlockingQueue].
@@ -148,20 +148,20 @@ func (q *UnboundedBlockingQueue[T]) Poll() T {
 }
 
 // TryPoll is the non-blocking variant of [UnboundedBlockingQueue.Poll].
-// It returns the dequeued value as an [option.Optional]; the result is
+// It returns the dequeued value as an [adt.Optional]; the result is
 // empty when the queue is empty.
-func (q *UnboundedBlockingQueue[T]) TryPoll() option.Optional[T] {
+func (q *UnboundedBlockingQueue[T]) TryPoll() adt.Optional[T] {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if q.count == 0 {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	v := q.items[q.head]
 	var zero T
 	q.items[q.head] = zero
 	q.head = (q.head + 1) & q.mask
 	q.count--
-	return option.Of(v)
+	return adt.Of(v)
 }
 
 // PollWithContext is the context-aware variant of [UnboundedBlockingQueue.Poll].

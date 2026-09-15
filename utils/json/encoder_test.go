@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/result"
+	"github.com/qianwj/typed/adt"
 )
 
 // ---------- success path: primitive values ----------
@@ -717,7 +717,7 @@ func TestEncodeDeterministicSortKeys(t *testing.T) {
 // TestEncodeCompatibleWithResultImport confirms that the
 // Encode return type composes with the rest of the
 // result package. This is a smoke test of the type
-// relationship: json.Encode returns result.Result[[]byte]
+// relationship: json.Encode returns adt.Result[[]byte]
 // and the result package methods work on it.
 func TestEncodeCompatibleWithResultImport(t *testing.T) {
 	// Construct an Encode result and exercise the result
@@ -725,11 +725,11 @@ func TestEncodeCompatibleWithResultImport(t *testing.T) {
 	// types do not line up, the test fails to build.
 	r := json.Encode(42)
 
-	// Type assertion: r must be result.Result[[]byte]. The explicit
+	// Type assertion: r must be adt.Result[[]byte]. The explicit
 	// type is the assertion under test (compile-time check that
-	// json.Encode returns result.Result[[]byte] exactly).
+	// json.Encode returns adt.Result[[]byte] exactly).
 	//nolint:staticcheck // QF1011: explicit type is the assertion under test.
-	var _ result.Result[[]byte] = r
+	var _ adt.Result[[]byte] = r
 
 	// Use the API: Value, Error, IsSuccess, IsFailure,
 	// Unwrap, OrElse, Optional.

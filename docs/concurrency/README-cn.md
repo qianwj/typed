@@ -33,11 +33,11 @@
 ```go
 import (
     "github.com/qianwj/typed/concurrency"
-    "github.com/qianwj/typed/utils/option"
+    "github.com/qianwj/typed/adt"
 )
 ```
 
-`concurrency` 依赖 `utils/option`,因为 `BoundedBlockingQueue.TryPoll` 和 `UnboundedBlockingQueue.TryPoll` 都返回 `option.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
+`concurrency` 依赖 `adt`,因为 `BoundedBlockingQueue.TryPoll` 和 `UnboundedBlockingQueue.TryPoll` 都返回 `adt.Optional[T]`,与工具集其他地方的“可能缺席”约定保持一致。
 
 `concurrency` 是独立的 `go.mod` 模块,可以单独引用,不依赖 `collections` / `reactivex` / `control` / `utils` 中的任何一个。
 
@@ -47,7 +47,7 @@ Go 内置的 `chan T` 本身就是一个相当不错的有界阻塞队列——�
 
 下面这些场景下,你会想要 `BoundedBlockingQueue[T]` 套在 channel 外面:
 
-- **非阻塞探测返回 `Optional`。** `TryPoll` 返回 `option.Optional[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
+- **非阻塞探测返回 `Optional`。** `TryPoll` 返回 `adt.Optional[T]`,与 `Stack.Pop` / `Queue.Pop` 同形,可以直接与工具集其他 API 链式组合,不需要再写 `(value, ok)` 风格的对偶。
 - **带 context 的阻塞。** `PushWithContext` / `PollWithContext` 让你直接跟超时、deadline、关停信号配合,不需要在 `Push` / `Poll` 外面再自己包一层 goroutine + channel。
 - **风格一致的泛型 API。** 用 `Size` 不用 `len`、用 `Capacity` 不用 `cap`、用 `Optional` 不用 `(T, bool)`——与 Typed 其他部分用同一套词汇。
 - **2 的幂容量向上取整。** `Capacity()` 总是返回 2 的幂,需要做位掩码的下游用起来方便。
@@ -89,7 +89,7 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 有空位时入队,成功返回 `true`;队列满时立即返回 `false`。 |
-| `TryPoll() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() adt.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
 
 这些方法永不等待,正好用于 `select { ... default: ... }` 风格,以及“满了就丢”或“满了就降级”这种背压策略,不需要起额外的 watcher goroutine。`TryPoll` 返回 `Optional` 而非 `(T, bool)`,是工具集通用的“可能缺席”约定,与 `Stack.Pop` / `Queue.Pop` / `Deque.PopFront` / `PopBack` 一致。
 
@@ -116,7 +116,7 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | 容量 | 在 `make` 时设置 | 在 `NewBoundedBlockingQueue` 时设置;向上取整到 2 的幂 |
 | 默认是否有界 | 否(`make(chan T)` 无缓冲) | 是——必须传 capacity |
 | 阻塞发送 / 接收 | `ch <- v` / `<-ch` | `Push(v)` / `Poll()` |
-| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryPoll() option.Optional[T]` |
+| 非阻塞探测 | 套 `select { default: }` | `TryPush() bool` / `TryPoll() adt.Optional[T]` |
 | 带 context 的阻塞 | 套 `select { case <-ctx.Done(): }` | `PushWithContext` / `PollWithContext` |
 | `len(ch)` | 有,但与操作之间没有同步保证 | `Size()` —— 同样的语义,同样不串行化 |
 | 吞吐(1P1C) | ~30 ns/op(微基准) | ~210 ns/op(微基准) |
@@ -231,7 +231,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | 方法 | 行为 |
 | --- | --- |
 | `TryPush(data T) bool` | 入队。**永不失败**——队列无界,所以始终返回 `true`。 |
-| `TryPoll() option.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
+| `TryPoll() adt.Optional[T]` | 队列非空时出队,成功返回 present 的 `Optional`;空队列时立即返回空 `Optional`。 |
 
 ### 状态查询
 

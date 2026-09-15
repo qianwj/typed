@@ -17,7 +17,7 @@ import (
 	"github.com/qianwj/typed/collections/maps"
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // HashSet is an unordered collection of unique comparable values.
@@ -343,12 +343,12 @@ func (s *HashSet[T]) SortBy(less func(x, y T) int) *lists.ArrayList[T] {
 }
 
 // MinBy returns the smallest value under less wrapped in a present
-// option.Optional[T], or an absent Optional when the set is empty.
+// adt.Optional[T], or an absent Optional when the set is empty.
 //
-// MinBy uses option.Optional[T] rather than (T, bool) so the
+// MinBy uses adt.Optional[T] rather than (T, bool) so the
 // "find and get" path is symmetric with Find and chains naturally
-// with option.Map / option.FlatMap.
-func (s *HashSet[T]) MinBy(less func(x, y T) int) option.Optional[T] {
+// with adt.Map / adt.FlatMap.
+func (s *HashSet[T]) MinBy(less func(x, y T) int) adt.Optional[T] {
 	var (
 		best  T
 		found bool
@@ -360,16 +360,16 @@ func (s *HashSet[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 		}
 	})
 	if !found {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }
 
 // MaxBy returns the largest value under less wrapped in a present
-// option.Optional[T], or an absent Optional when the set is empty.
+// adt.Optional[T], or an absent Optional when the set is empty.
 //
 // See MinBy for the rationale.
-func (s *HashSet[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
+func (s *HashSet[T]) MaxBy(less func(x, y T) int) adt.Optional[T] {
 	var (
 		best  T
 		found bool
@@ -381,9 +381,9 @@ func (s *HashSet[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 		}
 	})
 	if !found {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }
 
 // Any reports whether at least one value satisfies p.
@@ -414,11 +414,11 @@ func (s *HashSet[T]) None(p func(T) bool) bool {
 //
 // See ArrayList.Find for the rationale behind returning
 // Optional[T] rather than (T, bool).
-func (s *HashSet[T]) Find(p func(T) bool) option.Optional[T] {
+func (s *HashSet[T]) Find(p func(T) bool) adt.Optional[T] {
 	for _, value := range s.Collect() {
 		if p(value) {
-			return option.Of(value)
+			return adt.Of(value)
 		}
 	}
-	return option.Empty[T]()
+	return adt.Empty[T]()
 }

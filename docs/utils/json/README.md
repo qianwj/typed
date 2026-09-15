@@ -19,19 +19,19 @@
 ```go
 import (
     "github.com/qianwj/typed/utils/json"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
     jsonopts "github.com/go-json-experiment/json/options" // optional
 )
 ```
 
-## `Encode[T any](t T, opts ...json.Options) result.Result[[]byte]`
+## `Encode[T any](t T, opts ...json.Options) adt.Result[[]byte]`
 
 Serialises a value of type `T` into JSON bytes and returns it as a `Result[[]byte]`:
 
 - **Success:** the JSON byte slice.
 - **Failure:** the underlying `encoding/json/v2` error, **unwrapped**. To distinguish JSON errors from other errors, use `errors.Is` / `errors.As` against the v2 error types.
 
-`Encode` is implemented in terms of `result.Wrap` — the `([]byte, error)` pair from `json.Marshal` is wrapped into a `Result` in one call, no `if err != nil` ladder at the call site.
+`Encode` is implemented in terms of `adt.Wrap` — the `([]byte, error)` pair from `json.Marshal` is wrapped into a `Result` in one call, no `if err != nil` ladder at the call site.
 
 ### Options
 
@@ -55,7 +55,7 @@ v2 options are not v1 `json.Marshal` tags like `MarshalJSON` / `UnmarshalJSON`. 
 
 Unlike v1, `encoding/json/v2` does **not** escape HTML by default. A value containing `<`, `>`, or `&` is encoded verbatim. If HTML escaping is required, run the bytes through a separate escaping step or use the v1-style options explicitly.
 
-## `Decode[T any](data []byte) result.Result[T]`
+## `Decode[T any](data []byte) adt.Result[T]`
 
 Decodes `data` into a value of type `T` and returns it as a `Result[T]`.
 
@@ -76,7 +76,7 @@ use(cfg)
 ```go
 import (
     "github.com/qianwj/typed/utils/json"
-    "github.com/qianwj/typed/utils/result"
+    "github.com/qianwj/typed/adt"
 )
 
 type User struct {
@@ -94,4 +94,4 @@ name := decoded.Map(func(u User) string { return u.Name }).
 
 ## See also
 
-- The error / success flow uses [`utils/result`](../../result/README.md); this package only interacts with the outside world through `Result[T]`.
+- The error / success flow uses [`adt`](../../adt/README.md); this package only interacts with the outside world through `Result[T]`.

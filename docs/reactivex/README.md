@@ -240,7 +240,7 @@ func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
 | `Map` | Apply `f(value)` on success; pass errors through unchanged. `f` must be infallible. |
 | `FlatMap` | On success, run `f(value)` and return the resulting `Single`. The chain produces a fresh `Single`; the inner `Single` runs only if the outer succeeded. |
 | `Zip` | Wait for both this `Single` and `other`, then run `combine(left, right)`. The first error wins. |
-| `AndThen` | On success, run `next` and return its result. The original value is discarded; use `FlatMap` if `next` depends on it. |
+| `AndThen` | On success, run `next` and return its adt. The original value is discarded; use `FlatMap` if `next` depends on it. |
 
 ### Comparison with `Observable`
 
@@ -350,6 +350,6 @@ subj.ForEach(ctx, onMsg, onErr, onDone) // start one subscription
 ## See also
 
 - For synchronous, single-consumer iteration use the `Stream` in [`collections`](../collections/README.md).
-- For one-shot success / failure use [`utils/result`](../result/README.md); subscription-level errors are reported through `OnError`.
-- For "single value that may be absent" use [`utils/option`](../option/README.md).
-- For the typed tagged-union result container (Left = failure, Right = success) use [`utils/either`](../either/README.md).
+- For one-shot success / failure use [`adt`](../adt/README.md); subscription-level errors are reported through `OnError`.
+- For "single value that may be absent" use [`adt`](../adt/README.md).
+- For the typed tagged-union result container (Left = failure, Right = success) use [`adt`](../adt/README.md).

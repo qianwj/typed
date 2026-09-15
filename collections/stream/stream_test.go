@@ -1178,7 +1178,7 @@ func TestStreamForEach(t *testing.T) {
 
 // TestStreamFirstEmpty covers the empty-source branch of First: the
 // underlying for-range body never runs and the function returns
-// option.Empty[T]().
+// adt.Empty[T]().
 func TestStreamFirstEmpty(t *testing.T) {
 	if stream.Empty[int]().First().IsPresent() {
 		t.Fatal("First on empty: expected absent")
@@ -1214,7 +1214,7 @@ func TestStreamSortByEmpty(t *testing.T) {
 
 // TestStreamMinByMaxByEmpty covers the empty-source branches of
 // MinBy and MaxBy. The for-range body never runs, found stays false,
-// and the function returns option.Empty[T]().
+// and the function returns adt.Empty[T]().
 func TestStreamMinByMaxByEmpty(t *testing.T) {
 	if stream.Empty[int]().MinBy(func(a, b int) int { return a - b }).IsPresent() {
 		t.Fatal("MinBy on empty: expected absent")

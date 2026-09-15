@@ -5,7 +5,7 @@ import (
 
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 // ---------- LinkedList ----------
@@ -75,15 +75,15 @@ func (l *LinkedList[T]) AddFirst(v T) {
 }
 
 // RemoveFirst removes and returns the first element wrapped in a present
-// option.Optional[T], or an absent Optional if the list is empty.
+// adt.Optional[T], or an absent Optional if the list is empty.
 //
-// RemoveFirst returns option.Optional[T] rather than (T, bool) so the
+// RemoveFirst returns adt.Optional[T] rather than (T, bool) so the
 // "remove and get" path is symmetric with First / Last / Find, and
 // callers can chain OrElse / Map / FlatMap on the removed value
-// without first unpacking the result.
-func (l *LinkedList[T]) RemoveFirst() option.Optional[T] {
+// without first unpacking the adt.
+func (l *LinkedList[T]) RemoveFirst() adt.Optional[T] {
 	if l.head == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	v := l.head.value
 	l.head = l.head.next
@@ -93,17 +93,17 @@ func (l *LinkedList[T]) RemoveFirst() option.Optional[T] {
 		l.head.prev = nil
 	}
 	l.size--
-	return option.Of(v)
+	return adt.Of(v)
 }
 
 // RemoveLast removes and returns the last element wrapped in a present
-// option.Optional[T], or an absent Optional if the list is empty.
+// adt.Optional[T], or an absent Optional if the list is empty.
 //
 // See RemoveFirst for the rationale behind returning Optional[T]
 // rather than (T, bool).
-func (l *LinkedList[T]) RemoveLast() option.Optional[T] {
+func (l *LinkedList[T]) RemoveLast() adt.Optional[T] {
 	if l.tail == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	v := l.tail.value
 	l.tail = l.tail.prev
@@ -113,7 +113,7 @@ func (l *LinkedList[T]) RemoveLast() option.Optional[T] {
 		l.tail.next = nil
 	}
 	l.size--
-	return option.Of(v)
+	return adt.Of(v)
 }
 
 // Insert inserts value at the given index. Elements at index and after are
@@ -172,36 +172,36 @@ func (l *LinkedList[T]) RemoveAt(index int) T {
 }
 
 // Get returns the value at index i wrapped in a present
-// option.Optional[T], or an absent Optional if i is out of
+// adt.Optional[T], or an absent Optional if i is out of
 // range. The walk is O(i), so random access on a linked list
 // is slower than on an ArrayList.
 //
-// Get returns option.Optional[T] rather than (T, bool) so the
+// Get returns adt.Optional[T] rather than (T, bool) so the
 // result is symmetric with ArrayList.Get and with First / Last
 // / Find on the same list, and so callers can chain OrElse /
-// Map / FlatMap on the result.
-func (l *LinkedList[T]) Get(i int) option.Optional[T] {
+// Map / FlatMap on the adt.
+func (l *LinkedList[T]) Get(i int) adt.Optional[T] {
 	if i < 0 || i >= l.size {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	n := l.head
 	for range i {
 		n = n.next
 	}
-	return option.Of(n.value)
+	return adt.Of(n.value)
 }
 
 // First returns the first element wrapped in a present Optional,
 // or an absent Optional if the LinkedList is empty.
 //
-// First returns option.Optional[T] rather than the (T, bool) shape
+// First returns adt.Optional[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
-// (OrElse, Map, FlatMap, …) without first unpacking the result.
-func (l *LinkedList[T]) First() option.Optional[T] {
+// (OrElse, Map, FlatMap, …) without first unpacking the adt.
+func (l *LinkedList[T]) First() adt.Optional[T] {
 	if l.head == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(l.head.value)
+	return adt.Of(l.head.value)
 }
 
 // Last returns the last element wrapped in a present Optional,
@@ -209,11 +209,11 @@ func (l *LinkedList[T]) First() option.Optional[T] {
 //
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool).
-func (l *LinkedList[T]) Last() option.Optional[T] {
+func (l *LinkedList[T]) Last() adt.Optional[T] {
 	if l.tail == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
-	return option.Of(l.tail.value)
+	return adt.Of(l.tail.value)
 }
 
 // Size returns the number of elements.
@@ -361,13 +361,13 @@ func (l *LinkedList[T]) None(p func(T) bool) bool {
 // See First for the rationale behind returning Optional[T] rather
 // than (T, bool). Find is a short-circuiting terminal-style
 // operation: it stops at the first match.
-func (l *LinkedList[T]) Find(p func(T) bool) option.Optional[T] {
+func (l *LinkedList[T]) Find(p func(T) bool) adt.Optional[T] {
 	for n := l.head; n != nil; n = n.next {
 		if p(n.value) {
-			return option.Of(n.value)
+			return adt.Of(n.value)
 		}
 	}
-	return option.Empty[T]()
+	return adt.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.
@@ -482,15 +482,15 @@ func (l *LinkedList[T]) SortBy(less func(x, y T) int) *LinkedList[T] {
 }
 
 // MinBy returns the smallest element under less wrapped in a present
-// option.Optional[T], or an absent Optional if the list is empty.
+// adt.Optional[T], or an absent Optional if the list is empty.
 //
-// MinBy returns option.Optional[T] rather than (T, bool) so the
+// MinBy returns adt.Optional[T] rather than (T, bool) so the
 // "find and get" path is symmetric with Find and the other
 // MinBy / MaxBy implementations in this package
 // (ArrayList, HashSet, Stream).
-func (l *LinkedList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
+func (l *LinkedList[T]) MinBy(less func(x, y T) int) adt.Optional[T] {
 	if l.head == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	best := l.head.value
 	for n := l.head.next; n != nil; n = n.next {
@@ -498,16 +498,16 @@ func (l *LinkedList[T]) MinBy(less func(x, y T) int) option.Optional[T] {
 			best = n.value
 		}
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }
 
 // MaxBy returns the largest element under less wrapped in a present
-// option.Optional[T], or an absent Optional if the list is empty.
+// adt.Optional[T], or an absent Optional if the list is empty.
 //
 // See MinBy for the rationale.
-func (l *LinkedList[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
+func (l *LinkedList[T]) MaxBy(less func(x, y T) int) adt.Optional[T] {
 	if l.head == nil {
-		return option.Empty[T]()
+		return adt.Empty[T]()
 	}
 	best := l.head.value
 	for n := l.head.next; n != nil; n = n.next {
@@ -515,5 +515,5 @@ func (l *LinkedList[T]) MaxBy(less func(x, y T) int) option.Optional[T] {
 			best = n.value
 		}
 	}
-	return option.Of(best)
+	return adt.Of(best)
 }

@@ -1,10 +1,10 @@
-package either_test
+package adt_test
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/qianwj/typed/utils/either"
+	"github.com/qianwj/typed/adt"
 )
 
 func ExampleEither_typedErrorResult() {
@@ -26,9 +26,9 @@ func ExampleEither_typedErrorResult() {
 	// err: division by zero
 }
 
-func divide(a, b int) either.Either[error, int] {
+func divide(a, b int) adt.Either[error, int] {
 	if b == 0 {
-		return either.Left[error, int](errors.New("division by zero"))
+		return adt.Left[error, int](errors.New("division by zero"))
 	}
-	return either.Right[error, int](a / b)
+	return adt.Right[error, int](a / b)
 }

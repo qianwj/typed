@@ -3,7 +3,7 @@ package lists
 import (
 	"testing"
 
-	"github.com/qianwj/typed/utils/option"
+	"github.com/qianwj/typed/adt"
 )
 
 func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
@@ -13,8 +13,8 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 	for _, list := range []interface {
 		Add(int)
 		AddFirst(int)
-		RemoveFirst() option.Optional[int]
-		RemoveLast() option.Optional[int]
+		RemoveFirst() adt.Optional[int]
+		RemoveLast() adt.Optional[int]
 		Size() int
 		IsEmpty() bool
 		Clear()
@@ -40,7 +40,7 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 }
 
 // TestArrayListOptionalReturnsOnEmpty exercises the absent-Optional
-// branches of every ArrayList method that returns option.Optional[T].
+// branches of every ArrayList method that returns adt.Optional[T].
 // These are defensive branches: callers should not normally call Get
 // on an empty list, but the contract is "absent Optional, not panic",
 // and the branches must be covered.
@@ -271,7 +271,7 @@ func TestArrayListFilter(t *testing.T) {
 	t.Run("result is independent copy", func(t *testing.T) {
 		src := ArrayListOf(1, 2, 3, 4)
 		filtered := src.Filter(func(n int) bool { return n%2 == 0 })
-		// Mutating src after Filter must not change the result.
+		// Mutating src after Filter must not change the adt.
 		src.Add(99)
 		if want := []int{2, 4}; !equalValues(filtered.Collect(), want) {
 			t.Fatalf("filtered: got %v, want %v (mutated src leaked)", filtered.Collect(), want)
@@ -488,7 +488,7 @@ func TestArrayListDistinct(t *testing.T) {
 
 // TestArrayListConcat covers both empty, one empty, both populated,
 // and verifying that mutating the source after Concat does not affect
-// the result.
+// the adt.
 func TestArrayListConcat(t *testing.T) {
 	t.Run("both empty", func(t *testing.T) {
 		if got := NewArrayList[int]().Concat(NewArrayList[int]()).Size(); got != 0 {
@@ -1030,7 +1030,7 @@ func TestLinkedListDistinct(t *testing.T) {
 
 // TestLinkedListConcat covers both empty, one empty, both populated,
 // the nil-other defensive branch, and verifying that mutating the
-// sources after Concat does not affect the result.
+// sources after Concat does not affect the adt.
 func TestLinkedListConcat(t *testing.T) {
 	t.Run("both empty", func(t *testing.T) {
 		if got := NewLinkedList[int]().Concat(NewLinkedList[int]()).Size(); got != 0 {

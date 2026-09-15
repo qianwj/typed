@@ -230,7 +230,7 @@ func TestQueuePushPopIsConstantTime(t *testing.T) {
 // ---------- Optional integration ----------
 
 // TestQueueReturnsOptionValues exercises the type contract of
-// the access methods: Pop and Peek return option.Optional[T]
+// the access methods: Pop and Peek return adt.Optional[T]
 // with a present value on a hit and an absent value on a miss.
 func TestQueueReturnsOptionValues(t *testing.T) {
 	q := NewQueue[int]()
@@ -259,7 +259,7 @@ func TestQueueReturnsOptionValues(t *testing.T) {
 
 // TestQueueChaining shows that Optional-based chaining works
 // out of the box, which is the main reason Queue returns
-// option.Optional[T] instead of (T, bool).
+// adt.Optional[T] instead of (T, bool).
 func TestQueueChaining(t *testing.T) {
 	q := NewQueue[int]()
 	q.Push(3)
