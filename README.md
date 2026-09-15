@@ -151,6 +151,8 @@ use(v)
 - [Error handling](#error-handling)
 - [Go version](#go-version)
 - [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Bug reports](#bug-reports)
 - [License](#license)
 
 ## Design principles
@@ -495,6 +497,86 @@ Open:
       collection types, parallel to `Stream()`.
 - [ ] `concurrency` package: `PushCtx` / `TakeCtx` with cancellation.
       Design discussion lives in [docs/concurrency/README.md § Future work](./docs/concurrency/README.md#future-work-cancellation-support) — short version: it needs a rewrite of the synchronisation core from `sync.Cond` to channel-based signalling so the wait can participate in a `select` with `ctx.Done()`.
+
+## Contributing
+
+The toolkit is intentionally small, but contributions are welcome. Before
+opening a pull request, please skim the principles below so the review goes
+faster for everyone.
+
+- **Scope per module.** Each top-level package (`collections`, `control`,
+  `reactivex`, `concurrency`, `utils/option`, `utils/result`,
+  `utils/objects`, `utils/json`) ships as an **independent Go module** and
+  has its own version tag prefix (see [Stability and SemVer](#stability-and-semver)).
+  A PR that touches more than one module should call that out explicitly
+  in the description and explain why cross-module coordination is needed;
+  otherwise the maintainer will ask you to split it.
+- **Discuss before you build.** For anything beyond a small bug fix or
+  documentation typo, file an issue first so we can agree on the shape of
+  the change. Things that look like "just adding a method" often turn into
+  SemVer / API-surface decisions (see [the Stability chapter](#stability-and-semver)
+  for what counts as breaking).
+- **Tests are required.** A PR that changes behaviour must come with
+  `go test ./...` passing **with `-race`** on the affected module. The
+  toolkit's correctness story depends on it; PRs without a regression test
+  will be asked to add one.
+- **Linting must stay clean.** Run `golangci-lint run ./...` against the
+  module you changed before pushing. The CI workflow runs the same
+  configuration (`./.golangci.yml`) on every push and PR.
+- **Public API is sacred.** If your change touches an exported type,
+  method, function, or constant, the PR description must call it out
+  explicitly and tag it as `BREAKING:`, `feat:`, or `fix:` so the release
+  notes can be written correctly. See the [Per-module release tag
+  format](#per-module-release-tag-format) section for the tagging
+  conventions.
+- **Commit hygiene.** One logical change per commit. Bug fixes and
+  refactors should not be mixed with feature work in the same commit, and
+  each commit message should make sense on its own.
+- **Coding style.** Match the file you are editing. The codebase does not
+  introduce new dependencies without discussion; do the same. When in
+  doubt, read two neighbouring files first.
+
+The standard flow:
+
+1. Fork the repository and create a topic branch off `main`.
+2. Make your change, run `go test -race ./...` and `golangci-lint run`
+   on the affected module, push the branch.
+3. Open a pull request against `qianwj/typed:main` with a clear
+   description, a link to the issue it closes (if any), and the
+   `BREAKING:` / `feat:` / `fix:` tag if applicable.
+
+## Bug reports
+
+Please use the [issue tracker](https://github.com/qianwj/typed/issues) on
+GitHub. Before opening a new issue, search to make sure it is not already
+filed (including closed ones — the fix may have landed on a different
+module's branch and not yet been tagged).
+
+A good bug report includes:
+
+- **Goal.** One sentence: what were you trying to do with Typed?
+- **Module and version.** Which module is affected (`collections`,
+  `reactivex`, `concurrency`, ...), and at which commit / tag? `git rev-parse HEAD`
+  inside the module directory, or the module's `vX.Y.Z` tag, is enough.
+- **Environment.** `go version`, `go env GOOS GOARCH`, and (if relevant)
+  the OS / kernel version.
+- **Reproduction.** The smallest self-contained snippet that triggers the
+  bug. The preferred form is a Go test or a `go run`-able file; the
+  `gist`-style "here are ten lines of code that compile" report is
+  usually not enough to reproduce.
+- **Expected vs actual.** What you expected to happen, what actually
+  happened, and the exact error / panic / log output. For panics,
+  include the full stack trace.
+- **Race / data-race reports.** If you suspect a data race, say so
+  explicitly and include the `-race` output verbatim. Most concurrency
+  bugs in this toolkit only surface with `go test -race` or the runtime
+  race detector attached to a long-running process.
+- **Workarounds.** Anything you tried that got you past the bug, even if
+  it is ugly — it often reveals the underlying assumption.
+
+Security issues should **not** go through the public tracker. Use GitHub's
+[private security reporting](https://github.com/qianwj/typed/security/advisories/new)
+flow so the maintainer can coordinate a fix before disclosure.
 
 ## License
 

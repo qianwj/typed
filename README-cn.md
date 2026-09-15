@@ -122,6 +122,8 @@ use(v)
 - [稳定性与 SemVer](#稳定性与-semver)
 - [Go 版本要求](#go-版本要求)
 - [开发路线](#开发路线)
+- [贡献指南](#贡献指南)
+- [Bug 反馈](#bug-反馈)
 - [许可证](#许可证)
 
 ## 设计原则
@@ -359,6 +361,72 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [ ] 迭代器(`iter.Seq[T]`)作为集合类型的一等输出,与 `Stream()` 并列。
 - [ ] `concurrency` 包:`PushCtx` / `TakeCtx` 支持取消。设计讨论在
       [docs/concurrency/README-cn.md § 未来工作](./docs/concurrency/README-cn.md#未来工作-取消支持)——一句话:需要把同步核心从 `sync.Cond` 改成基于 channel 的信号,这样等待能跟 `ctx.Done()` 在同一个 `select` 里。
+
+## 贡献指南
+
+工具集刻意保持小巧,但欢迎贡献。在开 PR 之前,请先扫一眼下面的原则,
+review 流程会顺畅得多。
+
+- **按 module 划定范围。** 每个顶层包(`collections`、`control`、
+  `reactivex`、`concurrency`、`utils/option`、`utils/result`、
+  `utils/objects`、`utils/json`)都是 **独立的 Go module**,拥有各自的
+  tag 前缀(见 [稳定性与 SemVer](#稳定性与-semver))。跨多个 module 的
+  修改,必须在 PR 描述里明确点出,并说明为什么需要跨 module 联动;否则
+  维护者会让你拆 PR。
+- **先讨论再动手。** bug fix、文案小修之外的工作,请先开 issue 沟通,
+  把改动形态对齐。表面看像"加一个方法"的改动,经常会演变成 SemVer /
+  API 面决策(见 [稳定性与 SemVer](#稳定性与-semver) 里关于"什么算破坏性
+  变更"的说明)。
+- **测试是硬性要求。** 改变行为的 PR 必须附带在对应 module 上能通过
+  `go test -race ./...` 的测试。工具集的正确性故事依赖这条;
+  没有回归测试的 PR 会被要求补上。
+- **Lint 必须保持干净。** 推送前在你改动的 module 下跑一次
+  `golangci-lint run ./...`。CI 在每次 push 和 PR 上跑的是同一份配置
+  (`./.golangci.yml`)。
+- **公开 API 是禁区。** 只要动了导出类型、方法、函数或常量,PR 描述
+  里必须显式说明,并打上 `BREAKING:` / `feat:` / `fix:` 标签,这样 release
+  notes 才能写对。具体的 tag 约定见 [每个 module 独立的发布 tag](#每个-module-独立的发布-tag)。
+- **提交粒度。** 一次提交只做一件事。bug fix 与重构不要和功能改动
+  混在同一个 commit 里;每条 commit message 单独看也要讲得通。
+- **代码风格。** 跟随你正在编辑的文件。仓库不引入未经讨论的新依赖,
+  请你也按这条走;拿不准时,先读两个相邻的文件再下笔。
+
+标准流程:
+
+1. 在 GitHub 上 fork 仓库,从 `main` 切出一个 topic 分支。
+2. 写代码,在对应 module 下跑 `go test -race ./...` 与
+   `golangci-lint run`,再 push 分支。
+3. 在 `qianwj/typed:main` 上开 PR,描述里写清改了什么、关联了哪个
+   issue(若有),以及是否带 `BREAKING:` / `feat:` / `fix:` 标签。
+
+## Bug 反馈
+
+请用 GitHub 上的 [issue 列表](https://github.com/qianwj/typed/issues)。
+开新 issue 之前先搜一下,确认没被人提过(包括已关闭的——修复可能
+已经落在别的 module 分支上,只是还没打 tag)。
+
+一份合格的 bug 报告应当包含:
+
+- **目标。** 一句话讲清楚:你在用 Typed 做什么。
+- **Module 与版本。** 受影响的 module(`collections` / `reactivex` /
+  `concurrency` / ...),以及对应的 commit / tag。在 module 目录下
+  `git rev-parse HEAD`,或直接给出该 module 的 `vX.Y.Z` tag。
+- **环境。** `go version`、`go env GOOS GOARCH`,必要时附上操作系统 /
+  内核版本。
+- **复现步骤。** 能触发 bug 的最小可独立运行片段。优先用 Go test,
+  或者 `go run` 能直接跑的 file;只有"几行代码拼一起"的描述通常
+  不够复现。
+- **期望 vs 实际。** 期望发生什么、实际发生什么,以及完整报错 / panic /
+  日志输出。panic 一定要附上完整堆栈。
+- **数据竞争相关。** 如果怀疑是数据竞争,请显式说出来,并把
+  `-race` 的输出原样贴上来。仓库里大部分并发 bug 只能在
+  `go test -race` 或对长跑进程挂了 runtime race detector 后才能复现。
+- **绕开方法。** 你试过的任何能让你继续往下走的方法,哪怕很丑——
+  它通常能反推出底层的假设。
+
+安全问题 **不要** 走公开 issue 通道。请用 GitHub 的
+[私密安全上报](https://github.com/qianwj/typed/security/advisories/new)
+流程,以便维护者在公开披露之前协调修复。
 
 ## 许可证
 
