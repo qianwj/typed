@@ -9,12 +9,13 @@ Right now the package ships two types:
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Optional`-based non-blocking probes, and context-aware blocking.
 - `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
 
-> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
+> Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md). For what's planned next in this package, see the [Roadmap](./roadmap.md).
 
 ## Contents
 
 - [Import](#import)
 - [Why a custom queue?](#why-a-custom-queue)
+- [Roadmap](./roadmap.md)
 - [`BoundedBlockingQueue[T]`](#boundedblockingqueuet)
   - [Construction](#construction)
   - [Blocking variants](#blocking-variants)

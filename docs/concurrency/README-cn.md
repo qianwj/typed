@@ -7,12 +7,13 @@
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Optional` 形式的非阻塞探测、带 context 的阻塞。
 - `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
 
-> 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。
+> 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。本包接下来的计划见 [Roadmap](./roadmap.md)。
 
 ## 目录
 
 - [导入](#导入)
 - [为什么需要自己实现一个队列?](#为什么需要自己实现一个队列)
+- [Roadmap](./roadmap.md)
 - [`BoundedBlockingQueue[T]`](#boundedblockingqueuet)
   - [构造](#构造)
   - [阻塞 API](#阻塞-api)
