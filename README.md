@@ -4,8 +4,6 @@
 
 # Typed
 
-[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=utils)](https://codecov.io/gh/qianwj/typed)
-
 **A type-safe collection toolkit for Go generics.**
 
 [中文版](./README-cn.md) · [Documentation](./docs/README.md)
