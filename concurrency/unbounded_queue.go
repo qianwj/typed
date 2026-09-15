@@ -51,8 +51,8 @@ import (
 // The zero value is not usable; construct one with
 // [NewUnboundedBlockingQueue].
 type UnboundedBlockingQueue[T any] struct {
-	mu   sync.Mutex
-	cond *sync.Cond
+	mu    sync.Mutex
+	cond  *sync.Cond
 	items []T
 
 	// head is the index of the next element to be returned by Poll.
@@ -84,10 +84,7 @@ func NewUnboundedBlockingQueue[T any]() *UnboundedBlockingQueue[T] {
 // must hold q.mu.
 func (q *UnboundedBlockingQueue[T]) grow() {
 	oldCap := q.mask + 1
-	newCap := oldCap * 2
-	if newCap < 16 {
-		newCap = 16
-	}
+	newCap := max(oldCap*2, 16)
 	newItems := make([]T, newCap)
 	// Copy items[head:oldCap], then wrap around items[0:tail] if needed.
 	n := copy(newItems, q.items[q.head:])
@@ -140,8 +137,8 @@ func (q *UnboundedBlockingQueue[T]) Poll() T {
 	v := q.items[q.head]
 	// Clear the slot so the previous value can be collected by the GC if
 	// T contains pointers. This is purely an optimisation; it does not
- // // affect correctness because we never re-read this slot until it is
- // // overwritten by a future Push.
+	// // affect correctness because we never re-read this slot until it is
+	// // overwritten by a future Push.
 	var zero T
 	q.items[q.head] = zero
 	q.head = (q.head + 1) & q.mask
