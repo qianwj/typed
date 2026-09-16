@@ -44,6 +44,35 @@ package adt
 //   - The shape is intentionally simpler than a generic Result[T, E]:
 //     the error channel is always a standard error, which keeps the
 //     interop with regular Go code free of custom-error boxing.
+//
+// # Comparison with Either[L, R]
+//
+// Result[T] is the error-channel specialisation of [Either][L, R]:
+// every Result is morally an `Either[error, T]`. The two types
+// coexist deliberately:
+//
+//   - **Result** is opinionated: the Left side is always `error`, the
+//     (T, error) bridge ([Wrap] / [Unwrap]) is built in, and the
+//     combinators ([Recover], [MapError], [OrElseGet]) speak the
+//     standard `error` vocabulary (`errors.Is`, `errors.As`,
+//     `fmt.Errorf("%w", ...)`). Use Result when "may fail with an
+//     error" is the entire intent — which is most call sites in
+//     ordinary Go code.
+//
+//   - **Either** is the general tagged union: Left and Right can be
+//     any types. Use `Either[error, T]` when you want the
+//     primitive form (e.g., to compose with another Either that
+//     has a non-error Left), or use `Either[A, B]` for non-error
+//     pair types like "parsed or raw", "configured or default",
+//     or two categories of failure you want to merge into one
+//     return path.
+//
+// The surface overlap is small: `IsSuccess/IsFailure`, `Map`, and
+// `Value` roughly parallel `IsRight/IsLeft`, `MapRight`, and
+// `Right().Get()`. The combinators unique to Result
+// ([Wrap], [Unwrap], [Recover], [MapError], [OrElseGet]) all
+// depend on the Left side being a standard `error`, so they have
+// no counterpart on Either.
 type Result[T any] struct {
 	value T
 	err   error

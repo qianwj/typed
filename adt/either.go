@@ -52,6 +52,32 @@ package adt
 // The safe accessors (Left / Right) return Option[L] /
 // Option[R] so call sites can chain with the same combinators
 // they already use for Option.
+//
+// # Comparison with Result[T]
+//
+// [Result[T]] is the error-channel specialisation of Either: every
+// Result is morally an `Either[error, T]`. Use whichever fits
+// the call site:
+//
+//   - **`Result[T]`** when the Left side is always a standard
+//     `error`. You get the (T, error) bridge ([Result.Wrap] /
+//     [Result.Unwrap]) for free, plus error-aware combinators
+//     ([Result.Recover], [Result.MapError]) that have no
+//     counterpart here.
+//
+//   - **`Either[L, R]`** when you need a general tagged union.
+//     Common shapes include `Either[error, T]` to compose with
+//     another Either, `Either[A, B]` for two non-error
+//     alternatives (e.g., "parsed or raw", "configured or
+//     default"), or `Either[errA, errB]` to merge two error
+//     categories into one return path.
+//
+// The surface overlap is small: `IsLeft/IsRight`, `MapRight`,
+// and `RightOrZero` roughly parallel `Result.IsFailure/IsSuccess`,
+// `Result.Map`, and `Result.OrElse`. There is no "Result
+// embedded in Either" relationship — they are sibling types,
+// and choosing between them is a question of intent, not
+// optimisation.
 type Either[L, R any] struct {
 	left    L
 	right   R
