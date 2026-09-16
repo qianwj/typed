@@ -1,6 +1,6 @@
 // Package concurrency provides synchronization primitives that complement
 // the standard library: typed generic wrappers around `chan T`,
-// `sync.WaitGroup`, and the runtime signals they are built on.
+// `sync.WaitGroup`, `sync.Pool`, and the runtime signals they are built on.
 //
 // # Queues
 //
@@ -32,11 +32,16 @@
 // slot; the semaphore is fair under FIFO admission for the blocked
 // callers waiting on the same capacity.
 //
+// # Object reuse
+//
+// Pool[T] reuses disposable temporary values through Get (returning
+// adt.Option[T]) and Put. Cached values may be discarded at any time. Callers manage
+// resetting values and stop using them after returning them to the pool.
+//
 // # Conventions
 //
-// None of the types in this package are safe for concurrent mutation of
-// the *same* value from multiple goroutines; each primitive owns its own
-// internal synchronisation and exposes it through its API surface only.
+// Each primitive owns its internal synchronization. Use its documented API
+// for concurrent access; this does not make stored values concurrency-safe.
 // Concrete generic types (not interfaces) for the same reason as the
 // rest of the toolkit: Go 1.27's generic methods require a concrete
 // receiver.

@@ -15,7 +15,8 @@ The conventions used by every new type here:
   [`queues.Queue`](../collections/README.md#queuesqueuet--queuesdequet)
   and the rest of the toolkit).
 - `*Or[T]` helpers for tests where the convention is "(value, ok)".
-- Zero value not usable; construct with `New*`.
+- Construct with `New*` unless a type explicitly supports its zero value,
+  as `Pool[T]` does.
 
 ## Done
 
@@ -63,7 +64,16 @@ The package ships these types today:
   `golang.org/x/sync/semaphore`, over-release is not supported — the
   slot count is bounded by the initial capacity.
 
-All four share the same API conventions and pass `-race` clean.
+- **`Pool[T]`** — a thin generic wrapper around `sync.Pool` for temporary
+  object reuse. `NewPool(creator)` supplies a factory, `Get() adt.Option[T]`
+  acquires an optional value, and `Put(T)` returns a value for possible reuse. Values may be
+  discarded at any time; callers reset them and relinquish access after
+  `Put`. A miss without a creator or a nil result (including typed nil)
+  returns an empty Option. See the
+  [Pool guide](./README.md#poolt) for nil handling and ownership rules.
+
+All five pass `-race` clean; Pool retains the standard library's Get / Put
+vocabulary rather than queue or lock operations.
 
 ## Tier 1 — synchronization primitives
 
@@ -114,33 +124,32 @@ func (p *WorkerPool[T]) Close() error // drains in-flight, then stops
 `Group` once both are in; the implementation is short and the test
 surface is mostly inherited.
 
-## Tier 3 — specialised queues
+## Tier 3 — specialised blocking queues
 
-Both of these are useful but narrow. They will be added when a real
-use case shows up, not preemptively — preemptive additions tend to
-over-design the API and under-exercise the tests.
-
-### `PriorityQueue[T]` — heap-backed priority queue
-
-Same `Push` / `Poll` / `TryPoll` verbs as `BoundedBlockingQueue`,
-plus `PushWithPriority(data T, priority int)`. Heap implementation;
-the interface stays small so the package doesn't grow a
-container-style toolkit by accident.
-
-Use case: schedulers, leader election, anything with "process the
-most important thing first".
+This tier covers queues with concurrent access and blocking wait
+semantics. Synchronous containers belong in `collections/queues`.
+Add a specialised blocking queue when a real use case appears;
+avoid designing its API before that need is clear.
 
 ### `DelayQueue[T]` — items become available after a delay
 
 Elements carry an `availableAt time.Time`; `Poll` blocks until the
-head element is ready.
+head element is ready. The queue must coordinate concurrent producers
+and consumers, including waking a waiting consumer when a newly
+inserted element becomes available earlier than the previous head.
+These synchronization and waiting semantics place it in `concurrency`.
 
 Use case: scheduled tasks, retry with backoff.
 
 ## Out of scope
 
-Considered and explicitly rejected:
+Excluded from this package:
 
+- **Synchronous priority queues.** Already implemented as
+  [`collections/queues.PriorityQueue[T]`](../collections/README.md#queuespriorityqueuet),
+  with comparator-based ordering and `Push` / `Pop` / `Peek` operations.
+  It has no internal synchronization or blocking waits, so it belongs
+  in `collections/queues` rather than this roadmap's pending tiers.
 - **`Future[T]` — typed async result.** Go's `go` keyword + a
   buffered channel already gives you one-shot async value delivery
   in two lines; `Group` with one task adds cancellation and error
@@ -159,11 +168,6 @@ Considered and explicitly rejected:
   `Semaphore` covers the "I want bounded contention" use case; if you
   need a timed lock, that's a different primitive and probably not
   what you actually want.
-- **`Pool[T]` object pool.** Mostly subsumed by
-  [`sync.Pool`](https://pkg.go.dev/sync#Pool) with a tiny generic
-  helper, and the toolkit's existing `Pool` in
-  [`collections`](../collections/README.md). Adding a third one
-  here would just split the same idea across packages.
 
 ## Update policy
 

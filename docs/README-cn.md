@@ -19,7 +19,7 @@
 
 ### 并发原语
 
-- 🧵 [`concurrency`](./concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`,固定容量的 FIFO 队列,提供阻塞与非阻塞两套 API。
+- 🧵 [`concurrency`](./concurrency/README-cn.md) —— 阻塞队列、`Group`、`Semaphore`，以及复用临时对象的泛型 `Pool[T]`。
 
 ### 抽象
 

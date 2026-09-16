@@ -1,12 +1,14 @@
 # `typed/concurrency` — Typed
 
-`concurrency` 是与 Go 标准库互补的并发原语包,沿用本工具集一贯的写法:具体泛型类型、不绕 `any`、不用反射。
+`concurrency` 是与 Go 标准库互补的并发原语包，沿用本工具集一贯的写法：具体泛型类型和类型安全的公共 API。
 
-当前版本提供三个类型:
+当前版本提供:
 
 - `BoundedBlockingQueue[T]` —— 固定容量的 FIFO 阻塞队列,本质是 `chan T` 的一个薄泛型包装,在 channel 之上加了一层:工具集风格的命名、`Option` 形式的非阻塞探测、带 context 的阻塞。
 - `UnboundedBlockingQueue[T]` —— 无界的 FIFO 阻塞队列。`Push` 永不阻塞;`Poll` 在空队列时阻塞。底层是单个预分配 slice 上的环形缓冲区 + 一把 `sync.Mutex` + 一个 `*sync.Cond`,因为 Go runtime 没有"无界 buffered channel"。
 - `Group` —— 结构化并发,两种失败策略可选:`Strict`(任何任务失败即失败,ctx 取消兄弟)和 `BestEffort`(任务全部跑完,只有全部成功才成功,否则返回聚合后的 error)。直接构建在 `sync.WaitGroup` 上,零外部依赖。
+- `Semaphore` —— 用于限制并发访问数量的计数信号量。
+- `Pool[T]` —— `sync.Pool` 的泛型封装，通过 `Get` / `Put` 复用临时对象。
 
 > 属于 **Typed** 工具集。英文原版见 [README.md](./README.md)。本包接下来的计划见 [Roadmap](./roadmap.md)。
 
@@ -25,6 +27,7 @@
   - [示例](#示例)
 - [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
 - [`Group`](#group)
+- [`Pool[T]`](#poolt)
 - [Benchmark](#benchmark)
 - [与其他包的关系](#与其他包的关系)
 
@@ -367,6 +370,40 @@ Apple M5 Pro(Go 1.27,darwin/arm64)上:
 `BoundedBlockingQueue` 的 MPMC 是亮点——跟裸 `chan T` 同一量级,说明包装层每操作基本无开销。1P1C 的数字主要是微基准噪声——那个 benchmark 的消费者是 busy `TryPoll` 循环,不是裸 `<-ch`,两边的开销都被它吃掉了。在生产/消费都是 uncontended `Push` / `Poll` 的紧凑代码里,本类型跟裸 `chan T` 只差几 ns。
 
 `UnboundedBlockingQueue` 的 1P1C 比 `BoundedBlockingQueue` 快是因为消费者一直在 `TryPoll` 把队列抽干,`Push` 几乎不会撞上"队列满"(没有 `BoundedBlockingQueue` 的 channel 竞争);MPMC 更慢是因为环形缓冲区一把 mutex 串行化所有操作,在高竞争下输给 channel wrapper 的 per-P 队列。
+
+## `Pool[T]`
+
+`Pool[T]` 为 [`sync.Pool`](https://pkg.go.dev/sync#Pool) 提供类型安全的访问接口，通过复用临时对象减少分配和 GC 压力。推荐使用 `*bytes.Buffer` 等指针类型，因为值类型存入底层接口时可能产生装箱分配。
+
+| API | 行为 |
+| --- | --- |
+| `NewPool[T any](creator func() T) *Pool[T]` | 构造时不调用 creator。nil creator 会 panic；并发未命中时可能并发调用 creator。 |
+| `Get() adt.Option[T]` | 用 Option 包装缓存值或 creator 的结果。没有 creator 时未命中，或结果为 nil（含 typed nil），均返回空 Option。 |
+| `Put(value T)` | 归还值供后续尝试复用。nil 接口会被忽略，支持 typed nil。 |
+
+creator 可以返回 nil，此时得到空 Option。取到缓存的 typed nil 也返回空 Option，不会重试 creator。`0`、`false`、`""` 和非 nil 的空切片仍是存在的值。创建可变对象时，每次调用应返回独立对象。`Get` 和 `Put` 支持并发调用，但取出的对象不会因此自动支持并发修改。Pool 首次使用后不得复制。
+
+运行时可能随时移除缓存值且不通知调用方；`Put` 不保证后续 `Get` 一定复用该值。Pool 不限制容量，也不等待对象归还。适合可随时丢弃的临时对象，不适合管理需要显式关闭的连接等资源。它不限制并发数量；此类需求使用 `Semaphore`。
+
+调用方负责重置对象，并在 `Put` 后停止访问对象及其可变存储的别名。同一次取出的对象不得重复归还。`Get` 和 `Put` 均不自动重置状态。
+
+```go
+// 导入 bytes 和 github.com/qianwj/typed/concurrency。
+var buffers = concurrency.NewPool(func() *bytes.Buffer {
+    return new(bytes.Buffer)
+})
+
+func formatMessage(message string) string {
+    buf := buffers.Get().Get() // creator 始终返回非 nil 缓冲区。
+    buf.Reset()
+    defer buffers.Put(buf)
+    buf.WriteString("message: ")
+    buf.WriteString(message)
+    return buf.String()
+}
+```
+
+第二个 `Get` 用于解包 Option。零值池或 creator 可能返回 nil 时，应先检查 `IsPresent()` 或使用 `OrElseGet`，不要直接解包。返回的字符串在缓冲区归还后仍然有效。如果这里返回 `buf.Bytes()`，则会暴露后续使用者可能覆盖的可变存储。
 
 ## 与其他包的关系
 

@@ -200,6 +200,7 @@ use(v)
 | `BoundedBlockingQueue[T]` | `concurrency` | 固定容量 FIFO(容量向上取整到 2 的幂);`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞;`TryPoll` 返回 `adt.Option[T]`。`chan T` 的薄泛型包装。热路径上 `0 B/op`、`0 allocs/op`。 |
 | `UnboundedBlockingQueue[T]` | `concurrency` | 无界 FIFO;`Push` 永不阻塞,`Poll` 在空队列时阻塞。底层是环形缓冲区 + `sync.Mutex` + `*sync.Cond`。API 表面和 `BoundedBlockingQueue` 一致。 |
 | `Group` | `concurrency` | `errgroup` 风格的结构化并发,两种失败策略 —— `Strict`(任何任务失败即失败,ctx 取消兄弟)与 `BestEffort`(任务跑完,只有全部成功才成功,否则返回 `*BestEffortError`)。直接构建在 `sync.WaitGroup` 上,零外部依赖。 |
+| `Pool[T]` | `concurrency` | `sync.Pool` 的泛型封装，通过 `NewPool(creator)`、`Get() adt.Option[T]`、`Put(T)` 复用临时对象。无值或 nil 结果返回空 Option；调用方负责重置，并在归还后停止访问。 |
 
 ## 文档导航
 
@@ -209,7 +210,7 @@ use(v)
 - [collections](./docs/collections/README-cn.md) —— `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stack` / `Queue` / `Deque` / `Stream` / `Range`
 - [control](./docs/control/README-cn.md) —— `If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match`
 - [reactivex](./docs/reactivex/README-cn.md) —— `Observable` / `Subject` / 背压 / 算子
-- [concurrency](./docs/concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`(阻塞 + 非阻塞,固定容量)
+- [concurrency](./docs/concurrency/README-cn.md) —— 阻塞队列、`Group`、`Semaphore` 与 `Pool[T]`
 - [adt](./docs/adt/README-cn.md) —— `Option[T]`
 - [adt](./docs/adt/README-cn.md) —— `Result[T]`
 - [utils/objects](./docs/utils/objects/README-cn.md) —— `IsNil` / `Equals`
@@ -361,6 +362,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] `reactivex` 包:`Observable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
 - [x] `concurrency` 包:`BoundedBlockingQueue[T]`(数组环形缓冲,阻塞 + 非阻塞双 API,通过 race 测试)。
 - [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。
+- [x] `concurrency.Pool[T]`：基于 `sync.Pool` 的泛型临时对象复用。
 - [x] 有界内存:head-offset `ArrayList` 加周期性压缩,`Stack.Pop` 与列表的 `Remove*` 路径清零释放的槽位。
 - [x] 启用 race detector 的测试,覆盖每个子包。各模块的实时覆盖率通过 Codecov 报告 —— 见上方 badge。
 

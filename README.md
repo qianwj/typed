@@ -261,6 +261,7 @@ Go's argument evaluation rules mean `If(user != nil, user.Name, "anonymous")` st
 | `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `adt.Option[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
 | `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
 | `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
+| `Pool[T]` | `concurrency` | Typed `sync.Pool` with `NewPool(creator)`, `Get() adt.Option[T]`, and `Put(T)` for temporary object reuse. Missing or nil results yield an empty Option; callers reset objects and relinquish access after Put. |
 
 ## Documentation
 
@@ -270,7 +271,7 @@ Per-package API reference and examples, in English and Chinese:
 - [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `Stream`, `Range`
 - [control](./docs/control/README.md) — `If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
 - [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
-- [concurrency](./docs/concurrency/README.md) — `BoundedBlockingQueue[T]` (blocking + non-blocking, fixed capacity)
+- [concurrency](./docs/concurrency/README.md) — blocking queues, `Group`, `Semaphore`, and `Pool[T]`
 - [adt](./docs/adt/README.md) — `Option[T]`
 - [adt](./docs/adt/README.md) — `Result[T]`
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
@@ -510,6 +511,7 @@ Done:
 - [x] `concurrency` package: `BoundedBlockingQueue[T]` (array-backed
       ring buffer, blocking + non-blocking variants, race-tested).
 - [x] `utils/json` Result-style codec on top of `encoding/json/v2`.
+- [x] `concurrency.Pool[T]`: typed temporary object reuse backed by `sync.Pool`.
 - [x] Bounded memory: head-offset `ArrayList` with periodic compaction,
       slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
 - [x] Tests with the race detector on every module. Live coverage is

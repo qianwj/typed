@@ -2,13 +2,15 @@
 
 [![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=concurrency)](https://codecov.io/gh/qianwj/typed)
 
-Concurrency primitives that complement Go's standard library, written in the same style as the rest of the toolkit: concrete generic types, no `any` round-trips, no reflective tricks.
+Concurrency primitives that complement Go's standard library, written in the same style as the rest of the toolkit: concrete generic types and typed public APIs.
 
-Right now the package ships three types:
+The package provides:
 
 - `BoundedBlockingQueue[T]` — a fixed-capacity FIFO blocking queue, implemented as a thin generic wrapper around a `chan T` with toolkit-style naming, `Option`-based non-blocking probes, and context-aware blocking.
 - `UnboundedBlockingQueue[T]` — an unbounded FIFO blocking queue. `Push` never blocks; `Poll` blocks when empty. Implemented as a ring buffer over a single pre-allocated slice with a `sync.Mutex` and a `*sync.Cond`, because the Go runtime has no "unbounded buffered channel".
 - `Group` — structured concurrency with two failure policies: `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns aggregated errors). Built on `sync.WaitGroup`, no external dependencies.
+- `Semaphore` — counting semaphore for limiting concurrent access.
+- `Pool[T]` — typed `sync.Pool` wrapper for reusing temporary objects through `Get` / `Put`.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md). For what's planned next in this package, see the [Roadmap](./roadmap.md).
 
@@ -28,6 +30,7 @@ Right now the package ships three types:
 - [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
 - [`Group`](#group)
 - [`Semaphore`](#semaphore)
+- [`Pool[T]`](#poolt)
 - [Benchmarks](#benchmarks)
 - [See also](#see-also)
 
@@ -452,6 +455,40 @@ if !sem.TryAcquire() {
 defer sem.Release()
 process()
 ```
+
+## `Pool[T]`
+
+`Pool[T]` wraps [`sync.Pool`](https://pkg.go.dev/sync#Pool) with typed access, allowing temporary objects to be reused to reduce allocations and GC pressure. Pointer types such as `*bytes.Buffer` are preferred because storing value types in the underlying interface may require boxing allocations.
+
+| API | Behavior |
+| --- | --- |
+| `NewPool[T any](creator func() T) *Pool[T]` | Construct a pool without calling creator. A nil creator panics; concurrent cache misses may call it concurrently. |
+| `Get() adt.Option[T]` | Wrap a cached value or creator result in an Option. A miss without a creator, or a nil result including typed nil, returns an empty Option. |
+| `Put(value T)` | Return a value for possible reuse. A nil interface is ignored; typed nil values are supported. |
+
+Creator results may be nil, producing an empty Option. A cached typed nil also produces an empty Option without retrying creator. Non-nil values such as `0`, `false`, `""`, and non-nil empty slices remain present. A creator of mutable objects should return independent objects. `Get` and `Put` are safe for concurrent calls, but acquired objects are not automatically safe for concurrent mutation. Do not copy a Pool after first use.
+
+The runtime may discard cached values at any time without notification; a `Put` does not guarantee a future `Get` will reuse that value. Pool has no capacity limit and does not wait for a returned object. Use it for disposable temporary objects, not connections or other resources that require explicit cleanup. It does not limit concurrency; use `Semaphore` for that.
+
+Callers reset objects and stop accessing them (including aliases to their mutable storage) after `Put`. Do not return the same acquired object twice. Neither operation resets state automatically.
+
+```go
+// Imports: bytes and github.com/qianwj/typed/concurrency.
+var buffers = concurrency.NewPool(func() *bytes.Buffer {
+    return new(bytes.Buffer)
+})
+
+func formatMessage(message string) string {
+    buf := buffers.Get().Get() // The creator always returns a non-nil buffer.
+    buf.Reset()
+    defer buffers.Put(buf)
+    buf.WriteString("message: ")
+    buf.WriteString(message)
+    return buf.String()
+}
+```
+
+The second `Get` unwraps the Option. For a zero-value pool or a creator that may return nil, check `IsPresent()` or use `OrElseGet` instead of unconditionally unwrapping. The returned string remains valid after the buffer is returned. Returning `buf.Bytes()` here would expose mutable storage that a later borrower could overwrite.
 
 ## See also
 

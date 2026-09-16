@@ -19,7 +19,7 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 
 ### Concurrency primitives
 
-- 🧵 [`concurrency`](./concurrency/README.md) — `BoundedBlockingQueue[T]`, a fixed-capacity FIFO queue with blocking and non-blocking variants.
+- 🧵 [`concurrency`](./concurrency/README.md) — blocking queues, `Group`, `Semaphore`, and typed temporary object reuse with `Pool[T]`.
 
 ### Abstractions
 
