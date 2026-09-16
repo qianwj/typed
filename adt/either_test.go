@@ -2,6 +2,7 @@ package adt
 
 import (
 	"errors"
+	"strconv"
 	"testing"
 )
 
@@ -192,5 +193,160 @@ func TestRoundTripThroughOption(t *testing.T) {
 	}
 	if !l.Left().IsPresent() {
 		t.Error("Left.Left() should be present")
+	}
+}
+
+func TestEitherMapRightTypeChange(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	stringify := func(n int) string {
+		calls++
+		return strconv.Itoa(n)
+	}
+	got := Right[error, int](42).MapRight(stringify)
+	if !got.IsRight() || got.Right().Get() != "42" || calls != 1 {
+		t.Fatalf("MapRight = %v, calls = %d; want Right(42), 1 call", got, calls)
+	}
+	left := Left[error, int](errSample).MapRight(stringify)
+	if !left.IsLeft() || left.Left().Get() != errSample || calls != 1 {
+		t.Fatalf("MapRight on Left = %v, calls = %d; want original Left, no new calls", left, calls)
+	}
+}
+
+func TestEitherFlatMapRight(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		input Either[string, int]
+		want  Either[string, string]
+		calls int
+	}{
+		{"right to right", Right[string, int](42), Right[string, string]("42"), 1},
+		{"right to left", Right[string, int](-1), Left[string, string]("negative"), 1},
+		{"left skips callback", Left[string, int]("original"), Left[string, string]("original"), 0},
+		{"zero value is left", Either[string, int]{}, Left[string, string](""), 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			got := tc.input.FlatMapRight(func(n int) Either[string, string] {
+				calls++
+				if n < 0 {
+					return Left[string, string]("negative")
+				}
+				return Right[string, string](strconv.Itoa(n))
+			})
+			if got != tc.want || calls != tc.calls {
+				t.Fatalf("FlatMapRight = %v, calls = %d; want %v, %d", got, calls, tc.want, tc.calls)
+			}
+		})
+	}
+}
+
+func TestEitherFlatMapLeft(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		input Either[int, string]
+		want  Either[string, string]
+		calls int
+	}{
+		{"left to left", Left[int, string](42), Left[string, string]("42"), 1},
+		{"left to right", Left[int, string](-1), Right[string, string]("recovered"), 1},
+		{"right skips callback", Right[int, string]("original"), Right[string, string]("original"), 0},
+		{"zero value invokes callback", Either[int, string]{}, Left[string, string]("0"), 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			got := tc.input.FlatMapLeft(func(n int) Either[string, string] {
+				calls++
+				if n < 0 {
+					return Right[string, string]("recovered")
+				}
+				return Left[string, string](strconv.Itoa(n))
+			})
+			if got != tc.want || calls != tc.calls {
+				t.Fatalf("FlatMapLeft = %v, calls = %d; want %v, %d", got, calls, tc.want, tc.calls)
+			}
+		})
+	}
+}
+
+func TestEitherFlatMapLeftRecoveryChain(t *testing.T) {
+	t.Parallel()
+	got := Left[string, int]("missing").
+		FlatMapLeft(func(problem string) Either[error, int] {
+			if problem != "missing" {
+				t.Fatalf("callback received %q, want missing", problem)
+			}
+			return Right[error, int](21)
+		}).
+		FlatMapLeft(func(error) Either[string, int] {
+			t.Fatal("FlatMapLeft callback ran after recovery to Right")
+			return Left[string, int]("unexpected")
+		}).
+		FlatMapRight(func(n int) Either[string, int] {
+			return Right[string, int](n * 2)
+		})
+	if !got.IsRight() || got.Right().Get() != 42 {
+		t.Fatalf("chain = %v, want Right(42)", got)
+	}
+}
+
+func TestEitherFlatMapRightChainShortCircuits(t *testing.T) {
+	t.Parallel()
+	got := Right[error, int](42).
+		FlatMapRight(func(int) Either[error, string] {
+			return Left[error, string](errSample)
+		}).
+		FlatMapRight(func(string) Either[error, bool] {
+			t.Fatal("FlatMapRight callback ran after Left")
+			return Right[error, bool](true)
+		}).
+		MapRight(func(bool) int {
+			t.Fatal("MapRight callback ran after Left")
+			return 1
+		})
+	if !got.IsLeft() || got.Left().Get() != errSample {
+		t.Fatalf("chain = %v, want original Left", got)
+	}
+}
+
+func TestEitherFlatMapRightPreservesNilBranches(t *testing.T) {
+	t.Parallel()
+	left := Left[*int, int](nil).FlatMapRight(func(int) Either[*int, string] {
+		t.Fatal("FlatMapRight callback ran on Left(nil)")
+		return Right[*int, string]("")
+	})
+	if !left.IsLeft() || !left.Left().IsPresent() || left.Left().Get() != nil {
+		t.Fatalf("got %v, want Left(nil)", left)
+	}
+	right := Right[string, *int](nil).FlatMapRight(func(p *int) Either[string, *int] {
+		if p != nil {
+			t.Fatal("callback did not receive nil")
+		}
+		return Right[string, *int](p)
+	})
+	if !right.IsRight() || !right.Right().IsPresent() || right.Right().Get() != nil {
+		t.Fatalf("got %v, want Right(nil)", right)
+	}
+}
+
+func TestEitherFlatMapLeftPreservesNilBranches(t *testing.T) {
+	t.Parallel()
+	right := Right[int, *int](nil).FlatMapLeft(func(int) Either[string, *int] {
+		t.Fatal("FlatMapLeft callback ran on Right(nil)")
+		return Left[string, *int]("")
+	})
+	if !right.IsRight() || !right.Right().IsPresent() || right.Right().Get() != nil {
+		t.Fatalf("got %v, want Right(nil)", right)
+	}
+	left := Left[*int, string](nil).FlatMapLeft(func(p *int) Either[*int, string] {
+		if p != nil {
+			t.Fatal("callback did not receive nil")
+		}
+		return Left[*int, string](p)
+	})
+	if !left.IsLeft() || !left.Left().IsPresent() || left.Left().Get() != nil {
+		t.Fatalf("got %v, want Left(nil)", left)
 	}
 }

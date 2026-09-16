@@ -4,11 +4,16 @@ package adt
 // of two values: a Left of type L or a Right of type R.
 //
 // An Either is constructed through [Left] or [Right]; the zero
-// value of Either is treated as the Left with both fields zero,
-// which is rarely what callers want — prefer the explicit
-// constructors. Either values must not be copied after creation;
-// the safe usage is to obtain them through [Left] / [Right] and
-// then consume them through the methods.
+// value of Either holds the zero value of L as a Left. Prefer the
+// explicit constructors to make the intended branch clear. Either
+// may be copied; copying it does not deep-copy the contained value.
+//
+// MapLeft / MapRight and FlatMapLeft / FlatMapRight explicitly select
+// the branch to transform. The opposite branch passes through unchanged
+// without invoking the callback.
+// FlatMapRight keeps L fixed while allowing R to change; FlatMapLeft
+// keeps R fixed while allowing L to change. Either callback may
+// return a Left or a Right.
 //
 // The conventional reading is "Left = failure, Right = success" —
 // for example Right[error, T] is the typed equivalent of Go's
@@ -24,7 +29,7 @@ package adt
 // Or, building it directly:
 //
 //	result := adt.Right[error, int](42)
-//	val, ok := result.Right().Get() // val == 42, ok == true
+//	val := result.Right().Get() // val == 42
 //
 // # Why a tagged union instead of (T, error)?
 //
@@ -60,7 +65,7 @@ package adt
 // the call site:
 //
 //   - **`Result[T]`** when the Left side is always a standard
-//     `error`. You get the (T, error) bridge ([Result.Wrap] /
+//     `error`. You get the (T, error) bridge ([Wrap] /
 //     [Result.Unwrap]) for free, plus error-aware combinators
 //     ([Result.Recover], [Result.MapError]) that have no
 //     counterpart here.
@@ -72,7 +77,10 @@ package adt
 //     default"), or `Either[errA, errB]` to merge two error
 //     categories into one return path.
 //
-// The surface overlap is small: `IsLeft/IsRight`, `MapRight`,
+// MapRight / FlatMapRight operate on Right just as Result's
+// Map / FlatMap operate on success. MapLeft / FlatMapLeft provide
+// the corresponding operations on Left.
+// `IsLeft/IsRight`, `MapRight`,
 // and `RightOrZero` roughly parallel `Result.IsFailure/IsSuccess`,
 // `Result.Map`, and `Result.OrElse`. There is no "Result
 // embedded in Either" relationship — they are sibling types,
@@ -164,10 +172,32 @@ func (e Either[L, R]) MapLeft[L2 any](f func(L) L2) Either[L2, R] {
 
 // MapRight applies f to the Right value when this Either is Right
 // and returns a new Either with the mapped Right. The Left branch
-// is passed through unchanged.
+// is passed through unchanged without invoking f.
 func (e Either[L, R]) MapRight[R2 any](f func(R) R2) Either[L, R2] {
 	if e.isRight {
 		return Right[L, R2](f(e.right))
+	}
+	return Left[L, R2](e.left)
+}
+
+// FlatMapLeft applies f to the Left value and returns the Either it
+// produces, which may be Left or Right. When this Either is Right,
+// its value is passed through unchanged and f is not invoked.
+// The Right type stays fixed; the Left type may change.
+func (e Either[L, R]) FlatMapLeft[L2 any](f func(L) Either[L2, R]) Either[L2, R] {
+	if e.isRight {
+		return Right[L2, R](e.right)
+	}
+	return f(e.left)
+}
+
+// FlatMapRight applies f to the Right value and returns the Either it
+// produces, which may be Left or Right. When this Either is Left,
+// its value is passed through unchanged and f is not invoked.
+// The Left type stays fixed; the Right type may change.
+func (e Either[L, R]) FlatMapRight[R2 any](f func(R) Either[L, R2]) Either[L, R2] {
+	if e.isRight {
+		return f(e.right)
 	}
 	return Left[L, R2](e.left)
 }

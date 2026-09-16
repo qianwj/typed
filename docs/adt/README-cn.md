@@ -194,7 +194,7 @@ Go 的 `(T, error)` 在单点调用处很顺手，但一旦值要在多个中间
 
 | 工厂 | 语义 |
 |---|---|
-| `Left[L, R any](l L) Either[L, R]` | 携带 `l`。`Either` 的零值等价于 `Left(零值, 零值)`。 |
+| `Left[L, R any](l L) Either[L, R]` | 携带 `l`。`Either` 的零值是持有 `L` 零值的 `Left`。 |
 | `Right[L, R any](r R) Either[L, R]` | 携带 `r`。 |
 
 ### 谓词
@@ -217,10 +217,14 @@ Go 的 `(T, error)` 在单点调用处很顺手，但一旦值要在多个中间
 
 ### 组合子
 
+`MapLeft` / `MapRight` 和 `FlatMapLeft` / `FlatMapRight` 显式选择要操作的分支；遇到另一侧时均原样透传，不调用回调。`FlatMapLeft` 保持 `R` 不变，允许改变 `L`；`FlatMapRight` 保持 `L` 不变，允许改变 `R`。两者的回调均可返回 `Left` 或 `Right`，因此链式调用可以切换分支。用 `Fold` 汇合两个分支。
+
 | 方法 | 说明 |
 |---|---|
 | `MapLeft[L2](f func(L) L2) Either[L2, R]` | 只在 `Left` 上调 `f`；`Right` 分支原样透传。 |
-| `MapRight[R2](f func(R) R2) Either[L, R2]` | 只在 `Right` 上调 `f`；`Left` 分支原样透传。 |
+| `MapRight[R2](f func(R) R2) Either[L, R2]` | 只在 `Right` 上调 `f`；`Left` 原样透传。 |
+| `FlatMapLeft[L2](f func(L) Either[L2, R]) Either[L2, R]` | `Left` 时直接返回 `f` 产生的 `Either`；`Right` 原样透传，不调用 `f`。 |
+| `FlatMapRight[R2](f func(R) Either[L, R2]) Either[L, R2]` | `Right` 时直接返回 `f` 产生的 `Either`；`Left` 原样透传，不调用 `f`。 |
 | `Fold[T](onLeft func(L) T, onRight func(R) T) T` | 二选一，恰好一个回调会被调用并返回其结果。「挑对分支」的规范模式。 |
 
 ### 例子
@@ -229,7 +233,7 @@ Go 的 `(T, error)` 在单点调用处很顺手，但一旦值要在多个中间
 import "github.com/qianwj/typed/adt"
 
 result := adt.Right[error, int](42)
-val, ok := result.Right().Get() // val == 42，ok == true
+val := result.Right().Get() // val == 42
 ```
 
 ```go
@@ -238,6 +242,20 @@ msg := result.Fold(
     func(e error) string { return "err: " + e.Error() },
     func(n int) string { return fmt.Sprintf("val: %d", n) },
 )
+```
+
+```go
+result := adt.Left[string, int]("missing").
+    FlatMapLeft(func(problem string) adt.Either[error, int] {
+        if problem == "missing" {
+            return adt.Right[error, int](21)
+        }
+        return adt.Left[error, int](errors.New(problem))
+    }).
+    FlatMapRight(func(n int) adt.Either[error, string] {
+        return adt.Right[error, string](fmt.Sprintf("value: %d", n*2))
+    })
+fmt.Println(result.Right().Get()) // value: 42
 ```
 
 ## 如何选择

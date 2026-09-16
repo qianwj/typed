@@ -194,7 +194,7 @@ Go's `(T, error)` shape is convenient for one-shot call sites but awkward once a
 
 | Factory | Semantics |
 |---|---|
-| `Left[L, R any](l L) Either[L, R]` | Carries `l`. The zero value of `Either` is equivalent to `Left(zero, zero)`. |
+| `Left[L, R any](l L) Either[L, R]` | Carries `l`. The zero value of `Either` holds the zero value of `L` as a `Left`. |
 | `Right[L, R any](r R) Either[L, R]` | Carries `r`. |
 
 ### Predicates
@@ -217,10 +217,14 @@ The safe accessors return `Option` so call sites can chain with the same combina
 
 ### Combinators
 
+`MapLeft` / `MapRight` and `FlatMapLeft` / `FlatMapRight` explicitly select a branch. Each method passes the opposite branch through without invoking its callback. `FlatMapLeft` keeps `R` fixed and allows `L` to change; `FlatMapRight` keeps `L` fixed and allows `R` to change. Either callback may return a `Left` or a `Right`, so chains can switch branches. Use `Fold` to consume both alternatives.
+
 | Method | Description |
 |---|---|
 | `MapLeft[L2](f func(L) L2) Either[L2, R]` | Calls `f` only on `Left`; the `Right` branch passes through unchanged. |
-| `MapRight[R2](f func(R) R2) Either[L, R2]` | Calls `f` only on `Right`; the `Left` branch passes through unchanged. |
+| `MapRight[R2](f func(R) R2) Either[L, R2]` | Calls `f` only on `Right`; passes `Left` through unchanged. |
+| `FlatMapLeft[L2](f func(L) Either[L2, R]) Either[L2, R]` | On `Left`, returns the `Either` produced by `f`; passes `Right` through without calling `f`. |
+| `FlatMapRight[R2](f func(R) Either[L, R2]) Either[L, R2]` | On `Right`, returns the `Either` produced by `f`; passes `Left` through without calling `f`. |
 | `Fold[T](onLeft func(L) T, onRight func(R) T) T` | Calls exactly one of the two callbacks and returns its result. The canonical "pick the right branch" pattern. |
 
 ### Examples
@@ -229,7 +233,7 @@ The safe accessors return `Option` so call sites can chain with the same combina
 import "github.com/qianwj/typed/adt"
 
 result := adt.Right[error, int](42)
-val, ok := result.Right().Get() // val == 42, ok == true
+val := result.Right().Get() // val == 42
 ```
 
 ```go
@@ -238,6 +242,20 @@ msg := result.Fold(
     func(e error) string { return "err: " + e.Error() },
     func(n int) string { return fmt.Sprintf("val: %d", n) },
 )
+```
+
+```go
+result := adt.Left[string, int]("missing").
+    FlatMapLeft(func(problem string) adt.Either[error, int] {
+        if problem == "missing" {
+            return adt.Right[error, int](21)
+        }
+        return adt.Left[error, int](errors.New(problem))
+    }).
+    FlatMapRight(func(n int) adt.Either[error, string] {
+        return adt.Right[error, string](fmt.Sprintf("value: %d", n*2))
+    })
+fmt.Println(result.Right().Get()) // value: 42
 ```
 
 ## Choosing between them
