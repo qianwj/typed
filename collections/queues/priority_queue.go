@@ -8,7 +8,11 @@
 // concurrency package.
 package queues
 
-import "github.com/qianwj/typed/adt"
+import (
+	"fmt"
+
+	"github.com/qianwj/typed/adt"
+)
 
 // PriorityQueue[T] is a binary-heap-backed priority queue. The
 // ordering is supplied by the caller as a comparator function, the
@@ -39,6 +43,19 @@ import "github.com/qianwj/typed/adt"
 // The zero value of PriorityQueue is not usable; construct with
 // [NewPriorityQueue].
 //
+// # Capacity
+//
+// The queue is bounded at construction time by the capacity
+// argument to [NewPriorityQueue]:
+//
+//   - capacity > 0: the queue holds at most that many elements.
+//     Push follows the standard top-K rule — see Push. This is
+//     the common case (bounded caches, top-N tracking, etc.).
+//   - capacity == 0: the queue is unbounded. Push always accepts.
+//     Use this when you want a heap that grows on demand.
+//   - capacity < 0: NewPriorityQueue panics — a misconfigured
+//     capacity should fail loudly at construction.
+//
 // # API shape
 //
 // Push / Pop / Peek / Len mirror the collections.Queue surface
@@ -57,29 +74,42 @@ type PriorityQueue[T any] struct {
 	// less orders the queue: less(a, b) reports that a should be
 	// dequeued before b. Stored at construction; never reassigned.
 	less func(a, b T) bool
+
+	// capacity is the upper bound on len(heap). 0 means unbounded;
+	// >0 means bounded. Stored at construction; never reassigned.
+	capacity int
 }
 
 // NewPriorityQueue returns an empty PriorityQueue ordered by less:
 // Pop / Peek return the element for which less(element, other) is
 // true for every other element in the queue.
 //
-// A classic min-heap for [cmp.Ordered] types is
+// capacity sets the upper bound on the queue's size:
 //
-//	NewPriorityQueue(cmp.Less[int])            // ints, smallest first
-//	NewPriorityQueue(func(a, b string) bool {  // strings, ...
-//	    return len(a) < len(b)                  // shortest first
+//   - capacity > 0 — the queue holds at most capacity elements.
+//     Push follows the top-K rule: the new element is accepted
+//     when the queue is below capacity, or when the queue is at
+//     capacity and `less(new, root)` is true (in which case the
+//     root is replaced by the new element). Push returns false
+//     when the new element is dropped. See [PriorityQueue.Push]
+//     for the full contract.
+//   - capacity == 0 — the queue is unbounded. Push always
+//     accepts. Use this for the "grow on demand" case.
+//   - capacity < 0 — panics. A misconfigured capacity should
+//     fail loudly at construction, not silently produce a queue
+//     that drops everything or accepts everything.
+//
+// A classic min-heap of [cmp.Ordered] types is
+//
+//	NewPriorityQueue(0, cmp.Less[int])            // ints, unbounded
+//	NewPriorityQueue(100, cmp.Less[int])          // top-100 ints
+//	NewPriorityQueue(0, func(a, b string) bool {  // strings, unbounded
+//	    return len(a) < len(b)                    // shortest first
 //	})
 //
-// To get FIFO among ties (or any other secondary key), encode it
-// in a wrapper:
-//
-//	type byDeadline struct{ deadline time.Time; seq int }
-//	NewPriorityQueue(func(a, b byDeadline) bool {
-//	    if !a.deadline.Equal(b.deadline) {
-//	        return a.deadline.Before(b.deadline)
-//	    }
-//	    return a.seq < b.seq // monotonic counter, FIFO tiebreak
-//	})
+// To get FIFO (or any stable order) among ties, encode the
+// tiebreaker in a wrapper and pass a composite-key comparator —
+// see the PriorityQueue type doc for an example.
 //
 // less must be a pure function of its arguments (no observable
 // side effects, deterministic output for equal inputs). An
@@ -87,16 +117,83 @@ type PriorityQueue[T any] struct {
 // elements may come out in the wrong order, or never come out at
 // all. The standard library's [sort.Slice] / [container/heap]
 // docs carry the same warning.
-func NewPriorityQueue[T any](less func(a, b T) bool) *PriorityQueue[T] {
-	return &PriorityQueue[T]{less: less}
+func NewPriorityQueue[T any](capacity int, less func(a, b T) bool) *PriorityQueue[T] {
+	if capacity < 0 {
+		panic(fmt.Sprintf("queues: NewPriorityQueue(capacity=%d, ...); capacity must be non-negative", capacity))
+	}
+	return &PriorityQueue[T]{
+		less:     less,
+		capacity: capacity,
+	}
 }
 
-// Push adds data to the queue.
+// Push inserts data into the queue and reports whether the queue
+// accepted it.
 //
-// Push is O(log n), dominated by the sift-up.
-func (q *PriorityQueue[T]) Push(data T) {
+//   - In an unbounded queue (capacity == 0), Push always appends
+//     the new element and returns true.
+//   - In a bounded queue (capacity > 0), Push returns true when
+//     the queue is below capacity (the new element is appended)
+//     or when the queue is at capacity and `less(data, boundary)`
+//     is true, where `boundary` is the current lowest-priority
+//     element in the heap (the K-th highest, the eviction
+//     candidate). In the replacement case the boundary slot is
+//     overwritten with the new element and the heap is sifted
+//     up to maintain the min-heap invariant. Push returns false
+//     when the queue is at capacity and the new element is not
+//     higher priority than the boundary — the new element is
+//     dropped in that case.
+//
+// The bounded case is the standard top-K rule: at any point the
+// queue holds the capacity-many highest-priority elements that
+// have been Pushed so far, regardless of insertion order. See
+// the type doc for the rationale and typical use cases.
+//
+// Why scan for the boundary instead of comparing against the
+// root? The heap is a min-heap by `less`, so the root is the
+// HIGHEST-priority element — replacing the root with a new
+// higher-priority one would discard the current best, not the
+// current worst. The K-th highest (the eviction candidate) sits
+// somewhere in the leaves; we scan O(K) to find it. The total
+// Push cost in bounded mode is O(K) — acceptable for the
+// typical small K (top-N queries, bounded caches).
+//
+// Push is O(log n) in the unbounded case. In the bounded case
+// Push is O(K + log K) (linear scan for the boundary plus sift
+// up), and O(log K) when below capacity (append + sift up).
+func (q *PriorityQueue[T]) Push(data T) bool {
+	if q.capacity > 0 && len(q.heap) >= q.capacity {
+		// At capacity. Find the boundary — the element with the
+		// LOWEST priority, i.e. the MAX under `less` — by linear
+		// scan. This is O(K); see the doc above.
+		boundary := 0
+		for i := 1; i < len(q.heap); i++ {
+			// heap[i] has lower priority than heap[boundary] iff
+			// !less(heap[i], heap[boundary]) (i.e., heap[i] is not
+			// higher priority than heap[boundary]). The boundary
+			// tracks the worst-in-heap (the max by less), so we
+			// update whenever heap[i] is worse than (or tied with)
+			// the current boundary.
+			if !q.less(q.heap[i], q.heap[boundary]) {
+				boundary = i
+			}
+		}
+
+		// If the new element is higher priority than the boundary,
+		// replace and sift up to maintain the min-heap invariant.
+		// Sift up only — the boundary sits at (or near) a leaf, so
+		// no sift-down is needed for the replacement itself, only
+		// propagation up if the new value out-prioritises its parent.
+		if q.less(data, q.heap[boundary]) {
+			q.heap[boundary] = data
+			heapifyUp(q.heap, boundary, q.less)
+			return true
+		}
+		return false
+	}
 	q.heap = append(q.heap, data)
 	heapifyUp(q.heap, len(q.heap)-1, q.less)
+	return true
 }
 
 // Pop removes and returns the highest-priority element, or an
@@ -134,6 +231,14 @@ func (q *PriorityQueue[T]) Peek() adt.Option[T] {
 // Len returns the current number of elements in the queue.
 func (q *PriorityQueue[T]) Len() int {
 	return len(q.heap)
+}
+
+// Capacity returns the upper bound configured at [NewPriorityQueue]
+// time. Returns 0 if the queue is unbounded — the "0 = unbounded"
+// reading follows [container/list]'s idiom (an "n element" of 0
+// means unlimited) and is documented in the constructor.
+func (q *PriorityQueue[T]) Capacity() int {
+	return q.capacity
 }
 
 // heapifyUp restores the heap invariant by sifting the element at

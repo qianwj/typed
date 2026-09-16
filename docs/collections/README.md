@@ -5,7 +5,7 @@
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
 - `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Option[T]`.
-- `queues.PriorityQueue[T]` — comparator-ordered binary heap with `Push` / `Pop` / `Peek` / `Len`.
+- `queues.PriorityQueue[T]` — bounded-or-unbounded comparator-ordered binary heap with `Push` / `Pop` / `Peek` / `Len` / `Capacity`.
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — lists with immutable-style transforms (`Filter` / `Map` / `Take` / `Drop` / `Concat` / `Distinct` / `SortBy`).
 - `maps.HashMap[K, V]` — hash table with `Keys` / `Values` / `Entries` / `Filter*` / `MapValues` / `Concat`.
 - `maps.TreeMap[K, V]` — AVL-tree map with comparator ordering, neighbor lookups, and range queries.
@@ -106,7 +106,7 @@ s.Pop()                        // option.Empty[int](), no panic
 
 ## `queues.PriorityQueue[T]`
 
-`NewPriorityQueue[T any](less func(a, b T) bool) *PriorityQueue[T]` returns an empty priority queue backed by a binary heap. The ordering is supplied by the caller as a comparator function — the same way `sort.Slice` and `container/heap` do it. Use it to order work items within a single goroutine.
+`NewPriorityQueue[T any](capacity int, less func(a, b T) bool) *PriorityQueue[T]` returns an empty priority queue backed by a binary heap. The ordering is supplied by the caller as a comparator function — the same way `sort.Slice` and `container/heap` do it. Use it to order work items within a single goroutine.
 
 ```go
 import (
@@ -114,8 +114,8 @@ import (
     "github.com/qianwj/typed/collections/queues"
 )
 
-// Min-heap of ints: smallest first.
-pq := queues.NewPriorityQueue(cmp.Less[int])
+// Unbounded min-heap of ints: smallest first.
+pq := queues.NewPriorityQueue(0, cmp.Less[int])
 pq.Push(42)
 pq.Push(7)
 pq.Push(99)
@@ -123,21 +123,29 @@ pq.Push(99)
 for pq.Len() > 0 {
     fmt.Println(pq.Pop().Get()) // 7, 42, 99
 }
+
+// Bounded top-100 (always keep the 100 highest-priority items).
+top100 := queues.NewPriorityQueue(100, cmp.Less[int])
 ```
 
 | Method | Behaviour |
 | --- | --- |
-| `NewPriorityQueue(less)` | Construct an empty queue ordered by `less(a, b)` (true means "a before b"). |
-| `Push(data T)` | Add `data`. O(log n). |
+| `NewPriorityQueue(capacity, less)` | Construct an empty queue ordered by `less(a, b)` (true means "a before b"). `capacity` is required: `> 0` bounds the queue to that many elements (top-K); `== 0` is unbounded; `< 0` panics. |
+| `Push(data T) bool` | Insert `data`. Returns `true` if the queue accepted it, `false` if the bounded queue dropped it. O(log n) unbounded; O(K + log K) bounded; O(log K) when below capacity. |
 | `Pop() adt.Option[T]` | Remove and return the highest-priority element, or `Empty[T]()` if empty. O(log n). |
 | `Peek() adt.Option[T]` | Return the highest-priority element without removing it, or `Empty[T]()` if empty. O(1). |
 | `Len() int` | Current size. |
+| `Capacity() int` | The upper bound passed to the constructor; `0` if unbounded. |
 
-**Comparator contract.** `less` must be a pure function of its arguments — deterministic, no side effects, and a consistent total (or partial) order over `T`. An inconsistent comparator produces an inconsistent heap. The standard library's `sort.Slice` / `container/heap` docs carry the same warning.
+**Capacity / top-K.** With `capacity > 0`, the queue holds at most that many elements following the standard top-K rule: pushes that would grow the queue past `capacity` are accepted only when the new element is strictly higher priority than the current boundary (the K-th highest-priority element in the heap, i.e. the eviction candidate). When accepted, the boundary slot is overwritten with the new element and the heap is sifted to maintain the min-heap invariant. Otherwise the new element is dropped and `Push` returns `false`. Common uses: bounded caches ("track the 100 most relevant events"), bounded schedulers ("only the K most urgent jobs matter"), and streaming top-N queries.
+
+`capacity == 0` means unbounded — `Push` always returns `true`. `capacity < 0` panics at construction; a misconfigured capacity should fail loudly.
 
 **Why a comparator rather than `PushWithPriority(data, priority)`?** A comparator is strictly more general: integer-priority with "smaller first" is one specific `less` (`cmp.Less[T]` for any ordered `T`); a comparator also lets you encode multi-field keys ("earlier deadline wins, then lower id"), domain-specific orders ("shortest job first"), or stable FIFO among ties (encode a monotonic counter as the tiebreaker) without the type having to know any of those rules. The int-priority shortcut would have baked one particular scheme into the API and forced every other scheme through it.
 
-**Tie-breaking.** With a strict-less comparator, equal elements have no guaranteed relative order — a strict-less binary heap has no natural tiebreaker. To get FIFO (or any other stable order) among ties, encode the tiebreaker in the comparator:
+**Comparator contract.** `less` must be a pure function of its arguments — deterministic, no side effects, and a consistent total (or partial) order over `T`. An inconsistent comparator produces an inconsistent heap. The standard library's `sort.Slice` / `container/heap` docs carry the same warning.
+
+**Tie-breaking.** With a strict-less comparator, equal elements have no guaranteed relative order — a strict-less binary heap has no natural tiebreaker. In particular, in bounded mode, a tied push (`less(x, boundary) == false`) is dropped — swapping one tied element for another is a no-op under strict-less. To get FIFO (or any other stable order) among ties, encode the tiebreaker in the comparator:
 
 ```go
 type keyed struct{ deadline time.Time; seq int }
@@ -147,8 +155,10 @@ less := func(a, b keyed) bool {
     }
     return a.seq < b.seq // monotonic counter → FIFO within a deadline
 }
-q := queues.NewPriorityQueue(less)
+q := queues.NewPriorityQueue(0, less)
 ```
+
+**Bounded-mode complexity.** `Push` scans the heap for the boundary (`max by less`, which lives somewhere in the leaves), making bounded `Push` O(K + log K) rather than O(log K). The K-factor is the linear scan; acceptable for typical small K (top-N queries, bounded caches). `Pop` and `Peek` are O(log K) / O(1) regardless of capacity.
 
 **Concurrency.** `PriorityQueue` is synchronous (no internal locking) and lives in the `collections` package — the same single-goroutine contract as `Queue[T]` and `Stack[T]`. For cross-goroutine use, wrap with a `sync.Mutex` or feed it through a `concurrency.Group`. The roadmap originally sketched `Push` / `Poll` / `TryPoll` (the `BoundedBlockingQueue` verbs), but a synchronous container has no natural blocking `Poll`, so the API mirrors `collections.Queue` instead — `Push` + `Pop` (instead of `TryPoll`).
 

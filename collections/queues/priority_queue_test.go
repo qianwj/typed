@@ -3,6 +3,7 @@ package queues
 import (
 	"cmp"
 	"testing"
+	"time"
 
 	"github.com/qianwj/typed/adt"
 )
@@ -11,7 +12,7 @@ import (
 
 func TestPriorityQueue_NewIsEmpty(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 	if got := q.Len(); got != 0 {
 		t.Fatalf("Len on fresh queue = %d, want 0", got)
 	}
@@ -30,7 +31,7 @@ func TestPriorityQueue_NewIsEmpty(t *testing.T) {
 // (smaller first) yields 0, 1, 2 on Pop.
 func TestPriorityQueue_LessDrivesOrder(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 	q.Push(2)
 	q.Push(0)
 	q.Push(1)
@@ -55,7 +56,7 @@ func TestPriorityQueue_LessDrivesOrder(t *testing.T) {
 func TestPriorityQueue_DescendingComparator(t *testing.T) {
 	t.Parallel()
 	greaterFirst := func(a, b int) bool { return a > b }
-	q := NewPriorityQueue(greaterFirst)
+	q := NewPriorityQueue(0, greaterFirst)
 	q.Push(2)
 	q.Push(0)
 	q.Push(1)
@@ -73,20 +74,18 @@ func TestPriorityQueue_DescendingComparator(t *testing.T) {
 func TestPriorityQueue_CustomComparatorByLength(t *testing.T) {
 	t.Parallel()
 	byLength := func(a, b string) bool { return len(a) < len(b) }
-	q := NewPriorityQueue(byLength)
+	q := NewPriorityQueue(0, byLength)
 	q.Push("hi")
 	q.Push("hello")
 	q.Push("a")
 	q.Push("world")
 
-	// Expected dequeue order: "a" (1), "hi" (2), "hello" / "world" (5, ties).
 	if got := q.Pop().Get(); got != "a" {
 		t.Errorf("Pop[0] = %q, want \"a\"", got)
 	}
 	if got := q.Pop().Get(); got != "hi" {
 		t.Errorf("Pop[1] = %q, want \"hi\"", got)
 	}
-	// Two 5-char strings remain in unspecified order.
 	rest := []string{q.Pop().Get(), q.Pop().Get()}
 	if !contains(rest, "hello") || !contains(rest, "world") {
 		t.Errorf("Pop[2..3] = %v, want both \"hello\" and \"world\"", rest)
@@ -98,7 +97,7 @@ func TestPriorityQueue_CustomComparatorByLength(t *testing.T) {
 // order. The heap must not drop or duplicate them.
 func TestPriorityQueue_TiesPreservedAsMultiset(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[string])
+	q := NewPriorityQueue(0, cmp.Less[string])
 	q.Push("first")
 	q.Push("second")
 	q.Push("third")
@@ -121,7 +120,7 @@ func TestPriorityQueue_TiesPreservedAsMultiset(t *testing.T) {
 
 func TestPriorityQueue_PeekDoesNotMutate(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 	q.Push(42)
 
 	if got := q.Peek().Get(); got != 42 {
@@ -139,7 +138,7 @@ func TestPriorityQueue_PeekDoesNotMutate(t *testing.T) {
 
 func TestPriorityQueue_LenShrinksAfterPop(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 	for range 10 {
 		q.Push(0)
 	}
@@ -162,10 +161,8 @@ func TestPriorityQueue_LenShrinksAfterPop(t *testing.T) {
 // Catches "stale heap state" bugs.
 func TestPriorityQueue_DrainAndRefillPreservesHeapInvariant(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 
-	// First batch: 0..99, with the comparator ordering ints, so
-	// the natural drain order is 0, 1, ..., 99.
 	for i := range 100 {
 		q.Push(i)
 	}
@@ -177,9 +174,6 @@ func TestPriorityQueue_DrainAndRefillPreservesHeapInvariant(t *testing.T) {
 		t.Fatalf("first drain not sorted: %v", first)
 	}
 
-	// Second batch: 99..0, reversed — the natural drain order is
-	// still 0, 1, ..., 99 (the comparator doesn't care about
-	// insertion order).
 	for i := range 100 {
 		q.Push(99 - i)
 	}
@@ -195,15 +189,11 @@ func TestPriorityQueue_DrainAndRefillPreservesHeapInvariant(t *testing.T) {
 // TestPriorityQueue_LargeRandomSequenceIsMonotonicallyNonDecreasing
 // pushes a deterministic pseudo-random sequence of values, drains,
 // and checks the dequeue order is monotonically non-decreasing AND
-// the multiset matches the input. This is the strongest
-// single-thread invariant test: it exercises every internal code
-// path and verifies both ordering and completeness.
+// the multiset matches the input.
 func TestPriorityQueue_LargeRandomSequenceIsMonotonicallyNonDecreasing(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 
-	// Deterministic: same sequence every run. Modulus 113 with N=200
-	// gives some duplicates, exercising tie-handling.
 	const N = 200
 	want := make([]int, N)
 	for i := range N {
@@ -211,7 +201,6 @@ func TestPriorityQueue_LargeRandomSequenceIsMonotonicallyNonDecreasing(t *testin
 		want[i] = v
 		q.Push(v)
 	}
-	// Sort want so the comparison is multiset, not order.
 	insertionSort(want)
 
 	got := make([]int, 0, N)
@@ -240,8 +229,8 @@ func TestPriorityQueue_StableOrderViaCompositeKey(t *testing.T) {
 	t.Parallel()
 
 	type keyed struct {
-		primary int // tie group
-		seq     int // FIFO within tie group
+		primary int
+		seq     int
 	}
 	less := func(a, b keyed) bool {
 		if a.primary != b.primary {
@@ -249,11 +238,8 @@ func TestPriorityQueue_StableOrderViaCompositeKey(t *testing.T) {
 		}
 		return a.seq < b.seq
 	}
-	q := NewPriorityQueue(less)
+	q := NewPriorityQueue(0, less)
 
-	// Push three elements in primary group 1, then three in group
-	// 0 — interleaved, to make sure the heap can't rely on
-	// insertion order.
 	q.Push(keyed{primary: 1, seq: 10})
 	q.Push(keyed{primary: 0, seq: 1})
 	q.Push(keyed{primary: 1, seq: 11})
@@ -280,7 +266,7 @@ func TestPriorityQueue_StableOrderViaCompositeKey(t *testing.T) {
 
 func TestPriorityQueue_PopOnEmptyRepeatedlyReturnsEmpty(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[int])
+	q := NewPriorityQueue(0, cmp.Less[int])
 	for range 5 {
 		if opt := q.Pop(); opt.IsPresent() {
 			t.Fatalf("Pop on empty returned present: %v", opt.Get())
@@ -293,10 +279,226 @@ func TestPriorityQueue_PopOnEmptyRepeatedlyReturnsEmpty(t *testing.T) {
 
 func TestPriorityQueue_EmptyReturnsOptionNotNil(t *testing.T) {
 	t.Parallel()
-	q := NewPriorityQueue(cmp.Less[string])
+	q := NewPriorityQueue(0, cmp.Less[string])
 	var opt adt.Option[string] = q.Pop()
 	if opt.IsPresent() {
 		t.Errorf("Pop on empty queue returned present (%v)", opt.Get())
+	}
+}
+
+// --- Capacity / top-K ----------------------------------------------------
+
+// TestPriorityQueue_CapacityUnboundedReportsZero confirms the
+// "0 = unbounded" reading of Capacity: a queue built with
+// capacity 0 reports Capacity() == 0.
+func TestPriorityQueue_CapacityUnboundedReportsZero(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(0, cmp.Less[int])
+	if got := q.Capacity(); got != 0 {
+		t.Errorf("Capacity on unbounded queue = %d, want 0", got)
+	}
+}
+
+// TestPriorityQueue_CapacityBoundedReportsN confirms Capacity
+// returns the value passed at construction.
+func TestPriorityQueue_CapacityBoundedReportsN(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(42, cmp.Less[int])
+	if got := q.Capacity(); got != 42 {
+		t.Errorf("Capacity = %d, want 42", got)
+	}
+}
+
+// TestPriorityQueue_PushPanicsOnNegativeCapacity confirms the
+// constructor rejects a misconfigured capacity loudly.
+func TestPriorityQueue_PushPanicsOnNegativeCapacity(t *testing.T) {
+	t.Parallel()
+
+	done := make(chan any, 1)
+	go func() {
+		defer func() {
+			done <- recover()
+		}()
+		NewPriorityQueue(-1, cmp.Less[int])
+	}()
+
+	select {
+	case r := <-done:
+		if r == nil {
+			t.Fatal("NewPriorityQueue(-1, ...) did not panic")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("NewPriorityQueue(-1, ...) hung instead of panicking")
+	}
+}
+
+// TestPriorityQueue_UnboundedPushAlwaysReturnsTrue: in an
+// unbounded queue (capacity 0), every Push succeeds regardless of
+// how full the queue is.
+func TestPriorityQueue_UnboundedPushAlwaysReturnsTrue(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(0, cmp.Less[int])
+	for i := range 1000 {
+		if !q.Push(i) {
+			t.Errorf("Push(%d) returned false on unbounded queue", i)
+		}
+	}
+	if got := q.Len(); got != 1000 {
+		t.Errorf("Len after 1000 Pushes = %d, want 1000", got)
+	}
+}
+
+// TestPriorityQueue_BoundedPushBelowCapacityAcceptsAll: until the
+// queue reaches capacity, every Push returns true and the queue
+// grows.
+func TestPriorityQueue_BoundedPushBelowCapacityAcceptsAll(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(5, cmp.Less[int])
+	for i := range 5 {
+		if !q.Push(i) {
+			t.Errorf("Push(%d) returned false below capacity", i)
+		}
+	}
+	if got := q.Len(); got != 5 {
+		t.Errorf("Len after 5 Pushes = %d, want 5", got)
+	}
+}
+
+// TestPriorityQueue_BoundedPushAcceptsHigherPriorityReplacesBoundary
+// is the core top-K test: once the queue is full, pushing a new
+// element that out-prioritises the boundary (the lowest-priority
+// element in the heap, which is the eviction candidate) must
+// replace the boundary, and Push must return true. The current
+// highest-priority element (the root) is preserved.
+func TestPriorityQueue_BoundedPushAcceptsHigherPriorityReplacesBoundary(t *testing.T) {
+	t.Parallel()
+	// Min-heap: smaller = higher priority. Push 1..5 — queue
+	// ends up holding [1,2,3,4,5] with root=1 (the smallest = highest
+	// priority) and boundary=5 (the largest = lowest priority).
+	q := NewPriorityQueue(5, cmp.Less[int])
+	for i := 1; i <= 5; i++ {
+		q.Push(i)
+	}
+	// Verify the initial top.
+	if got := q.Peek().Get(); got != 1 {
+		t.Fatalf("Peek before replacement = %d, want 1 (root of min-heap is smallest)", got)
+	}
+
+	// Push 0 — out-prioritises the boundary (5). Boundary should be
+	// replaced; the queue ends up holding {0, 1, 2, 3, 4} with root=0.
+	if !q.Push(0) {
+		t.Fatal("Push(0) returned false; want true (0 < boundary=5)")
+	}
+	if got := q.Peek().Get(); got != 0 {
+		t.Errorf("Peek after replacement = %d, want 0 (0 should be at root)", got)
+	}
+	if got := q.Len(); got != 5 {
+		t.Errorf("Len after replacement = %d, want 5 (capacity unchanged)", got)
+	}
+
+	// Drain and verify the queue holds {0, 1, 2, 3, 4}.
+	drained := make([]int, 0, 5)
+	for q.Len() > 0 {
+		drained = append(drained, q.Pop().Get())
+	}
+	wantDrained := []int{0, 1, 2, 3, 4}
+	if !equalSlices(drained, wantDrained) {
+		t.Errorf("drained = %v, want %v", drained, wantDrained)
+	}
+}
+
+// TestPriorityQueue_BoundedPushDropsLowerPriorityThanBoundary is
+// the complement: once the queue is full, pushing a new element
+// that is NOT higher priority than the boundary must be dropped,
+// and Push must return false. The root is preserved.
+func TestPriorityQueue_BoundedPushDropsLowerPriorityThanBoundary(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(5, cmp.Less[int])
+	for i := 1; i <= 5; i++ {
+		q.Push(i)
+	}
+	// Boundary is 5 (the largest). Push 10 — does NOT out-prioritise
+	// boundary. Drop.
+	if q.Push(10) {
+		t.Error("Push(10) returned true; want false (10 not < boundary=5)")
+	}
+	if got := q.Len(); got != 5 {
+		t.Errorf("Len after drop = %d, want 5 (capacity unchanged)", got)
+	}
+	if got := q.Peek().Get(); got != 1 {
+		t.Errorf("Peek after drop = %d, want 1 (root unchanged)", got)
+	}
+}
+
+// TestPriorityQueue_BoundedPushEqualToBoundaryDrops: ties against
+// the boundary are NOT considered "higher priority" — strict-less
+// comparator means less(boundary, boundary) is false, so a tied
+// push is dropped. This preserves the multiset invariant when
+// the comparator is strict-less: a tied push would replace an
+// equally-bad element with another equally-bad element, swapping
+// one for the other — no information gain.
+func TestPriorityQueue_BoundedPushEqualToBoundaryDrops(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(3, cmp.Less[int])
+	q.Push(5)
+	q.Push(3)
+	q.Push(7)
+	// Heap: 3 at root, 5 and 7 below. Boundary is 7.
+	if got := q.Peek().Get(); got != 3 {
+		t.Fatalf("Peek = %d, want 3", got)
+	}
+	// Push 7 — tied with boundary. Strict-less: less(7, 7) is
+	// false, so drop.
+	if q.Push(7) {
+		t.Error("Push(7) returned true; want false (tied with boundary)")
+	}
+	if got := q.Len(); got != 3 {
+		t.Errorf("Len after tied push = %d, want 3", got)
+	}
+}
+
+// TestPriorityQueue_BoundedHoldsTopK is the integration test:
+// push N=100 elements with priorities 0..99 into a top-10 queue
+// and verify the queue ends up holding {0..9}. This catches the
+// whole top-K pipeline: root comparison, replacement, sift down.
+func TestPriorityQueue_BoundedHoldsTopK(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(10, cmp.Less[int])
+	for i := range 100 {
+		q.Push(i)
+	}
+	if got := q.Len(); got != 10 {
+		t.Fatalf("Len after 100 pushes into top-10 = %d, want 10", got)
+	}
+	drained := make([]int, 0, 10)
+	for q.Len() > 0 {
+		drained = append(drained, q.Pop().Get())
+	}
+	want := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
+	if !equalSlices(drained, want) {
+		t.Errorf("drained = %v, want %v (the top-10 priorities)", drained, want)
+	}
+}
+
+// TestPriorityQueue_BoundedReverseOrder: pushing in reverse order
+// into a top-K queue still ends up holding the top K. Catches
+// "depends on insertion order" bugs.
+func TestPriorityQueue_BoundedReverseOrder(t *testing.T) {
+	t.Parallel()
+	q := NewPriorityQueue(5, cmp.Less[int])
+	for i := 99; i >= 0; i-- {
+		q.Push(i)
+	}
+	if got := q.Len(); got != 5 {
+		t.Fatalf("Len = %d, want 5", got)
+	}
+	drained := make([]int, 0, 5)
+	for q.Len() > 0 {
+		drained = append(drained, q.Pop().Get())
+	}
+	want := []int{0, 1, 2, 3, 4}
+	if !equalSlices(drained, want) {
+		t.Errorf("drained = %v, want %v", drained, want)
 	}
 }
 
@@ -318,6 +520,18 @@ func contains(s []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func equalSlices(a, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // insertionSort is a tiny in-place stable sort. Used here to
