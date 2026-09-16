@@ -7,6 +7,26 @@ import (
 	"github.com/qianwj/typed/collections/stream"
 )
 
+func TestFromPairs(t *testing.T) {
+	calls := 0
+	s := stream.FromPairs(func(yield func(int, int) bool) {
+		for i := 1; i <= 4; i++ {
+			calls++
+			if !yield(i, i*10) {
+				return
+			}
+		}
+	})
+	if calls != 0 {
+		t.Fatal("FromPairs consumed its source")
+	}
+	got := s.Filter(func(k, _ int) bool { return k > 1 }).
+		Map(func(k, v int) int { return k + v }).Take(1).Collect()
+	if !slices.Equal(got, []int{22}) || calls != 2 {
+		t.Fatalf("got=%v calls=%d, want [22] and 2 calls", got, calls)
+	}
+}
+
 func TestMapStreamLazyTransforms(t *testing.T) {
 	sourceCalls, mapCalls := 0, 0
 	s := stream.Of(1, 2, 3).
@@ -22,7 +42,7 @@ func TestMapStreamLazyTransforms(t *testing.T) {
 	if sourceCalls != 0 || mapCalls != 0 {
 		t.Fatal("pipeline ran before Collect")
 	}
-	var got map[int][]int = s.Collect()
+	got := s.Collect()
 	if len(got) != 1 || !slices.Equal(got[2], []int{2, 20}) || sourceCalls != 3 || mapCalls != 1 {
 		t.Fatalf("got=%v sourceCalls=%d mapCalls=%d", got, sourceCalls, mapCalls)
 	}

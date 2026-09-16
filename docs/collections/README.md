@@ -420,6 +420,7 @@ A lazy synchronous stream. `Stream[T]` is a thin wrapper over `iter.Seq[T]`; eve
 | Function | Description |
 |---|---|
 | `From[T](seq iter.Seq[T]) Stream[T]` | Direct wrap of `iter.Seq[T]`. |
+| `FromPairs[K, V](seq iter.Seq2[K, V]) MapStream[K, V]` | Direct wrap of a key-value iterator; does not consume or copy the source. |
 | `FromSlice[T](s []T) Stream[T]` | Lazy iteration over `s` (the slice is held but not copied). |
 | `Of[T](values ...T) Stream[T]` | Variadic → `Stream[T]`, sugar for `FromSlice`. |
 | `Empty[T]() Stream[T]` | Terminates immediately. |

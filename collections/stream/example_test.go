@@ -22,7 +22,7 @@ func ExampleArrayList_Stream() {
 }
 
 func ExampleStream_Associate() {
-	var result map[int]string = stream.Of("a", "bb", "ccc", "dd").
+	result := stream.Of("a", "bb", "ccc", "dd").
 		Associate(func(s string) (int, string) { return len(s), s }).
 		Filter(func(k int, _ string) bool { return k == 2 }).
 		MapValues(func(_ int, v string) string { return strings.ToUpper(v) }).

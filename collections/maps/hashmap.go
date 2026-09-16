@@ -1,5 +1,5 @@
-// Package maps provides HashMap[K, V], a type-safe unordered collection of
-// key-value pairs built on top of the built-in map.
+// Package maps provides HashMap[K, V], backed by the built-in map, and
+// TreeMap[K, V], an ordered AVL-tree map with a caller-supplied comparator.
 //
 // As with the other concrete generic collections in this module,
 // HashMap's methods (including type-changing ones such as MapValues[R])
@@ -14,7 +14,7 @@
 //
 // HashMap is eager: intermediate operations return new HashMaps
 // immediately. For lazy pipelines over the entries, call Stream() to
-// obtain a stream.Stream[Entry[K, V]].
+// obtain a stream.MapStream[K, V].
 package maps
 
 import (
@@ -25,9 +25,8 @@ import (
 	"github.com/qianwj/typed/utils/json"
 )
 
-// Entry is a single key-value pair as yielded by HashMap.Entries and
-// HashMap.Stream. Key matches the comparable constraint of the parent
-// HashMap, Value is unconstrained.
+// Entry is a key-value pair yielded by HashMap and TreeMap. Key is
+// comparable and Value is unconstrained.
 type Entry[K comparable, V any] struct {
 	Key   K
 	Value V
@@ -253,7 +252,7 @@ func (m *HashMap[K, V]) Concat(other *HashMap[K, V]) *HashMap[K, V] {
 
 // ---------- Stream and collect ----------
 
-// Stream returns a lazy stream.Stream[Entry[K, V]] that is a snapshot of
+// Stream returns a lazy stream.MapStream[K, V] that is a snapshot of
 // the HashMap at the time Stream() is called. Mutations to the HashMap
 // after Stream() do not affect the Stream.
 //
@@ -263,13 +262,20 @@ func (m *HashMap[K, V]) Concat(other *HashMap[K, V]) *HashMap[K, V] {
 // once at the HashMap -> Stream boundary, after which the Stream itself
 // remains lazy.
 //
-// The Stream is single-use.
-func (m *HashMap[K, V]) Stream() stream.Stream[Entry[K, V]] {
+// The Stream is single-use, with unspecified iteration order. Its Collect
+// method returns a plain map[K]V.
+func (m *HashMap[K, V]) Stream() stream.MapStream[K, V] {
 	buf := make([]Entry[K, V], 0, len(m.items))
 	for k, v := range m.items {
 		buf = append(buf, Entry[K, V]{Key: k, Value: v})
 	}
-	return stream.FromSlice(buf)
+	return stream.FromPairs(func(yield func(K, V) bool) {
+		for _, e := range buf {
+			if !yield(e.Key, e.Value) {
+				return
+			}
+		}
+	})
 }
 
 // Collect returns a freshly allocated map[K]V containing the same

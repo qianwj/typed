@@ -521,17 +521,34 @@ func TestStreamIsSnapshot(t *testing.T) {
 
 	m.Put("c", 3)
 	m.Remove("a")
+	m.Put("b", 20)
 
 	got := s.Collect()
-	if len(got) != 2 {
-		t.Fatalf("Stream snapshot: got %d entries, want 2", len(got))
+	if !equalStringInt(got, map[string]int{"a": 1, "b": 2}) {
+		t.Fatalf("Stream snapshot: got %v, want a:1 and b:2", got)
 	}
-	keys := make(map[string]bool)
-	for _, e := range got {
-		keys[e.Key] = true
+	got["b"] = 99
+	if m.GetOrDefault("b", 0) != 20 {
+		t.Fatal("Stream Collect exposes HashMap storage")
 	}
-	if !keys["a"] || !keys["b"] || keys["c"] {
-		t.Fatalf("Stream snapshot keys: got %v, want only a and b", keys)
+}
+
+func TestHashMapStreamTransforms(t *testing.T) {
+	m := HashMapOf(
+		Entry[string, string]{Key: "a", Value: "one"},
+		Entry[string, string]{Key: "b", Value: "two"},
+		Entry[string, string]{Key: "c", Value: "three"},
+	)
+	visited := 0
+	s := m.Stream().Filter(func(k, v string) bool {
+		visited++
+		return k != "a" && len(v) > 3
+	}).MapValues(func(k, v string) int { return len(k) + len(v) })
+	if visited != 0 {
+		t.Fatal("stream evaluated before collection")
+	}
+	if got := s.Collect(); !equalStringInt(got, map[string]int{"c": 6}) || visited != 3 {
+		t.Fatalf("stream transforms: got %v, visited %d entries", got, visited)
 	}
 }
 
@@ -539,8 +556,8 @@ func TestStreamIsSnapshot(t *testing.T) {
 // an empty HashMap yields no entries.
 func TestStreamOnEmptyProducesEmpty(t *testing.T) {
 	m := NewHashMap[string, int]()
-	if got := m.Stream().Collect(); len(got) != 0 {
-		t.Fatalf("Stream on empty: got %d entries, want 0", len(got))
+	if got := m.Stream().Collect(); got == nil || len(got) != 0 {
+		t.Fatalf("Stream on empty: got %#v, want non-nil empty map", got)
 	}
 }
 

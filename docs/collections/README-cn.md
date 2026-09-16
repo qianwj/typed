@@ -318,6 +318,7 @@ JSON 解码前必须先用比较器构造 TreeMap。解码保留比较器，成�
 | 函数 | 说明 |
 |---|---|
 | `From[T](seq iter.Seq[T]) Stream[T]` | 直接包装 `iter.Seq[T]`。 |
+| `FromPairs[K, V](seq iter.Seq2[K, V]) MapStream[K, V]` | 直接包装键值迭代器，不消费或复制数据源。 |
 | `FromSlice[T](s []T) Stream[T]` | 在 `s` 上做惰性遍历（`s` 会被持有但不会复制）。 |
 | `Of[T](values ...T) Stream[T]` | 变参 → `Stream[T]`，`FromSlice` 的语法糖。 |
 | `Empty[T]() Stream[T]` | 立刻结束的流。 |
