@@ -80,9 +80,9 @@ q := concurrency.NewBoundedBlockingQueue[Job](1024)
 | `Push(data T)` | 入队。**队列满时阻塞**,直到腾出空位。 |
 | `Poll() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
 | `PushWithContext(ctx, data T) error` | 带 context 的 `Push`。阻塞到队列有空位或 `ctx` 取消;取消时返回 `ctx.Err()`,元素不入队。 |
-| `PollWithContext(ctx) (T, error)` | 带 context 的 `Poll`。阻塞到有元素可取或 `ctx` 取消;取消时返回 `(零值, ctx.Err())`。 |
+| `PollWithContext(ctx) adt.Result[T]` | 带 context 的 `Poll`。阻塞到有元素可取或 `ctx` 取消;成功时返回 `adt.Success(value)`,取消时返回 `adt.Failure[T](ctx.Err())`。 |
 
-阻塞直接走底层的 `chan T`:`Push` 就是 `ch <- data`,`Poll` 就是 `<-ch`。`PushWithContext` / `PollWithContext` 在同一个 `select` 上多一个 `case <-ctx.Done()`,从而零成本支持取消:ctx 取消时 `select` 走 ctx 那一支,返回 `ctx.Err()`;`PushWithContext` 取消时元素不入队。
+阻塞直接走底层的 `chan T`:`Push` 就是 `ch <- data`,`Poll` 就是 `<-ch`。`PushWithContext` / `PollWithContext` 在同一个 `select` 上多一个 `case <-ctx.Done()`,从而零成本支持取消:当 `select` 选中 `ctx.Done()` 分支时,`PushWithContext` 返回 `ctx.Err()` 且元素不入队;`PollWithContext` 返回 `adt.Failure[T](ctx.Err())` 且不取出元素。
 
 ### 非阻塞 API
 
@@ -220,7 +220,7 @@ q := concurrency.NewUnboundedBlockingQueue[*Job]()
 | `Push(data T)` | 入队。**永不阻塞**——队列无界。 |
 | `Poll() T` | 出队并返回。**队列空时阻塞**,直到有新元素。 |
 | `PushWithContext(ctx, data T) error` | 带 context 的 `Push`。ctx 已被取消时直接返回 `ctx.Err()` 不入队;否则行为同 `Push`。 |
-| `PollWithContext(ctx) (T, error)` | 带 context 的 `Poll`。阻塞到有元素或 ctx 取消;取消时返回 `(零值, ctx.Err())`。 |
+| `PollWithContext(ctx) adt.Result[T]` | 带 context 的 `Poll`。阻塞到有元素或 ctx 取消;成功时返回 `adt.Success(value)`,取消时返回 `adt.Failure[T](ctx.Err())`。 |
 
 `PollWithContext` 会起一个一次性的 watcher goroutine,ctx 取消时唤醒所有 `cond.Wait` 的 goroutine。这个 goroutine 在 `PollWithContext` 返回时立刻退出,所以代价是每次调用多一个 goroutine——关停场景下没问题,紧循环里就别用。
 

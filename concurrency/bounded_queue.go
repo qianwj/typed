@@ -138,15 +138,14 @@ func (q *BoundedBlockingQueue[T]) Poll() T {
 
 // PollWithContext is the context-aware variant of [BoundedBlockingQueue.Poll].
 // It blocks until an element is available, or until ctx is canceled —
-// whichever happens first. It returns (value, nil) on success and
-// (zero, ctx.Err()) on cancellation.
-func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) (T, error) {
+// whichever happens first. It returns adt.Success(value) on success and
+// adt.Failure[T](ctx.Err()) on cancellation.
+func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) adt.Result[T] {
 	select {
 	case v := <-q.ch:
-		return v, nil
+		return adt.Success(v)
 	case <-ctx.Done():
-		var zero T
-		return zero, ctx.Err()
+		return adt.Failure[T](ctx.Err())
 	}
 }
 

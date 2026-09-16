@@ -379,11 +379,11 @@ func TestPollWithContext_FastPathSucceeds(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 	q.Push(9)
-	v, err := q.PollWithContext(context.Background())
-	if err != nil {
-		t.Fatalf("PollWithContext on non-empty queue returned err=%v, want nil", err)
+	result := q.PollWithContext(context.Background())
+	if result.IsFailure() {
+		t.Fatalf("PollWithContext on non-empty queue failed: %v", result.Error())
 	}
-	if v != 9 {
+	if v := result.Value(); v != 9 {
 		t.Fatalf("PollWithContext = %d, want 9", v)
 	}
 }
@@ -431,33 +431,30 @@ func TestPollWithContext_BlocksUntilPush(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
-	takeDone := make(chan int, 1)
-	takeErr := make(chan error, 1)
+	takeDone := make(chan adt.Result[int], 1)
 	go func() {
-		v, err := q.PollWithContext(context.Background())
-		takeDone <- v
-		takeErr <- err
+		takeDone <- q.PollWithContext(context.Background())
 	}()
 
 	time.Sleep(20 * time.Millisecond)
 	select {
-	case v := <-takeDone:
-		t.Fatalf("PollWithContext returned (%d, ...) before any Push", v)
+	case result := <-takeDone:
+		t.Fatalf("PollWithContext returned %v before any Push", result)
 	default:
 	}
 
 	q.Push(42)
 
 	select {
-	case v := <-takeDone:
-		if v != 42 {
+	case result := <-takeDone:
+		if result.IsFailure() {
+			t.Fatalf("PollWithContext failed: %v", result.Error())
+		}
+		if v := result.Value(); v != 42 {
 			t.Fatalf("PollWithContext value = %d, want 42", v)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("PollWithContext did not return after Push")
-	}
-	if err := <-takeErr; err != nil {
-		t.Fatalf("PollWithContext err = %v, want nil", err)
 	}
 }
 
@@ -497,32 +494,26 @@ func TestPushWithContext_CanceledDoesNotEnqueue(t *testing.T) {
 	}
 }
 
-func TestPollWithContext_CanceledReturnsZero(t *testing.T) {
+func TestPollWithContext_CanceledReturnsFailure(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	takeDone := make(chan int, 1)
-	takeErr := make(chan error, 1)
+	takeDone := make(chan adt.Result[int], 1)
 	go func() {
-		v, err := q.PollWithContext(ctx)
-		takeDone <- v
-		takeErr <- err
+		takeDone <- q.PollWithContext(ctx)
 	}()
 
 	time.Sleep(20 * time.Millisecond)
 	cancel()
 
 	select {
-	case v := <-takeDone:
-		if v != 0 {
-			t.Fatalf("PollWithContext value after cancel = %d, want zero", v)
+	case result := <-takeDone:
+		if !result.IsFailure() || !errors.Is(result.Error(), context.Canceled) {
+			t.Fatalf("PollWithContext = %v, want failure with context.Canceled", result)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("PollWithContext did not return after cancel")
-	}
-	if err := <-takeErr; !errors.Is(err, context.Canceled) {
-		t.Fatalf("PollWithContext err = %v, want context.Canceled", err)
 	}
 	// Queue must still be empty — cancellation must not have dequeued anything.
 	if got := q.Size(); got != 0 {
@@ -562,11 +553,11 @@ func TestPollWithContext_Deadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := q.PollWithContext(ctx)
+	result := q.PollWithContext(ctx)
 	elapsed := time.Since(start)
 
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("PollWithContext err = %v, want context.DeadlineExceeded", err)
+	if !result.IsFailure() || !errors.Is(result.Error(), context.DeadlineExceeded) {
+		t.Fatalf("PollWithContext = %v, want failure with context.DeadlineExceeded", result)
 	}
 	if elapsed < 20*time.Millisecond {
 		t.Fatalf("PollWithContext returned in %v, want >= ~30ms (deadline)", elapsed)
@@ -607,14 +598,13 @@ func TestPushWithContext_PollWithContextRace(t *testing.T) {
 
 	// One consumer running PollWithContext in a tight loop. Each call uses a fresh
 	// ctx with a 5ms timeout; a few will hit the timeout, and those PollWithContext
-	// calls must return (zero, DeadlineExceeded) without dequeuing.
+	// calls must return Failure(context.DeadlineExceeded) without dequeuing.
 	takeDone := make(chan struct{})
 	go func() {
 		defer close(takeDone)
 		for consumed.Load() < int64(expectedTotal) {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
-			if v, err := q.PollWithContext(ctx); err == nil {
-				_ = v
+			if result := q.PollWithContext(ctx); result.IsSuccess() {
 				consumed.Add(1)
 			}
 			cancel()

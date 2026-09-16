@@ -129,10 +129,10 @@ func TestUnboundedPollWithContextDeadline(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
 	defer cancel()
 	start := time.Now()
-	_, err := q.PollWithContext(ctx)
+	result := q.PollWithContext(ctx)
 	elapsed := time.Since(start)
-	if !errors.Is(err, context.DeadlineExceeded) {
-		t.Fatalf("PollWithContext err = %v, want context.DeadlineExceeded", err)
+	if !result.IsFailure() || !errors.Is(result.Error(), context.DeadlineExceeded) {
+		t.Fatalf("PollWithContext = %v, want failure with context.DeadlineExceeded", result)
 	}
 	if elapsed < 20*time.Millisecond {
 		t.Fatalf("PollWithContext returned in %v, want >= ~30ms", elapsed)
@@ -148,11 +148,11 @@ func TestUnboundedPollWithContextDeadlineReturnsAfterItem(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 		q.Push(1)
 	}()
-	v, err := q.PollWithContext(ctx)
-	if err != nil {
-		t.Fatalf("PollWithContext err = %v, want nil", err)
+	result := q.PollWithContext(ctx)
+	if result.IsFailure() {
+		t.Fatalf("PollWithContext failed: %v", result.Error())
 	}
-	if v != 1 {
+	if v := result.Value(); v != 1 {
 		t.Fatalf("PollWithContext value = %d, want 1", v)
 	}
 }

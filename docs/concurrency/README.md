@@ -83,9 +83,9 @@ The zero value is not usable; always go through the constructor.
 | `Push(data T)` | Enqueue. **Blocks** while the queue is full; wakes as soon as a slot frees up. |
 | `Poll() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
 | `PushWithContext(ctx, data T) error` | Context-aware `Push`. Blocks until the queue has space or `ctx` is canceled; returns `ctx.Err()` and does not enqueue on cancellation. |
-| `PollWithContext(ctx) (T, error)` | Context-aware `Poll`. Blocks until an element is available or `ctx` is canceled; returns `(zero, ctx.Err())` on cancellation. |
+| `PollWithContext(ctx) adt.Result[T]` | Context-aware `Poll`. Blocks until an element is available or `ctx` is canceled; returns `adt.Success(value)` on success and `adt.Failure[T](ctx.Err())` on cancellation. |
 
-Blocking uses the underlying `chan T` directly. `Push` is `ch <- data`, `Poll` is `<-ch`. `PushWithContext` and `PollWithContext` add a `case <-ctx.Done()` to the same `select`, so cancellation composes for free: a context cancel just makes the `select` pick the `ctx.Done()` branch and return `ctx.Err()`, and no element is enqueued in the cancellation case for `PushWithContext`.
+Blocking uses the underlying `chan T` directly. `Push` is `ch <- data`, `Poll` is `<-ch`. `PushWithContext` and `PollWithContext` add a `case <-ctx.Done()` to the same `select`, so cancellation composes for free: when the `ctx.Done()` branch is selected, `PushWithContext` returns `ctx.Err()` without enqueuing, while `PollWithContext` returns `adt.Failure[T](ctx.Err())` without dequeuing.
 
 ### Non-blocking variants
 
@@ -245,7 +245,7 @@ No capacity argument — the queue grows on demand.
 | `Push(data T)` | Enqueue. **Never blocks** — the queue is unbounded. |
 | `Poll() T` | Dequeue and return. **Blocks** while the queue is empty; wakes as soon as an element arrives. |
 | `PushWithContext(ctx, data T) error` | Context-aware `Push`. Returns `ctx.Err()` without enqueuing when ctx is already canceled; otherwise behaves like `Push`. |
-| `PollWithContext(ctx) (T, error)` | Context-aware `Poll`. Blocks until an element is available or ctx is canceled; returns `(zero, ctx.Err())` on cancellation. |
+| `PollWithContext(ctx) adt.Result[T]` | Context-aware `Poll`. Blocks until an element is available or ctx is canceled; returns `adt.Success(value)` on success and `adt.Failure[T](ctx.Err())` on cancellation. |
 
 `PollWithContext` spawns a one-shot watcher goroutine that wakes any blocked `cond.Wait` when ctx is canceled. The goroutine exits as soon as `PollWithContext` returns, so the cost is one goroutine per `PollWithContext` call — fine for shutdown signals, not something you want in a tight loop.
 
