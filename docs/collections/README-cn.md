@@ -16,6 +16,7 @@
 ## 目录
 
 - [包导入](#包导入)
+- [`iterable.Iterable[T]`](#iterableiterablet)
 - [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
@@ -30,6 +31,7 @@
 ```go
 import (
     "github.com/qianwj/typed/collections"
+    "github.com/qianwj/typed/collections/iterable"
     "github.com/qianwj/typed/collections/lists"
     "github.com/qianwj/typed/collections/maps"
     "github.com/qianwj/typed/collections/sets"
@@ -38,6 +40,35 @@ import (
 ```
 
 四个子包独立成 `go.mod`，按需引入。
+
+---
+
+## `iterable.Iterable[T]`
+
+`collections/iterable` 包定义共享的遍历接口：
+
+```go
+type Iterable[T any] interface {
+    ForEach(visit func(T))
+}
+```
+
+`ArrayList`、`LinkedList`、`HashSet` 和 `Stream` 通过已有的 `ForEach` 方法自动满足接口。转换构造函数接受这些类型，也接受自定义实现，具体集合之间无需互相依赖。
+
+| 构造函数 | 行为 |
+|---|---|
+| `lists.ArrayListFrom[T](source iterable.Iterable[T])` | 创建新的 `*ArrayList[T]`，保留源遍历顺序和重复值。 |
+| `lists.LinkedListFrom[T](source iterable.Iterable[T])` | 创建新的 `*LinkedList[T]`，保留源遍历顺序和重复值。 |
+| `sets.HashSetFrom[T comparable](source iterable.Iterable[T])` | 创建新的 `*HashSet[T]`，自动去重。 |
+
+每个构造函数只遍历源一次，结果具有独立存储，元素本身为浅拷贝。set 的遍历顺序未指定，因此转为 list 后也不保证顺序。传入 Stream 会消费该流。
+
+```go
+list := lists.ArrayListOf(3, 1, 3, 2)
+set := sets.HashSetFrom(list)
+array := lists.ArrayListFrom(set)
+linked := lists.LinkedListFrom(array)
+```
 
 ---
 
@@ -254,6 +285,15 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 
 `Filter(p) / Map[R](f) / FlatMap[R](f) / Peek(visit) / Take(n) / Drop(n) / Distinct(eq) / Concat(other) / SortBy(less)` — 全部返回 `Stream[...]`，可继续链式。
 
+`Associate[K, V](f func(T) (K, V)) MapStream[K, V]` 惰性地产生键值对。`MapStream.Filter(func(K, V) bool)` 和 `MapValues[R](func(K, V) R)` 保持键值流类型；`Collect()` 返回原生 `map[K]V`，空流也返回非 nil 的空 map。重复键在中间转换中保留，最终到达 `Collect` 的后值覆盖前值。`Map[R](func(K, V) R)` 显式投影为普通 `Stream[R]`，其 `Collect()` 返回切片。
+
+```go
+var result map[int]string = stream.Of("a", "bb", "ccc", "dd").
+    Associate(func(s string) (int, string) { return len(s), s }).
+    Filter(func(k int, _ string) bool { return k == 2 }).
+    Collect() // map[int]string{2: "dd"}
+```
+
 ### 终结
 
 | 方法 | 返回 |
@@ -265,7 +305,6 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 | `Find(p) option.Option[T]` | 首个匹配元素。 |
 | `Reduce(init T, f func(acc, v T) T) T` | 折叠。 |
 | `ForEach(visit func(T))` | 纯消费。 |
-| `Associate[K, V](f func(T) (K, V)) map[K]V` | 折叠为 `map`，同键后者覆盖前者。 |
 | `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | 极值；空流返回 `option.Empty[T]()`。 |
 | `SortBy(less) Stream[T]` | 终结式：先物化排序再返回新流。 |
 

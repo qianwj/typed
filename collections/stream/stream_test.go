@@ -583,7 +583,7 @@ func TestStreamAssociate(t *testing.T) {
 
 	got := lists.ArrayListOf(users...).
 		Stream().
-		Associate(func(u user) (int, string) { return u.ID, u.Name })
+		Associate(func(u user) (int, string) { return u.ID, u.Name }).Collect()
 
 	want := map[int]string{1: "Alice", 2: "Bob", 3: "Carol"}
 	if len(got) != len(want) {
@@ -606,7 +606,7 @@ func TestStreamAssociate(t *testing.T) {
 		{"a", 99}, // overwrites the first "a"
 	}
 	merged := stream.FromSlice(pairs).
-		Associate(func(p pair) (string, int) { return p.k, p.v })
+		Associate(func(p pair) (string, int) { return p.k, p.v }).Collect()
 	if merged["a"] != 99 {
 		t.Fatalf("collision: got[\"a\"] = %d, want 99", merged["a"])
 	}
@@ -615,7 +615,7 @@ func TestStreamAssociate(t *testing.T) {
 	}
 
 	// Empty stream -> empty map (not nil).
-	empty := lists.NewArrayList[int]().Stream().Associate(func(n int) (int, int) { return n, n })
+	empty := lists.NewArrayList[int]().Stream().Associate(func(n int) (int, int) { return n, n }).Collect()
 	if empty == nil {
 		t.Fatal("Associate on empty stream should return non-nil empty map")
 	}

@@ -18,6 +18,7 @@ Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type on
 ## Contents
 
 - [Import](#import)
+- [`iterable.Iterable[T]`](#iterableiterablet)
 - [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
@@ -32,6 +33,7 @@ Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type on
 ```go
 import (
     "github.com/qianwj/typed/collections"
+    "github.com/qianwj/typed/collections/iterable"
     "github.com/qianwj/typed/collections/lists"
     "github.com/qianwj/typed/collections/maps"
     "github.com/qianwj/typed/collections/sets"
@@ -40,6 +42,35 @@ import (
 ```
 
 The four sub-packages are independent `go.mod` modules; import what you use.
+
+---
+
+## `iterable.Iterable[T]`
+
+The `collections/iterable` package defines the shared traversal contract:
+
+```go
+type Iterable[T any] interface {
+    ForEach(visit func(T))
+}
+```
+
+`ArrayList`, `LinkedList`, `HashSet`, and `Stream` already satisfy it through their existing `ForEach` methods. The interface lets constructors consume any of these types, or your own implementation, without dependencies between concrete collection types.
+
+| Constructor | Behavior |
+|---|---|
+| `lists.ArrayListFrom[T](source iterable.Iterable[T])` | Creates a new `*ArrayList[T]`, preserving source order and duplicates. |
+| `lists.LinkedListFrom[T](source iterable.Iterable[T])` | Creates a new `*LinkedList[T]`, preserving source order and duplicates. |
+| `sets.HashSetFrom[T comparable](source iterable.Iterable[T])` | Creates a new `*HashSet[T]`, eliminating duplicates. |
+
+Each constructor consumes the source once into independent storage; elements are shallow-copied. Converting a set to a list does not establish an order because set iteration is unspecified. Passing a Stream consumes that stream.
+
+```go
+list := lists.ArrayListOf(3, 1, 3, 2)
+set := sets.HashSetFrom(list)
+array := lists.ArrayListFrom(set)
+linked := lists.LinkedListFrom(array)
+```
 
 ---
 
@@ -256,6 +287,15 @@ A lazy synchronous stream. `Stream[T]` is a thin wrapper over `iter.Seq[T]`; eve
 
 `Filter(p) / Map[R](f) / FlatMap[R](f) / Peek(visit) / Take(n) / Drop(n) / Distinct(eq) / Concat(other) / SortBy(less)` — all return `Stream[...]` and remain chainable.
 
+`Associate[K, V](f func(T) (K, V)) MapStream[K, V]` lazily produces key-value pairs. `MapStream.Filter(func(K, V) bool)` and `MapValues[R](func(K, V) R)` preserve the map pipeline; `Collect()` returns a plain `map[K]V` (non-nil even for empty input). Duplicate keys remain through transformations; the last value reaching `Collect` wins. `Map[R](func(K, V) R)` explicitly projects to an ordinary `Stream[R]`, whose `Collect()` returns a slice.
+
+```go
+var result map[int]string = stream.Of("a", "bb", "ccc", "dd").
+    Associate(func(s string) (int, string) { return len(s), s }).
+    Filter(func(k int, _ string) bool { return k == 2 }).
+    Collect() // map[int]string{2: "dd"}
+```
+
 ### Terminals
 
 | Method | Returns |
@@ -267,7 +307,6 @@ A lazy synchronous stream. `Stream[T]` is a thin wrapper over `iter.Seq[T]`; eve
 | `Find(p) option.Option[T]` | First matching element. |
 | `Reduce(init T, f func(acc, v T) T) T` | Fold. |
 | `ForEach(visit func(T))` | Pure consumption. |
-| `Associate[K, V](f func(T) (K, V)) map[K]V` | Fold into a `map`; later values overwrite earlier ones on key collision. |
 | `MinBy(less) option.Option[T]` / `MaxBy(less) option.Option[T]` | Extreme; empty stream returns `option.Empty[T]()`. |
 | `SortBy(less) Stream[T]` | Terminal: materialise and sort, then return a new stream. |
 
