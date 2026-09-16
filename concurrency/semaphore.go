@@ -42,7 +42,7 @@ func NewSemaphore(n int) *Semaphore {
 	// Pre-fill the buffer so the slot count equals n. After this
 	// loop, every Receive decrements the available count and every
 	// Send increments it back.
-	for i := 0; i < n; i++ {
+	for range n {
 		ch <- struct{}{}
 	}
 	return &Semaphore{ch: ch}

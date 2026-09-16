@@ -24,7 +24,7 @@ func TestGroup_NoTasksWaitReturnsNil(t *testing.T) {
 func TestGroup_AllSucceed(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background())
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		g.Go(func(ctx context.Context) error { return nil })
 	}
 	if err := g.Wait(); err != nil {
@@ -129,7 +129,7 @@ func TestGroup_Strict_ParentCtxCancelReturnsCtxErr(t *testing.T) {
 func TestGroup_BestEffort_AllSucceedReturnsNil(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background(), WithMode(BestEffort))
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		g.Go(func(ctx context.Context) error { return nil })
 	}
 	if err := g.Wait(); err != nil {
@@ -248,7 +248,7 @@ func TestGroup_BestEffort_ParentCtxCancelCollectsCtxErrs(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	g := NewGroup(ctx, WithMode(BestEffort))
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		g.Go(func(ctx context.Context) error {
 			<-ctx.Done()
 			return ctx.Err()
@@ -295,7 +295,7 @@ func TestGroup_WithLimit_BlocksExcessGo(t *testing.T) {
 		return func() { running.Add(-1) }
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		g.Go(func(ctx context.Context) error {
 			defer observe()()
 			time.Sleep(20 * time.Millisecond)
@@ -342,7 +342,7 @@ func TestGroup_WaitWithContext_NoTasksReturnsNil(t *testing.T) {
 func TestGroup_WaitWithContext_AllSucceedReturnsNil(t *testing.T) {
 	t.Parallel()
 	g := NewGroup(context.Background())
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		g.Go(func(ctx context.Context) error { return nil })
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -561,7 +561,7 @@ func TestGroup_WaitWithContext_Stress(t *testing.T) {
 	const N = 100
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for range N {
 		go func() {
 			defer wg.Done()
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -652,7 +652,7 @@ func TestGroup_Stress_ConcurrentGoAndWait(t *testing.T) {
 
 	// Producer: spawn N tasks as fast as possible.
 	go func() {
-		for i := 0; i < N; i++ {
+		for range N {
 			g.Go(func(ctx context.Context) error { return nil })
 		}
 		close(done)
@@ -674,7 +674,7 @@ func TestGroup_Stress_StrictWithManyFailures(t *testing.T) {
 	g := NewGroup(context.Background())
 
 	const N = 100
-	for i := 0; i < N; i++ {
+	for range N {
 		g.Go(func(ctx context.Context) error { return errSentinel })
 	}
 
@@ -765,10 +765,10 @@ func TestGroup_ConcurrentGoCallers(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(callers)
-	for c := 0; c < callers; c++ {
+	for range callers {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < perCaller; i++ {
+			for range perCaller {
 				g.Go(func(ctx context.Context) error { return nil })
 			}
 		}()

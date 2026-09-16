@@ -249,7 +249,7 @@ func TestSemaphore_AvailableUnderConcurrentReads(t *testing.T) {
 	const N = 100
 	var wg sync.WaitGroup
 	wg.Add(N)
-	for i := 0; i < N; i++ {
+	for range N {
 		go func() {
 			defer wg.Done()
 			_ = s.Available()
@@ -269,7 +269,7 @@ func TestSemaphore_ConcurrentAcquireRelease(t *testing.T) {
 		currentRunning atomic.Int32
 	)
 
-	for i := 0; i < N; i++ {
+	for range N {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -327,7 +327,7 @@ func TestSemaphore_AcquireWithContext_ConcurrentUnblocksOnRelease(t *testing.T) 
 	// Release N-2 more slots, one at a time with a small gap so the
 	// runtime can wake one goroutine per send. Each Release is paired
 	// with exactly one wake-up; no goroutine should miss its turn.
-	for i := 0; i < N-2; i++ {
+	for range N - 2 {
 		s.Release()
 		time.Sleep(2 * time.Millisecond)
 	}

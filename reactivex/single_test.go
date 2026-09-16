@@ -149,7 +149,7 @@ func TestSingle_MultipleSubscribers_ShareResult(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(3)
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		go func() {
 			defer wg.Done()
 			sub := s.Subscribe(func(v string) {}, func(error) {})

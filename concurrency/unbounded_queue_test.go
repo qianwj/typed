@@ -298,11 +298,11 @@ func TestUnboundedBurstWakesAllWaiters(t *testing.T) {
 	var received atomic.Int64
 	var wg sync.WaitGroup
 	wg.Add(waiters)
-	for w := 0; w < waiters; w++ {
+	for range waiters {
 		go func() {
 			defer wg.Done()
 			// Each taker takes one item. Loop until we get our share.
-			for i := 0; i < bursts/waiters; i++ {
+			for range bursts / waiters {
 				q.Poll()
 				received.Add(1)
 			}
