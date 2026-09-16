@@ -13,7 +13,7 @@ import (
 func TestPriorityQueue_NewIsEmpty(t *testing.T) {
 	t.Parallel()
 	q := NewPriorityQueue(0, cmp.Less[int])
-	if got := q.Len(); got != 0 {
+	if got := q.Size(); got != 0 {
 		t.Fatalf("Len on fresh queue = %d, want 0", got)
 	}
 	if opt := q.Peek(); !opt.IsEmpty() {
@@ -103,7 +103,7 @@ func TestPriorityQueue_TiesPreservedAsMultiset(t *testing.T) {
 	q.Push("third")
 
 	seen := make(map[string]bool, 3)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		seen[q.Pop().Get()] = true
 	}
 	for _, want := range []string{"first", "second", "third"} {
@@ -126,7 +126,7 @@ func TestPriorityQueue_PeekDoesNotMutate(t *testing.T) {
 	if got := q.Peek().Get(); got != 42 {
 		t.Errorf("first Peek = %d, want 42", got)
 	}
-	if got := q.Len(); got != 1 {
+	if got := q.Size(); got != 1 {
 		t.Errorf("Len after Peek = %d, want 1 (Peek must not mutate)", got)
 	}
 	if got := q.Peek().Get(); got != 42 {
@@ -142,13 +142,13 @@ func TestPriorityQueue_LenShrinksAfterPop(t *testing.T) {
 	for range 10 {
 		q.Push(0)
 	}
-	if got := q.Len(); got != 10 {
+	if got := q.Size(); got != 10 {
 		t.Fatalf("Len after 10 Pushes = %d, want 10", got)
 	}
 	for range 10 {
 		q.Pop()
 	}
-	if got := q.Len(); got != 0 {
+	if got := q.Size(); got != 0 {
 		t.Errorf("Len after 10 Pops = %d, want 0", got)
 	}
 }
@@ -167,7 +167,7 @@ func TestPriorityQueue_DrainAndRefillPreservesHeapInvariant(t *testing.T) {
 		q.Push(i)
 	}
 	first := make([]int, 0, 100)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		first = append(first, q.Pop().Get())
 	}
 	if !monotonicNonDecreasing(first) {
@@ -178,7 +178,7 @@ func TestPriorityQueue_DrainAndRefillPreservesHeapInvariant(t *testing.T) {
 		q.Push(99 - i)
 	}
 	second := make([]int, 0, 100)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		second = append(second, q.Pop().Get())
 	}
 	if !monotonicNonDecreasing(second) {
@@ -204,7 +204,7 @@ func TestPriorityQueue_LargeRandomSequenceIsMonotonicallyNonDecreasing(t *testin
 	insertionSort(want)
 
 	got := make([]int, 0, N)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		got = append(got, q.Pop().Get())
 	}
 
@@ -272,7 +272,7 @@ func TestPriorityQueue_PopOnEmptyRepeatedlyReturnsEmpty(t *testing.T) {
 			t.Fatalf("Pop on empty returned present: %v", opt.Get())
 		}
 	}
-	if got := q.Len(); got != 0 {
+	if got := q.Size(); got != 0 {
 		t.Errorf("Len after repeated empty Pops = %d, want 0", got)
 	}
 }
@@ -343,7 +343,7 @@ func TestPriorityQueue_UnboundedPushAlwaysReturnsTrue(t *testing.T) {
 			t.Errorf("Push(%d) returned false on unbounded queue", i)
 		}
 	}
-	if got := q.Len(); got != 1000 {
+	if got := q.Size(); got != 1000 {
 		t.Errorf("Len after 1000 Pushes = %d, want 1000", got)
 	}
 }
@@ -359,7 +359,7 @@ func TestPriorityQueue_BoundedPushBelowCapacityAcceptsAll(t *testing.T) {
 			t.Errorf("Push(%d) returned false below capacity", i)
 		}
 	}
-	if got := q.Len(); got != 5 {
+	if got := q.Size(); got != 5 {
 		t.Errorf("Len after 5 Pushes = %d, want 5", got)
 	}
 }
@@ -392,13 +392,13 @@ func TestPriorityQueue_BoundedPushAcceptsHigherPriorityReplacesBoundary(t *testi
 	if got := q.Peek().Get(); got != 0 {
 		t.Errorf("Peek after replacement = %d, want 0 (0 should be at root)", got)
 	}
-	if got := q.Len(); got != 5 {
+	if got := q.Size(); got != 5 {
 		t.Errorf("Len after replacement = %d, want 5 (capacity unchanged)", got)
 	}
 
 	// Drain and verify the queue holds {0, 1, 2, 3, 4}.
 	drained := make([]int, 0, 5)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		drained = append(drained, q.Pop().Get())
 	}
 	wantDrained := []int{0, 1, 2, 3, 4}
@@ -422,7 +422,7 @@ func TestPriorityQueue_BoundedPushDropsLowerPriorityThanBoundary(t *testing.T) {
 	if q.Push(10) {
 		t.Error("Push(10) returned true; want false (10 not < boundary=5)")
 	}
-	if got := q.Len(); got != 5 {
+	if got := q.Size(); got != 5 {
 		t.Errorf("Len after drop = %d, want 5 (capacity unchanged)", got)
 	}
 	if got := q.Peek().Get(); got != 1 {
@@ -452,7 +452,7 @@ func TestPriorityQueue_BoundedPushEqualToBoundaryDrops(t *testing.T) {
 	if q.Push(7) {
 		t.Error("Push(7) returned true; want false (tied with boundary)")
 	}
-	if got := q.Len(); got != 3 {
+	if got := q.Size(); got != 3 {
 		t.Errorf("Len after tied push = %d, want 3", got)
 	}
 }
@@ -467,11 +467,11 @@ func TestPriorityQueue_BoundedHoldsTopK(t *testing.T) {
 	for i := range 100 {
 		q.Push(i)
 	}
-	if got := q.Len(); got != 10 {
+	if got := q.Size(); got != 10 {
 		t.Fatalf("Len after 100 pushes into top-10 = %d, want 10", got)
 	}
 	drained := make([]int, 0, 10)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		drained = append(drained, q.Pop().Get())
 	}
 	want := []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}
@@ -489,11 +489,11 @@ func TestPriorityQueue_BoundedReverseOrder(t *testing.T) {
 	for i := 99; i >= 0; i-- {
 		q.Push(i)
 	}
-	if got := q.Len(); got != 5 {
+	if got := q.Size(); got != 5 {
 		t.Fatalf("Len = %d, want 5", got)
 	}
 	drained := make([]int, 0, 5)
-	for q.Len() > 0 {
+	for q.Size() > 0 {
 		drained = append(drained, q.Pop().Get())
 	}
 	want := []int{0, 1, 2, 3, 4}

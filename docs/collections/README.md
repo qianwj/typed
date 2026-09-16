@@ -120,7 +120,7 @@ pq.Push(42)
 pq.Push(7)
 pq.Push(99)
 
-for pq.Len() > 0 {
+for pq.Size() > 0 {
     fmt.Println(pq.Pop().Get()) // 7, 42, 99
 }
 
@@ -134,7 +134,7 @@ top100 := queues.NewPriorityQueue(100, cmp.Less[int])
 | `Push(data T) bool` | Insert `data`. Returns `true` if the queue accepted it, `false` if the bounded queue dropped it. O(log n) unbounded; O(K + log K) bounded; O(log K) when below capacity. |
 | `Pop() adt.Option[T]` | Remove and return the highest-priority element, or `Empty[T]()` if empty. O(log n). |
 | `Peek() adt.Option[T]` | Return the highest-priority element without removing it, or `Empty[T]()` if empty. O(1). |
-| `Len() int` | Current size. |
+| `Size() int` | Current size. |
 | `Capacity() int` | The upper bound passed to the constructor; `0` if unbounded. |
 
 **Capacity / top-K.** With `capacity > 0`, the queue holds at most that many elements following the standard top-K rule: pushes that would grow the queue past `capacity` are accepted only when the new element is strictly higher priority than the current boundary (the K-th highest-priority element in the heap, i.e. the eviction candidate). When accepted, the boundary slot is overwritten with the new element and the heap is sifted to maintain the min-heap invariant. Otherwise the new element is dropped and `Push` returns `false`. Common uses: bounded caches ("track the 100 most relevant events"), bounded schedulers ("only the K most urgent jobs matter"), and streaming top-N queries.

@@ -228,8 +228,13 @@ func (q *PriorityQueue[T]) Peek() adt.Option[T] {
 	return adt.Of(q.heap[0])
 }
 
-// Len returns the current number of elements in the queue.
-func (q *PriorityQueue[T]) Len() int {
+// Size returns the current number of elements in the queue.
+// Named to match the [collections.Stack] / [collections.Queue] /
+// [collections.Deque] / [collections.BoundedBlockingQueue]
+// convention; the underlying stdlib [container/heap] uses Len,
+// which the toolkit deliberately deviates from for naming
+// consistency.
+func (q *PriorityQueue[T]) Size() int {
 	return len(q.heap)
 }
 
