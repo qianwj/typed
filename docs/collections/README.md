@@ -5,6 +5,7 @@
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
 - `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Option[T]`.
+- `queues.PriorityQueue[T]` — min-heap-backed priority queue with `Push` / `PushWithPriority` / `Pop` / `Peek` / `Len`.
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — lists with immutable-style transforms (`Filter` / `Map` / `Take` / `Drop` / `Concat` / `Distinct` / `SortBy`).
 - `maps.HashMap[K, V]` — hash table with `Keys` / `Values` / `Entries` / `Filter*` / `MapValues` / `Concat`.
 - `sets.HashSet[T]` — hash set with set algebra (`Union` / `Intersect` / `Difference` / `SymmetricDifference`) and same-kind transforms.
@@ -20,6 +21,7 @@ Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type on
 - [Import](#import)
 - [`iterable.Iterable[T]`](#iterableiterablet)
 - [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
+- [`queues.PriorityQueue[T]`](#queuespriorityqueuet)
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
 - [`maps.HashMap[K, V]`](#mapshashmapk-v)
@@ -36,6 +38,7 @@ import (
     "github.com/qianwj/typed/collections/iterable"
     "github.com/qianwj/typed/collections/lists"
     "github.com/qianwj/typed/collections/maps"
+    "github.com/qianwj/typed/collections/queues"
     "github.com/qianwj/typed/collections/sets"
     "github.com/qianwj/typed/collections/stream"
 )
@@ -96,6 +99,40 @@ s.Pop()                        // option.Empty[int](), no panic
 | `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Option[T] / PopBack() Option[T] / Front() Option[T] / Back() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 
 `Pop*` / `Peek*` on an empty container return `option.Empty[T]()`: they do not panic, and `Peek` / `Front` / `Back` leave the container unchanged, while `Pop*` mutates per the container rules.
+
+---
+
+## `queues.PriorityQueue[T]`
+
+`NewPriorityQueue[T any]() *PriorityQueue[T]` returns an empty priority queue backed by a min-heap (slice-based, in-place sift). Use it to order work items by priority within a single goroutine.
+
+```go
+import "github.com/qianwj/typed/collections/queues"
+
+pq := queues.NewPriorityQueue[int]()
+pq.PushWithPriority(42, 0)
+pq.PushWithPriority(7,  -1) // highest priority
+pq.PushWithPriority(99, 5)
+
+for pq.Len() > 0 {
+    fmt.Println(pq.Pop().Get()) // 7, 42, 99
+}
+```
+
+| Method | Behaviour |
+| --- | --- |
+| `NewPriorityQueue[T]()` | Construct an empty queue. |
+| `Push(data T)` | Add with priority 0. Equivalent to `PushWithPriority(data, 0)`. |
+| `PushWithPriority(data T, priority int)` | Add with the given priority. Lower priority values are dequeued first. |
+| `Pop() adt.Option[T]` | Remove and return the highest-priority element, or `Empty[T]()` if the queue is empty. O(log n). |
+| `Peek() adt.Option[T]` | Return the highest-priority element without removing it, or `Empty[T]()` if empty. O(1). |
+| `Len() int` | Current size. |
+
+**Tie-breaking.** The heap uses strict less-than comparison; equal-priority elements have no guaranteed relative order. If you need FIFO (or any stable) ordering among ties, encode the tiebreaker in the priority itself — e.g., `priority = scheduledAt.UnixNano()`.
+
+**Concurrency.** `PriorityQueue` is synchronous (no internal locking) and lives in the `collections` package — the same single-goroutine contract as `Queue[T]` and `Stack[T]`. For cross-goroutine use, wrap with a `sync.Mutex` or feed it through a `concurrency.Group`. The roadmap originally sketched `Push` / `Poll` / `TryPoll` (the `BoundedBlockingQueue` verbs), but a synchronous container has no natural blocking `Poll`, so the API mirrors `collections.Queue` instead — `Push` + `Pop` (instead of `TryPoll`).
+
+**Memory model.** Backed by a single `[]priorityItem` that grows via `append` on every push. Freed slots are zeroed in `Pop` so a pointer-typed `T` is not pinned in the backing array after removal, matching `collections.Stack` and `collections.Queue`.
 
 ---
 
