@@ -5,9 +5,10 @@
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
 - `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Option[T]`.
-- `queues.PriorityQueue[T]` — min-heap-backed priority queue with `Push` / `PushWithPriority` / `Pop` / `Peek` / `Len`.
+- `queues.PriorityQueue[T]` — comparator-ordered binary heap with `Push` / `Pop` / `Peek` / `Len`.
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — lists with immutable-style transforms (`Filter` / `Map` / `Take` / `Drop` / `Concat` / `Distinct` / `SortBy`).
 - `maps.HashMap[K, V]` — hash table with `Keys` / `Values` / `Entries` / `Filter*` / `MapValues` / `Concat`.
+- `maps.TreeMap[K, V]` — AVL-tree map with comparator ordering, neighbor lookups, and range queries.
 - `sets.HashSet[T]` — hash set with set algebra (`Union` / `Intersect` / `Difference` / `SymmetricDifference`) and same-kind transforms.
 - `stream.Stream[T]` — a lazy stream over `iter.Seq[T]`, chainable with `Filter` / `Map` / `FlatMap` / `Take` / `Drop` / `Distinct` / `Concat` / `SortBy` / `Reduce` / `Count` / `Find` and other terminal operations.
 - `collections.Range[T]` — integer half-open interval as a `Stream[T]` factory.
@@ -25,6 +26,7 @@ Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type on
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
 - [`maps.HashMap[K, V]`](#mapshashmapk-v)
+- [`maps.TreeMap[K, V]`](#mapstreemapk-v)
 - [`sets.HashSet[T]`](#setshashsett)
 - [`stream.Stream[T]`](#streamstreamt)
 - [`collections.Range[T]`](#collectionsranget)
@@ -104,15 +106,19 @@ s.Pop()                        // option.Empty[int](), no panic
 
 ## `queues.PriorityQueue[T]`
 
-`NewPriorityQueue[T any]() *PriorityQueue[T]` returns an empty priority queue backed by a min-heap (slice-based, in-place sift). Use it to order work items by priority within a single goroutine.
+`NewPriorityQueue[T any](less func(a, b T) bool) *PriorityQueue[T]` returns an empty priority queue backed by a binary heap. The ordering is supplied by the caller as a comparator function — the same way `sort.Slice` and `container/heap` do it. Use it to order work items within a single goroutine.
 
 ```go
-import "github.com/qianwj/typed/collections/queues"
+import (
+    "cmp"
+    "github.com/qianwj/typed/collections/queues"
+)
 
-pq := queues.NewPriorityQueue[int]()
-pq.PushWithPriority(42, 0)
-pq.PushWithPriority(7,  -1) // highest priority
-pq.PushWithPriority(99, 5)
+// Min-heap of ints: smallest first.
+pq := queues.NewPriorityQueue(cmp.Less[int])
+pq.Push(42)
+pq.Push(7)
+pq.Push(99)
 
 for pq.Len() > 0 {
     fmt.Println(pq.Pop().Get()) // 7, 42, 99
@@ -121,18 +127,32 @@ for pq.Len() > 0 {
 
 | Method | Behaviour |
 | --- | --- |
-| `NewPriorityQueue[T]()` | Construct an empty queue. |
-| `Push(data T)` | Add with priority 0. Equivalent to `PushWithPriority(data, 0)`. |
-| `PushWithPriority(data T, priority int)` | Add with the given priority. Lower priority values are dequeued first. |
-| `Pop() adt.Option[T]` | Remove and return the highest-priority element, or `Empty[T]()` if the queue is empty. O(log n). |
+| `NewPriorityQueue(less)` | Construct an empty queue ordered by `less(a, b)` (true means "a before b"). |
+| `Push(data T)` | Add `data`. O(log n). |
+| `Pop() adt.Option[T]` | Remove and return the highest-priority element, or `Empty[T]()` if empty. O(log n). |
 | `Peek() adt.Option[T]` | Return the highest-priority element without removing it, or `Empty[T]()` if empty. O(1). |
 | `Len() int` | Current size. |
 
-**Tie-breaking.** The heap uses strict less-than comparison; equal-priority elements have no guaranteed relative order. If you need FIFO (or any stable) ordering among ties, encode the tiebreaker in the priority itself — e.g., `priority = scheduledAt.UnixNano()`.
+**Comparator contract.** `less` must be a pure function of its arguments — deterministic, no side effects, and a consistent total (or partial) order over `T`. An inconsistent comparator produces an inconsistent heap. The standard library's `sort.Slice` / `container/heap` docs carry the same warning.
+
+**Why a comparator rather than `PushWithPriority(data, priority)`?** A comparator is strictly more general: integer-priority with "smaller first" is one specific `less` (`cmp.Less[T]` for any ordered `T`); a comparator also lets you encode multi-field keys ("earlier deadline wins, then lower id"), domain-specific orders ("shortest job first"), or stable FIFO among ties (encode a monotonic counter as the tiebreaker) without the type having to know any of those rules. The int-priority shortcut would have baked one particular scheme into the API and forced every other scheme through it.
+
+**Tie-breaking.** With a strict-less comparator, equal elements have no guaranteed relative order — a strict-less binary heap has no natural tiebreaker. To get FIFO (or any other stable order) among ties, encode the tiebreaker in the comparator:
+
+```go
+type keyed struct{ deadline time.Time; seq int }
+less := func(a, b keyed) bool {
+    if !a.deadline.Equal(b.deadline) {
+        return a.deadline.Before(b.deadline)
+    }
+    return a.seq < b.seq // monotonic counter → FIFO within a deadline
+}
+q := queues.NewPriorityQueue(less)
+```
 
 **Concurrency.** `PriorityQueue` is synchronous (no internal locking) and lives in the `collections` package — the same single-goroutine contract as `Queue[T]` and `Stack[T]`. For cross-goroutine use, wrap with a `sync.Mutex` or feed it through a `concurrency.Group`. The roadmap originally sketched `Push` / `Poll` / `TryPoll` (the `BoundedBlockingQueue` verbs), but a synchronous container has no natural blocking `Poll`, so the API mirrors `collections.Queue` instead — `Push` + `Pop` (instead of `TryPoll`).
 
-**Memory model.** Backed by a single `[]priorityItem` that grows via `append` on every push. Freed slots are zeroed in `Pop` so a pointer-typed `T` is not pinned in the backing array after removal, matching `collections.Stack` and `collections.Queue`.
+**Memory model.** Backed by a single `[]T` that grows via `append` on every push. Freed slots are zeroed in `Pop` so a pointer-typed `T` is not pinned in the backing array after removal, matching `collections.Stack` and `collections.Queue`.
 
 ---
 
@@ -257,6 +277,47 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 `Filter(p) / FilterKeys(p) / FilterValues(p) *HashMap[K, V]` — return a new map.
 `MapValues[R](f func(K, V) R) *HashMap[K, R]` — value-type transform.
 `Concat(other) *HashMap[K, V]` — same keys are overwritten by `other`.
+
+---
+
+## `maps.TreeMap[K, V]`
+
+An ordered map backed by an AVL tree. Construct with `NewTreeMap[K comparable, V any](compare func(K, K) int)` or `TreeMapOf(compare, entries...)`. For natural ordering, pass `cmp.Compare[K]` from the standard `cmp` package; reverse its arguments for descending order.
+
+The comparator must define a consistent total ordering. A comparison of zero identifies the same key, even when Go's `==` differs; updating that key preserves its original stored representation. Keys must remain stable under the comparator. A nil comparator panics, and the zero TreeMap is not usable.
+
+```go
+m := maps.NewTreeMap[int, string](cmp.Compare[int])
+m.Put(30, "thirty")
+m.Put(10, "ten")
+m.Put(20, "twenty")
+
+m.Keys().Collect()      // [10, 20, 30]
+m.Floor(25).Get()       // Entry{Key: 20, Value: "twenty"}
+m.Higher(20).Get()      // Entry{Key: 30, Value: "thirty"}
+m.Range(10, 30).Collect() // entries for 10 and 20
+```
+
+| Method | Behavior |
+|---|---|
+| `Put(k, v) V / PutIfAbsent(k, v)` | Insert or replace, following HashMap's return conventions; O(log n). |
+| `Get(k) (V, bool) / GetOrDefault(k, fallback) / Contains(k)` | Comparator-based lookup; O(log n). |
+| `Remove(k) (V, bool)` | Delete and return the old value if present; O(log n). |
+| `Size() / IsEmpty() / Clear()` | Entry count, emptiness, or reset while retaining the comparator. |
+| `First() / Last()` | `adt.Option[Entry[K, V]]` for the least/greatest key; O(log n). |
+| `Floor(k) / Ceiling(k)` | Nearest entry at or before / at or after k; `adt.Option[Entry[K, V]]`, O(log n). |
+| `Lower(k) / Higher(k)` | Strict predecessor / successor; `adt.Option[Entry[K, V]]`, O(log n). |
+| `Range(from, to)` | Ordered snapshot stream over `[from, to)` under the comparator; O(log n + k) for k results. Equal or reversed bounds yield an empty stream. |
+| `ForEach(func(K, V))` | Visits all entries in comparator order; callbacks must not mutate the tree. |
+| `Keys() / Values() / Entries()` | Independent ArrayLists in key order. |
+| `Stream()` | Ordered snapshot `Stream[Entry[K, V]]`. |
+| `Collect() map[K]V` | Independent native map; ordering is lost. |
+| `Filter(p) / MapValues[R](f)` | New TreeMaps retaining the comparator; O(n log n). |
+| `MarshalJSON / UnmarshalJSON` | JSON object, without comparator ordering guarantees. |
+
+Empty neighbor queries return an empty Option. Snapshots and transformations use independent container storage; contained values are shallow copies. TreeMap is not safe for concurrent mutation.
+
+JSON decoding requires a TreeMap already constructed with a comparator. It preserves that comparator, replaces entries on success, clears on `null`, and leaves entries unchanged on invalid input. Comparator-equal but Go-distinct object keys are collapsed with an unspecified winner.
 
 ---
 
