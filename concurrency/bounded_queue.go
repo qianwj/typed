@@ -1,5 +1,3 @@
-// Package concurrency provides synchronization primitives that complement
-// the standard library.
 package concurrency
 
 import (
