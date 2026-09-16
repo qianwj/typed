@@ -94,6 +94,14 @@ type Group struct {
 
 	mu    sync.Mutex
 	state groupState
+
+	// doneOnce / doneCh back [Group.Wait] and [Group.WaitWithContext].
+	// doneCh is closed when every spawned task has returned; it is
+	// lazily allocated on the first call to [Group.doneChan], so the
+	// watcher goroutine is spawned at most once per Group regardless of
+	// how many times Wait / WaitWithContext is invoked.
+	doneOnce sync.Once
+	doneCh   chan struct{}
 }
 
 // groupState is the result-tracking half of Group, protected by mu.
@@ -208,14 +216,102 @@ func (g *Group) handleResult(err error) {
 //     single task error if exactly one task failed; a [*BestEffortError]
 //     wrapping every failed task if more than one task failed.
 //
+// Wait also cancels the Group's derived ctx on return, which releases
+// the cancelCtx from any parent's children map and lets any
+// propagateCancel watcher goroutine exit. The cancellation is
+// idempotent and harmless for [Strict] mode where the first task
+// error has already canceled the ctx.
+//
 // Wait is safe to call multiple times; subsequent calls return the
 // same value once all tasks have finished.
 func (g *Group) Wait() error {
-	g.wg.Wait()
+	defer g.cancel()
+
+	<-g.doneChan()
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	return g.snapshotError()
+}
 
+// WaitWithContext is the ctx-aware variant of [Group.Wait]. It blocks
+// until every spawned task has returned OR ctx is canceled or its
+// deadline expires, whichever comes first.
+//
+// When ctx fires first, WaitWithContext returns ctx.Err() and does NOT
+// kill the in-flight goroutines — Go has no safe kill primitive, and
+// the toolkit's policy is "abandon, don't kill". Tasks that respect
+// the Group's ctx will see it canceled (see "Cleanup" below) and
+// exit promptly; tasks that ignore the ctx will continue running, and
+// callers who want the eventual outcome can call [Group.Wait] after
+// this method returns.
+//
+// When all spawned tasks have finished first, the return value is the
+// same outcome-based error that [Group.Wait] would return — the ctx
+// only governs the wait, not the result. Once all tasks are done,
+// every subsequent call to WaitWithContext (or [Group.Wait]) returns
+// the same outcome-based error, regardless of whether ctx is still
+// alive. This is implemented with a non-blocking "tasks already done"
+// probe before the blocking ctx race, so the deterministic "tasks
+// done" case wins over a concurrently-canceled ctx instead of being
+// resolved by Go's randomly-tied select.
+//
+// A nil ctx is treated as [context.Background].
+//
+// Cleanup: like [Group.Wait], this method always cancels the Group's
+// derived ctx on return (idempotent with any Strict-mode error-path
+// cancel already done), so the cancelCtx is released from any
+// parent's children map and any propagateCancel watcher goroutine
+// started by [context.WithCancel] against a non-cancelCtx parent can
+// exit. This is the standard library's own cleanup pattern (see
+// golang.org/x/sync/errgroup); without it the Group would leak one
+// propagateCancel goroutine per instantiation when the parent is a
+// custom non-cancelCtx Context.
+func (g *Group) WaitWithContext(ctx context.Context) error {
+	defer g.cancel()
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// Fast path: if every task is already done, skip the ctx race so
+	// that an already-canceled ctx doesn't steal the outcome from a
+	// finished Group (Go's select picks randomly when both cases are
+	// ready; the contract here is "done beats canceled").
+	select {
+	case <-g.doneChan():
+		// All tasks finished; fall through to the shared state-read
+		// path used by [Group.Wait].
+	default:
+		select {
+		case <-g.doneChan():
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.snapshotError()
+}
+
+// doneChan returns a channel that is closed when every task spawned by
+// [Group.Go] has returned. It is safe to call concurrently and
+// repeatedly; a single watcher goroutine is spawned per Group on the
+// first call, and that goroutine terminates naturally when the
+// underlying [sync.WaitGroup] reaches zero.
+func (g *Group) doneChan() <-chan struct{} {
+	g.doneOnce.Do(func() {
+		g.doneCh = make(chan struct{})
+		go func() {
+			g.wg.Wait()
+			close(g.doneCh)
+		}()
+	})
+	return g.doneCh
+}
+
+// snapshotError reads the group's result state and returns the error
+// that best describes it. The caller must hold g.mu.
+func (g *Group) snapshotError() error {
 	if g.cfg.mode == Strict {
 		return g.state.firstErr
 	}

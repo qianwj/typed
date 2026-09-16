@@ -311,6 +311,7 @@ A nil parent ctx is treated as `context.Background`.
 | --- | --- |
 | `Go(fn func(ctx context.Context) error)` | Spawn a task. Blocks if the limit is set and reached (waits for a slot to free up). |
 | `Wait() error` | Wait for every spawned task to return. Returns the error that best describes the outcome — see [`Strict` mode](#strict-mode) and [`BestEffort` mode](#besteffort-mode). |
+| `WaitWithContext(ctx context.Context) error` | Ctx-aware `Wait`. Blocks until every spawned task returns OR ctx fires; returns the outcome-based error on completion, `ctx.Err()` if ctx fires first. **Abandons, doesn't kill** — but cancels the Group's derived ctx on return (so tasks respecting the ctx exit promptly; tasks ignoring it keep running; follow up with `Wait()` for the eventual outcome). |
 
 Go is safe to call from multiple goroutines concurrently. Calls to `Go` after the first error still spawn their goroutines; their results simply don't influence `Wait`'s` return value in `Strict` mode.
 
@@ -362,11 +363,11 @@ func (e *BestEffortError) Unwrap() []error // errors.Is / errors.As can walk all
 
 ### Observability
 
-None — `Group` is meant to be used once and discarded. `Wait()` is the only inspection point.
+None — `Group` is meant to be used once and discarded. `Wait()` and `WaitWithContext()` are the only inspection points.
 
 ### Memory model
 
-- **Backing concurrency.** `sync.WaitGroup` for "wait for all", `sync.Mutex` to guard the result state, and (if a limit is configured) a buffered `chan struct{}` as a counting semaphore. No external dependencies; no `errgroup`, no `x/sync`.
+- **Backing concurrency.** `sync.WaitGroup` for "wait for all", `sync.Mutex` to guard the result state, and (if a limit is configured) a buffered `chan struct{}` as a counting semaphore. `Wait` / `WaitWithContext` share a single `doneCh` channel (closed when the WaitGroup reaches zero) backed by one lazily-spawned watcher goroutine, regardless of how many times the wait methods are invoked. Both methods also fire the Group's cancel func on return to release the cancelCtx from any parent's `children` map and let any `propagateCancel` watcher exit — without this, `BestEffort` Groups (and `Strict` Groups whose tasks all succeed) would leak one goroutine per instantiation when the parent is a non-cancelCtx custom `Context`. No external dependencies; no `errgroup`, no `x/sync`.
 - **Per-op allocations.** One `context.WithCancel` derived ctx at construction. Each `Go` call captures the goroutine closure and adds to the WaitGroup. No other allocations on the hot path.
 - **Why not `errgroup`?** `errgroup` is the obvious implementation choice, but its API is awkward to adapt to ours (it doesn't pass ctx to `fn`, its `SetLimit` must be called before any `Go` and panics otherwise, and its `Wait` returns a single error which is fine for `Strict` but awkward for `BestEffort`). Building directly on `sync.WaitGroup` is about the same line count and gives us full control over both modes.
 

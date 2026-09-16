@@ -40,7 +40,16 @@ The package ships these types today:
   bare single error if exactly one task failed, or a
   `*BestEffortError` aggregating all failures otherwise.
   `WithLimit(n)` (set at construction) caps concurrent tasks via a
-  semaphore channel.
+  semaphore channel. `WaitWithContext(ctx)` is the ctx-aware wait
+  variant: it returns the outcome-based error if all tasks finish
+  before ctx fires, otherwise `ctx.Err()` — goroutines are abandoned,
+  not killed (callers wanting the eventual outcome follow up with
+  `Wait()`). Both `Wait` and `WaitWithContext` fire the Group's
+  cancel func on return so the cancelCtx is released from any
+  parent's children map and any `propagateCancel` watcher can exit
+  (mirrors `golang.org/x/sync/errgroup`'s cleanup pattern; without it
+  BestEffort Groups would leak when the parent is a non-cancelCtx
+  custom Context).
 
 All three share the same API conventions and pass `-race` clean.
 
