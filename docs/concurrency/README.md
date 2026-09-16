@@ -27,6 +27,7 @@ Right now the package ships three types:
   - [Examples](#examples)
 - [`UnboundedBlockingQueue[T]`](#unboundedblockingqueuet)
 - [`Group`](#group)
+- [`Semaphore`](#semaphore)
 - [Benchmarks](#benchmarks)
 - [See also](#see-also)
 
@@ -370,6 +371,87 @@ None — `Group` is meant to be used once and discarded. `Wait()` and `WaitWithC
 - **Backing concurrency.** `sync.WaitGroup` for "wait for all", `sync.Mutex` to guard the result state, and (if a limit is configured) a buffered `chan struct{}` as a counting semaphore. `Wait` / `WaitWithContext` share a single `doneCh` channel (closed when the WaitGroup reaches zero) backed by one lazily-spawned watcher goroutine, regardless of how many times the wait methods are invoked. Both methods also fire the Group's cancel func on return to release the cancelCtx from any parent's `children` map and let any `propagateCancel` watcher exit — without this, `BestEffort` Groups (and `Strict` Groups whose tasks all succeed) would leak one goroutine per instantiation when the parent is a non-cancelCtx custom `Context`. No external dependencies; no `errgroup`, no `x/sync`.
 - **Per-op allocations.** One `context.WithCancel` derived ctx at construction. Each `Go` call captures the goroutine closure and adds to the WaitGroup. No other allocations on the hot path.
 - **Why not `errgroup`?** `errgroup` is the obvious implementation choice, but its API is awkward to adapt to ours (it doesn't pass ctx to `fn`, its `SetLimit` must be called before any `Go` and panics otherwise, and its `Wait` returns a single error which is fine for `Strict` but awkward for `BestEffort`). Building directly on `sync.WaitGroup` is about the same line count and gives us full control over both modes.
+
+---
+
+## `Semaphore`
+
+A counting semaphore that limits the number of goroutines that can concurrently hold a "slot". It is the primitive behind [`Group`'s `WithLimit`](#group) and is exposed directly for the common "max N concurrent goroutines touching X" use case — e.g., rate-limiting outbound calls to a downstream service, capping the parallelism of a per-key pipeline, or any global cap that doesn't fit cleanly onto a single [`BoundedBlockingQueue[T]`](#boundedblockingqueuet)'s per-queue backpressure.
+
+Unlike [`golang.org/x/sync/semaphore`](https://pkg.go.dev/golang.org/x/sync/semaphore), `Semaphore` uses **fixed unit weights** ("N slots") — there is no `Acquire(ctx, n)` overload with a weight argument. That trade-off matches the common case and keeps the API minimal; if you need weighted acquires, reach for `x/sync/semaphore`.
+
+### Construction
+
+```go
+// NewSemaphore(n int) *Semaphore
+sem := concurrency.NewSemaphore(8)
+```
+
+`n` must be positive; passing `0` or a negative value panics. A misconfigured capacity should fail loudly at construction — a `Semaphore` that can never be acquired is almost always a bug, not a deliberate "always block" choice.
+
+The zero value is not usable; always go through the constructor.
+
+### Blocking variants
+
+| Method | Behaviour |
+| --- | --- |
+| `Acquire()` | Block until a slot is available, then take one. |
+| `AcquireWithContext(ctx context.Context) error` | Ctx-aware `Acquire`. Blocks until a slot is available OR ctx fires; returns `nil` on success, `ctx.Err()` on ctx firing. **On ctx firing no slot is taken** — callers do not need to `Release` to balance. |
+| `TryAcquire() bool` | Take a slot without blocking. Returns `true` on success, `false` immediately if no slot is available. |
+| `Release()` | Return a previously-acquired slot. Pairs with `Acquire` / successful `TryAcquire` / successful `AcquireWithContext`. |
+
+### Observability
+
+| Method | Behaviour |
+| --- | --- |
+| `Available() int` | Current number of free slots. Atomic length read of the underlying channel — not synchronised with the next operation you perform. If you need strict "Available() → next op sees a consistent view" semantics, use `TryAcquire` which combines the read with the take. |
+
+### Memory model
+
+- **Backing storage.** A single `make(chan struct{}, n)` pre-filled with `n` values at construction. `Acquire` is a `<-ch`, `Release` is `ch <- struct{}{}`. The channel's natural blocking semantics give us the wait-for-slot behaviour for free, with no separate condition variable.
+- **Why pre-fill?** `len(ch)` is the slot count. Pre-filling the buffer once at construction lets `Available()` be a single `len(ch)` atomic load, and lets `TryAcquire` be a `select { case <-ch: default: }` instead of an explicit `len(ch) > 0` check followed by a race-prone receive.
+- **Per-op allocations.** Zero. Channel send/recv fast path does not allocate.
+- **No over-release.** Calling `Release` without a matching `Acquire` blocks (the channel send can't complete against a full buffer), which in a single-goroutine program surfaces as the Go runtime's deadlock detector and in a concurrent program is silent. This is deliberate — unlike `x/sync/semaphore`, the toolkit does not support silent growth of the slot count beyond the initial `n`.
+
+### Examples
+
+#### Capping concurrent calls to a downstream service
+
+```go
+sem := concurrency.NewSemaphore(8) // max 8 in-flight requests
+
+for _, req := range requests {
+    sem.Acquire()                  // blocks if 8 are already in flight
+    go func() {
+        defer sem.Release()
+        handle(req)
+    }()
+}
+```
+
+#### Cancellable acquire
+
+```go
+ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+defer cancel()
+
+if err := sem.AcquireWithContext(ctx); err != nil {
+    // ctx fired before a slot was available; no slot taken, no Release needed
+    return err
+}
+defer sem.Release()
+```
+
+#### Best-effort: try, fall back if full
+
+```go
+if !sem.TryAcquire() {
+    metrics.Dropped.Inc()
+    return // shed load instead of blocking
+}
+defer sem.Release()
+process()
+```
 
 ## See also
 

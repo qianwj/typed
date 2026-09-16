@@ -50,36 +50,22 @@ The package ships these types today:
   (mirrors `golang.org/x/sync/errgroup`'s cleanup pattern; without it
   BestEffort Groups would leak when the parent is a non-cancelCtx
   custom Context).
+- **`Semaphore`** — counting semaphore with fixed unit weights
+  ("N slots"). Thin typed wrapper around a pre-filled `chan struct{}`
+  with capacity `n`: `Acquire` is a `<-ch`, `Release` is
+  `ch <- struct{}{}`, `TryAcquire` is `select { case <-ch: default: }`,
+  `AcquireWithContext` is the ctx-aware variant that returns
+  `ctx.Err()` and takes no slot on ctx firing, `Available()` is the
+  atomic length. `NewSemaphore(n)` panics on non-positive `n`. Unlike
+  `golang.org/x/sync/semaphore`, over-release is not supported — the
+  slot count is bounded by the initial capacity.
 
-All three share the same API conventions and pass `-race` clean.
+All four share the same API conventions and pass `-race` clean.
 
 ## Tier 1 — synchronization primitives
 
-These two are small and address gaps in the standard library's
+One left; small and addresses a real gap in the standard library's
 "goroutine coordination" surface.
-
-### `Semaphore` — counting semaphore
-
-Limit concurrent access to a resource (a downstream service, a
-DB, a remote API). `golang.org/x/sync/semaphore` exists but uses
-`int64` weights and is awkward for the simple "N slots" case. A
-typed version with `Acquire` / `Release` is more idiomatic.
-
-```go
-type Semaphore struct { /* ... */ }
-
-func NewSemaphore(n int) *Semaphore
-func (s *Semaphore) Acquire()
-func (s *Semaphore) AcquireWithContext(ctx context.Context) error
-func (s *Semaphore) TryAcquire() bool
-func (s *Semaphore) Release()
-func (s *Semaphore) Available() int
-```
-
-Typical use: rate limit at the goroutine level instead of the
-request level. The toolkit's existing `BoundedBlockingQueue` already
-gives per-queue backpressure; `Semaphore` is for the broader
-"max N concurrent goroutines touching X" case.
 
 ### `CountDownLatch` — one-shot N-party coordination
 
