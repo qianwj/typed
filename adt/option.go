@@ -1,29 +1,3 @@
-// Package adt provides typed algebraic data types — value types
-// that explicitly model "present vs absent" or "success vs failure"
-// or "this variant vs that variant".
-//
-// The three types in this package are:
-//
-//   - [Option][T] — zero-or-one of a single type. The typed
-//     alternative to `(T, bool)`.
-//   - [Result][T]   — success carrying T, or failure carrying a
-//     non-nil error. The typed alternative to `(T, error)`.
-//   - [Either][L, R] — exactly one of two values. The general
-//     tagged-union primitive that the first two specialise.
-//
-// Why a single package? The three types share the same vocabulary
-// (present / absent / success / failure / left / right) and they
-// cross-reference each other in idiomatic ways —
-// [Result.Option] returns an [Option], and
-// [Either.Right] returns an [Option]. Co-locating them in one
-// package makes those relationships visible at the call site
-// (`adt.Option`, `adt.Result`, `adt.Either`) without the
-// import-by-import friction of separate sub-packages.
-//
-// Why a separate module? They are value types, not utilities in
-// the same sense as [objects.IsNil] or a JSON codec; the `adt`
-// module gives them a distinct import path so consumers can depend
-// on the value types without pulling in unrelated `utils/*` code.
 package adt
 
 import (
