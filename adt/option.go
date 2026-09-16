@@ -24,23 +24,6 @@
 // the same sense as [objects.IsNil] or a JSON codec; the `adt`
 // module gives them a distinct import path so consumers can depend
 // on the value types without pulling in unrelated `utils/*` code.
-//
-// # Option[T]
-//
-// Option is not an interface, which lets its methods declare
-// their own type parameters (Map[R]) under Go 1.27's generic
-// methods.
-//
-// Why not the standard `(T, bool)` shape?
-//
-//   - An explicit Option makes the call site self-documenting
-//     and lets combinators chain without scattering boolean
-//     checks at every step.
-//   - Option is designed to work for any T, including value
-//     types such as int, string and struct{}, not just
-//     pointer-like ones. This is why Option carries a separate
-//     present flag rather than relying on a nil check on the
-//     value.
 package adt
 
 import (
@@ -56,6 +39,21 @@ import (
 // Option values must not be copied after creation; the safe usage is
 // to obtain them through one of the constructors (Empty, Of, OfNullable)
 // and then consume them through the methods.
+//
+// Option is not an interface, which lets its methods declare
+// their own type parameters (Map[R]) under Go 1.27's generic
+// methods.
+//
+// Why not the standard `(T, bool)` shape?
+//
+//   - An explicit Option makes the call site self-documenting
+//     and lets combinators chain without scattering boolean
+//     checks at every step.
+//   - Option is designed to work for any T, including value
+//     types such as int, string and struct{}, not just
+//     pointer-like ones. This is why Option carries a separate
+//     present flag rather than relying on a nil check on the
+//     value.
 type Option[T any] struct {
 	value   T
 	present bool

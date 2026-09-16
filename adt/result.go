@@ -1,3 +1,5 @@
+package adt
+
 // Result[T] is the outcome of an operation that may fail.
 //
 // A Result is either a success carrying a value of type T, or a
@@ -42,14 +44,6 @@
 //   - The shape is intentionally simpler than a generic Result[T, E]:
 //     the error channel is always a standard error, which keeps the
 //     interop with regular Go code free of custom-error boxing.
-package adt
-
-// Result[T] is the outcome of an operation that may fail.
-//
-// A Result is either a success carrying a value of type T, or a
-// failure carrying a non-nil error. The zero value of Result is a
-// failure with a nil error; callers should always build results
-// through Success / Failure and inspect them through the methods.
 type Result[T any] struct {
 	value T
 	err   error

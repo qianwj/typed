@@ -1,5 +1,14 @@
+package adt
+
 // Either[L, R] is a tagged-union value type that holds exactly one
 // of two values: a Left of type L or a Right of type R.
+//
+// An Either is constructed through [Left] or [Right]; the zero
+// value of Either is treated as the Left with both fields zero,
+// which is rarely what callers want — prefer the explicit
+// constructors. Either values must not be copied after creation;
+// the safe usage is to obtain them through [Left] / [Right] and
+// then consume them through the methods.
 //
 // The conventional reading is "Left = failure, Right = success" —
 // for example Right[error, T] is the typed equivalent of Go's
@@ -43,17 +52,6 @@
 // The safe accessors (Left / Right) return Option[L] /
 // Option[R] so call sites can chain with the same combinators
 // they already use for Option.
-package adt
-
-// Either[L, R] holds either a Left value of type L or a Right
-// value of type R, exactly one of which is present.
-//
-// An Either is constructed through [Left] or [Right]; the zero
-// value of Either is treated as the Left with both fields zero,
-// which is rarely what callers want — prefer the explicit
-// constructors. Either values must not be copied after creation;
-// the safe usage is to obtain them through [Left] / [Right] and
-// then consume them through the methods.
 type Either[L, R any] struct {
 	left    L
 	right   R
