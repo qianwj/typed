@@ -34,6 +34,8 @@ Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan
 import "github.com/qianwj/typed/reactivex"
 ```
 
+Blocking consumption of `Single` and `Maybe` returns types from `github.com/qianwj/typed/adt`; this module depends on `adt`.
+
 ## Core types
 
 ### `Observable[T]`
@@ -220,8 +222,8 @@ func NewSingle[T any](fn func() (T, error)) *Single[T]
 func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
 
 // Blocking consumption
-func (s *Single[T]) Await() (T, error)
-func (s *Single[T]) AwaitWithContext(ctx context.Context) (T, error)
+func (s *Single[T]) Await() adt.Result[T]
+func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 
 // Non-blocking check
 func (s *Single[T]) Done() bool
@@ -232,6 +234,10 @@ func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R]
 func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Single[R]
 func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
 ```
+
+`Await` returns `Success(value)` or `Failure(err)`. To use Go's `(T, error)` form, call `single.Await().Unwrap()`; otherwise compose directly with Result methods such as `Map` and `OrElse`.
+
+`AwaitWithContext` returns `Failure(ctx.Err())` when the wait is canceled. An already completed result takes precedence over cancellation; otherwise an already canceled context prevents starting the source. Canceling a wait does not cancel a running source or overwrite its eventual result.
 
 ### Composition
 
@@ -281,8 +287,8 @@ func (m *Maybe[T]) Subscribe(
     onError func(error),
 ) Subscription
 
-func (m *Maybe[T]) Await() (T, bool, error)
-func (m *Maybe[T]) AwaitWithContext(ctx context.Context) (T, bool, error)
+func (m *Maybe[T]) Await() adt.Result[adt.Option[T]]
+func (m *Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
 
 func (m *Maybe[T]) Done() bool
 
@@ -290,6 +296,27 @@ func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R]
 func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R]
 func (m *Maybe[T]) Zip[U, R any](other *Maybe[U], combine func(T, U) R) *Maybe[R]
 func (m *Maybe[T]) AndThen[R any](next *Maybe[R]) *Maybe[R]
+```
+
+The outer Result describes success or failure; the inner Option describes whether a successful completion emitted a value:
+
+| Outcome | Await result |
+| --- | --- |
+| `OnSuccess(value)` | `Success(Of(value))` |
+| `OnComplete()` | `Success(Empty[T]())` |
+| `OnError(err)` | `Failure[Option[T]](err)` |
+| Wait canceled or deadline exceeded | `Failure[Option[T]](ctx.Err())` |
+
+Presence follows the source's explicit flag: emitting `0` or nil with `present=true` remains a present Option. Source errors take precedence over the flag. Context handling and cached-result precedence follow Single's rules above.
+
+```go
+value, err := reactivex.NewMaybe(func() (string, bool, error) {
+    return "", false, nil
+}).Await().Unwrap()
+if err != nil {
+    return err
+}
+name := value.OrElse("anonymous") // empty completion uses the fallback
 ```
 
 ### Composition
@@ -302,7 +329,7 @@ All operators propagate the three states: `Map` / `FlatMap` / `Zip` / `AndThen` 
 | --- | --- | --- | --- |
 | Cardinality | 0..N | exactly 1 | 0 or 1 |
 | Terminal states | complete / error | success / error | success / complete / error |
-| Await return | n/a (use `ToSlice`) | `(T, error)` | `(T, bool, error)` |
+| Await return | n/a (use `ToSlice`) | `Result[T]` | `Result[Option[T]]` |
 | Best for | streams of events | a guaranteed result | an optional result |
 
 ### Use cases

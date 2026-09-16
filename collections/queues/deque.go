@@ -1,9 +1,9 @@
 package queues
 
 import (
+	"github.com/qianwj/typed/adt"
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/adt"
 )
 
 // Deque[T] is a double-ended queue of T, implemented as a thin

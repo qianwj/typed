@@ -80,14 +80,14 @@ func TestSingle_Await(t *testing.T) {
 
 	s := NewSingle(func() (string, error) { return "hello", nil })
 
-	v, err := s.Await()
+	v, err := s.Await().Unwrap()
 	if err != nil || v != "hello" {
 		t.Errorf("Await = (%q, %v), want (\"hello\", nil)", v, err)
 	}
 
 	// Subsequent Await returns the same cached result without
 	// re-running fn.
-	v2, err2 := s.Await()
+	v2, err2 := s.Await().Unwrap()
 	if err2 != nil || v2 != "hello" {
 		t.Errorf("Await #2 = (%q, %v), want (\"hello\", nil)", v2, err2)
 	}
@@ -110,7 +110,7 @@ func TestSingle_AwaitWithContext_Cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	v, err := s.AwaitWithContext(ctx)
+	v, err := s.AwaitWithContext(ctx).Unwrap()
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}
@@ -131,7 +131,7 @@ func TestSingle_AwaitWithContext_Done(t *testing.T) {
 
 	s := NewSingle(func() (int, error) { return 99, nil })
 
-	v, err := s.AwaitWithContext(context.Background())
+	v, err := s.AwaitWithContext(context.Background()).Unwrap()
 	if err != nil || v != 99 {
 		t.Errorf("AwaitWithContext = (%d, %v), want (99, nil)", v, err)
 	}
@@ -170,7 +170,7 @@ func TestSingle_Map_Success(t *testing.T) {
 		return "x" + string(rune('0'+n%10))
 	})
 
-	v, err := s.Await()
+	v, err := s.Await().Unwrap()
 	if err != nil || v != "x1" {
 		t.Errorf("Map Await = (%q, %v), want (\"x1\", nil)", v, err)
 	}
@@ -182,7 +182,7 @@ func TestSingle_Map_ErrorPassesThrough(t *testing.T) {
 	s := NewSingle(func() (int, error) { return 0, errSentinelSingle })
 	mapped := s.Map(func(n int) string { return "should not run" })
 
-	v, err := mapped.Await()
+	v, err := mapped.Await().Unwrap()
 	if !errors.Is(err, errSentinelSingle) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -200,7 +200,7 @@ func TestSingle_FlatMap_Success(t *testing.T) {
 			return inner
 		})
 
-	v, err := outer.Await()
+	v, err := outer.Await().Unwrap()
 	if err != nil || v != "inner" {
 		t.Errorf("FlatMap Await = (%q, %v), want (\"inner\", nil)", v, err)
 	}
@@ -215,7 +215,7 @@ func TestSingle_FlatMap_OuterError(t *testing.T) {
 			return nil
 		})
 
-	_, err := outer.Await()
+	_, err := outer.Await().Unwrap()
 	if !errors.Is(err, errSentinelSingle) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -228,7 +228,7 @@ func TestSingle_Zip_BothSuccess(t *testing.T) {
 	b := NewSingle(func() (int, error) { return 4, nil })
 	zipped := a.Zip(b, func(x, y int) int { return x*x + y*y })
 
-	v, err := zipped.Await()
+	v, err := zipped.Await().Unwrap()
 	if err != nil || v != 25 {
 		t.Errorf("Zip Await = (%d, %v), want (25, nil)", v, err)
 	}
@@ -241,7 +241,7 @@ func TestSingle_Zip_LeftError(t *testing.T) {
 	b := NewSingle(func() (int, error) { return 4, nil })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
-	_, err := zipped.Await()
+	_, err := zipped.Await().Unwrap()
 	if !errors.Is(err, errSentinelSingle) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -254,7 +254,7 @@ func TestSingle_Zip_RightError(t *testing.T) {
 	b := NewSingle(func() (int, error) { return 0, errSentinelSingle })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
-	_, err := zipped.Await()
+	_, err := zipped.Await().Unwrap()
 	if !errors.Is(err, errSentinelSingle) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -267,7 +267,7 @@ func TestSingle_AndThen_RunsNext(t *testing.T) {
 	second := NewSingle(func() (string, error) { return "next", nil })
 	seq := first.AndThen(second)
 
-	v, err := seq.Await()
+	v, err := seq.Await().Unwrap()
 	if err != nil || v != "next" {
 		t.Errorf("AndThen Await = (%q, %v), want (\"next\", nil)", v, err)
 	}
@@ -283,7 +283,7 @@ func TestSingle_AndThen_SkipsNextOnError(t *testing.T) {
 	})
 	seq := first.AndThen(second)
 
-	_, err := seq.Await()
+	_, err := seq.Await().Unwrap()
 	if !errors.Is(err, errSentinelSingle) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -299,7 +299,7 @@ func TestSingle_SubscribeThenAwait(t *testing.T) {
 	sub := s.Subscribe(func(v int) { reactive = v }, nil)
 	<-sub.Done()
 
-	v, err := s.Await()
+	v, err := s.Await().Unwrap()
 	if err != nil || v != 7 || reactive != 7 {
 		t.Errorf("got reactive=%d blocking=(%d, %v), want 7 / (7, nil)", reactive, v, err)
 	}
@@ -322,7 +322,7 @@ func TestSingle_Done_InitialFalseThenTrue(t *testing.T) {
 
 	done := make(chan struct{})
 	go func() {
-		v, err := s.Await()
+		v, err := s.Await().Unwrap()
 		if v != 11 || err != nil {
 			t.Errorf("Await = (%d, %v), want (11, nil)", v, err)
 		}

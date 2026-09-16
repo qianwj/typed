@@ -4,6 +4,9 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+
+	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/control"
 )
 
 // maybeKind distinguishes the three terminal states a Maybe can
@@ -57,10 +60,10 @@ type Maybe[T any] struct {
 	startedOnce sync.Once
 	doneCh      chan struct{}
 
-	done     atomic.Bool
-	kind     maybeKind
-	val      T
-	err      error
+	done atomic.Bool
+	kind maybeKind
+	val  T
+	err  error
 }
 
 // NewMaybe returns a Maybe whose source function produces a
@@ -110,36 +113,26 @@ func (m *Maybe[T]) Subscribe(
 	return &maybeSubscription[T]{done: m.doneCh, cb: cb}
 }
 
-// Await blocks until the Maybe has terminated and returns
-// (value, present, error). present=true means v holds a meaningful
-// value; present=false means the producer completed with no value.
-// On error, err is non-nil and present has no meaning.
+// Await blocks until the Maybe terminates. A value produces Success(Of(value)),
+// empty completion produces Success(Empty[T]()), and a source error produces
+// Failure[Option[T]](err). The source's presence flag determines whether a
+// value exists, so an emitted zero or nil value remains present.
+// Repeated calls return the cached outcome without re-running the source.
 //
 // Await cannot be cancelled; use [AwaitWithContext] for cancellation
 // or deadlines.
-func (m *Maybe[T]) Await() (T, bool, error) {
-	return m.await(context.Background())
+func (m *Maybe[T]) Await() adt.Result[adt.Option[T]] {
+	return m.AwaitWithContext(context.Background())
 }
 
 // AwaitWithContext blocks until the Maybe has terminated or ctx is
-// canceled. On terminal event it returns the cached result. On ctx
-// cancellation it returns (zero, false, ctx.Err()) and does not
-// start the producer if ctx is already done.
-func (m *Maybe[T]) AwaitWithContext(ctx context.Context) (T, bool, error) {
-	var zero T
-	if m.Done() {
-		return m.val, m.kind == maybeSuccess, m.err
-	}
-	if err := ctx.Err(); err != nil {
-		return zero, false, err
-	}
-	m.startProducer()
-	select {
-	case <-m.doneCh:
-		return m.val, m.kind == maybeSuccess, m.err
-	case <-ctx.Done():
-		return zero, false, ctx.Err()
-	}
+// canceled. Termination uses the same three outcomes as Await; cancellation
+// returns Failure[Option[T]](ctx.Err()), not successful empty completion.
+// An already completed Maybe takes precedence over ctx. Otherwise, an already
+// canceled ctx prevents the source from starting. Canceling a wait does not
+// cancel an already running source.
+func (m *Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]] {
+	return m.await(ctx)
 }
 
 // Done reports whether the Maybe has terminated. Done is non-blocking
@@ -154,16 +147,11 @@ func (m *Maybe[T]) Done() bool {
 // unchanged.
 func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R] {
 	return NewMaybe(func() (R, bool, error) {
-		v, present, err := m.Await()
-		if err != nil {
-			var zero R
-			return zero, false, err
-		}
-		if !present {
-			var zero R
-			return zero, false, nil
-		}
-		return f(v), true, nil
+		value, err := m.Await().Map(func(value adt.Option[T]) adt.Option[R] {
+			return value.Map(f)
+		}).Unwrap()
+		var zero R
+		return value.OrElse(zero), value.IsPresent(), err
 	})
 }
 
@@ -173,16 +161,14 @@ func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R] {
 // outcome is propagated.
 func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R] {
 	return NewMaybe(func() (R, bool, error) {
-		v, present, err := m.Await()
-		if err != nil {
-			var zero R
-			return zero, false, err
-		}
-		if !present {
-			var zero R
-			return zero, false, nil
-		}
-		return f(v).Await()
+		value, err := m.Await().FlatMap(func(value adt.Option[T]) adt.Result[adt.Option[R]] {
+			if value.IsEmpty() {
+				return adt.Success(adt.Empty[R]())
+			}
+			return f(value.Get()).Await()
+		}).Unwrap()
+		var zero R
+		return value.OrElse(zero), value.IsPresent(), err
 	})
 }
 
@@ -192,23 +178,10 @@ func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R] {
 // If either errors, the error is propagated (this Maybe's error
 // wins when both error).
 func (m *Maybe[T]) Zip[U, R any](other *Maybe[U], combine func(T, U) R) *Maybe[R] {
-	return NewMaybe(func() (R, bool, error) {
-		var zero R
-		l, lPresent, lErr := m.Await()
-		if lErr != nil {
-			return zero, false, lErr
-		}
-		if !lPresent {
-			return zero, false, nil
-		}
-		r, rPresent, rErr := other.Await()
-		if rErr != nil {
-			return zero, false, rErr
-		}
-		if !rPresent {
-			return zero, false, nil
-		}
-		return combine(l, r), true, nil
+	return m.FlatMap(func(left T) *Maybe[R] {
+		return other.Map(func(right U) R {
+			return combine(left, right)
+		})
 	})
 }
 
@@ -218,17 +191,8 @@ func (m *Maybe[T]) Zip[U, R any](other *Maybe[U], combine func(T, U) R) *Maybe[R
 // AndThen ignores the value of this Maybe — use FlatMap if next
 // depends on it.
 func (m *Maybe[T]) AndThen[R any](next *Maybe[R]) *Maybe[R] {
-	return NewMaybe(func() (R, bool, error) {
-		_, present, err := m.Await()
-		if err != nil {
-			var zero R
-			return zero, false, err
-		}
-		if !present {
-			var zero R
-			return zero, false, nil
-		}
-		return next.Await()
+	return m.FlatMap(func(T) *Maybe[R] {
+		return next
 	})
 }
 
@@ -263,17 +227,25 @@ func (m *Maybe[T]) runProducer() {
 	close(m.doneCh)
 }
 
-func (m *Maybe[T]) await(ctx context.Context) (T, bool, error) {
-	var zero T
+func (m *Maybe[T]) await(ctx context.Context) adt.Result[adt.Option[T]] {
 	if m.Done() {
-		return m.val, m.kind == maybeSuccess, m.err
+		return adt.Wrap(
+			control.If(m.kind == maybeSuccess, adt.Of(m.val), adt.Empty[T]()),
+			m.err,
+		)
+	}
+	if err := ctx.Err(); err != nil {
+		return adt.Failure[adt.Option[T]](err)
 	}
 	m.startProducer()
 	select {
 	case <-m.doneCh:
-		return m.val, m.kind == maybeSuccess, m.err
+		return adt.Wrap(
+			control.If(m.kind == maybeSuccess, adt.Of(m.val), adt.Empty[T]()),
+			m.err,
+		)
 	case <-ctx.Done():
-		return zero, false, ctx.Err()
+		return adt.Wrap(adt.Empty[T](), ctx.Err())
 	}
 }
 

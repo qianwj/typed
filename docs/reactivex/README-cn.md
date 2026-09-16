@@ -21,6 +21,8 @@
   - [`OverflowStrategy`](#overflowstrategy)
   - [`BackpressureOption`](#backpressureoption)
 - [`Subject[T]`](#subjectt)
+- [`Single[T]`](#singlet)
+- [`Maybe[T]`](#maybet)
 - [例子](#例子)
 - [与其他包的关系](#与其他包的关系)
 
@@ -29,6 +31,8 @@
 ```go
 import "github.com/qianwj/typed/reactivex"
 ```
+
+`Single` 和 `Maybe` 的阻塞消费返回 `github.com/qianwj/typed/adt` 中的类型，本模块因此依赖 `adt`。
 
 ## 核心类型
 
@@ -196,6 +200,53 @@ func (s *Subject[T]) OnComplete()
 ```
 
 > `OnSubscribe` 当前**不**自动向上游 `Request`；下游需求也不会被自动汇总到上游。用 `Subject` 当 `Subscriber` 时，记得自己 `Request`。
+
+## `Single[T]`
+
+`Single` 以一个值或一个错误结束。生产者最多执行一次，多次等待共享同一个结果。
+
+```go
+func NewSingle[T any](fn func() (T, error)) *Single[T]
+func (s *Single[T]) Await() adt.Result[T]
+func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
+```
+
+成功返回 `Success(value)`，失败返回 `Failure(err)`。可以直接调用 Result 的 `Map`、`OrElse` 等方法，也可以通过 `single.Await().Unwrap()` 转成 `(T, error)`。
+
+`AwaitWithContext` 在等待取消或超时时返回 `Failure(ctx.Err())`。已完成的结果优先于 context 的取消状态；尚未完成时，已取消的 context 会阻止生产者启动。取消等待不会停止已运行的生产者，也不会覆盖其最终结果。
+
+## `Maybe[T]`
+
+`Maybe` 在 Single 的基础上增加“正常完成但没有值”的状态。生产者的 `present` 标志明确区分有值和空完成，错误优先于该标志。
+
+```go
+func NewMaybe[T any](fn func() (T, bool, error)) *Maybe[T]
+func (m *Maybe[T]) Await() adt.Result[adt.Option[T]]
+func (m *Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
+```
+
+外层 Result 表示成功或失败，内层 Option 表示成功完成后有没有值：
+
+| 结果 | Await 返回值 |
+| --- | --- |
+| `OnSuccess(value)` | `Success(Of(value))` |
+| `OnComplete()` | `Success(Empty[T]())` |
+| `OnError(err)` | `Failure[Option[T]](err)` |
+| 等待取消或超时 | `Failure[Option[T]](ctx.Err())` |
+
+当 `present=true` 时，发出 `0` 或 nil 仍表示有值。context 和已完成结果的优先级与 Single 相同。
+
+```go
+value, err := reactivex.NewMaybe(func() (string, bool, error) {
+    return "", false, nil
+}).Await().Unwrap()
+if err != nil {
+    return err
+}
+name := value.OrElse("匿名") // 空完成时使用默认值
+```
+
+`Map`、`FlatMap`、`Zip`、`AndThen` 会传播空完成和错误，只有有值分支才执行对应转换或后续源。
 
 ## 例子
 

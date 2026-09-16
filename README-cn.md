@@ -187,8 +187,8 @@ use(v)
 | --- | --- | --- |
 | `reactivex.Observable[T]`、`Publisher[T]`、`Subscriber[T]` | `reactivex` | 强类型异步流,显式需求(`Subscription.Request(n)`)与 `OnError` / `OnComplete` 终止信号。 |
 | `reactivex.Subject[T]` | `reactivex` | 热多播发布者 + 订阅者;通过 `WithBuffer` / `WithOverflow` 配置。 |
-| `reactivex.Single[T]` | `reactivex` | reactive 容器,恰好发一个值或一个 error。`Await` / `Subscribe` 分别对应阻塞 / 回调消费;`Map` / `FlatMap` / `Zip` / `AndThen` 用于组合。 |
-| `reactivex.Maybe[T]` | `reactivex` | reactive 容器,发零或一个值,或一个 error —— 三种终止状态(success / complete / error)。 |
+| `reactivex.Single[T]` | `reactivex` | reactive 容器，恰好发一个值或一个 error。`Await` / `AwaitWithContext` 返回 `adt.Result[T]`，`Subscribe` 用于回调消费。 |
+| `reactivex.Maybe[T]` | `reactivex` | reactive 容器，包含有值、空完成、错误三种终态。`Await` / `AwaitWithContext` 返回 `adt.Result[adt.Option[T]]`，空完成是成功结果。 |
 | `reactivex.OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`。 |
 | 源:`Just` / `FromSlice` / `FromChannel` / `FromChannelWithOptions` / `FromSeq` / `Create` / `Interval` | `reactivex` | 冷、热源构造器。 |
 | 算子:`Map[R]`、`Filter`、`Take`、`Skip`、`Scan[R]`、`Reduce` | `reactivex` | 全部为包装型,自身不启 goroutine、不带队列。 |

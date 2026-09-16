@@ -9,22 +9,21 @@ import (
 
 func ExampleMaybe_Await() {
 	// Maybe[T] adds a 'no value' terminal state to Single: the
-	// presence flag distinguishes success-with-value from
-	// complete-without-value.
+	// inner Option distinguishes a value from empty completion.
 
-	v, present, err := reactivex.NewMaybe(func() (string, bool, error) {
+	value, err := reactivex.NewMaybe(func() (string, bool, error) {
 		return "value-for-user:42", true, nil
-	}).Await()
-	fmt.Println(v, present, err)
+	}).Await().Unwrap()
+	fmt.Println(value.OrElse("missing"), value.IsPresent(), err)
 	// Output: value-for-user:42 true <nil>
 }
 
 func ExampleMaybe_completeWithoutValue() {
-	// Terminal 'no value' state: present=false, err=nil.
-	v, present, err := reactivex.NewMaybe(func() (string, bool, error) {
+	// Empty completion is a successful result containing an empty Option.
+	value, err := reactivex.NewMaybe(func() (string, bool, error) {
 		return "", false, nil
-	}).Await()
-	fmt.Printf("%q %v %v\n", v, present, err)
+	}).Await().Unwrap()
+	fmt.Printf("%q %v %v\n", value.OrElse(""), value.IsPresent(), err)
 	// Output: "" false <nil>
 }
 
@@ -34,7 +33,7 @@ func ExampleMaybe_errorPropagates() {
 	})
 	mapped := m.Map(func(int) string { return "should not run" })
 
-	_, present, err := mapped.Await()
-	fmt.Println(present, err)
-	// Output: false missing
+	result := mapped.Await()
+	fmt.Println(result.IsFailure(), result.Error())
+	// Output: true missing
 }

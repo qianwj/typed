@@ -1,9 +1,9 @@
 package queues
 
 import (
+	"github.com/qianwj/typed/adt"
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/adt"
 )
 
 // Queue[T] is a First-In-First-Out container of T, implemented as

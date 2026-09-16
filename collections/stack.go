@@ -1,8 +1,8 @@
 package collections
 
 import (
-	"github.com/qianwj/typed/utils/json"
 	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/utils/json"
 )
 
 // Stack[T] is a Last-In-First-Out container of T, backed by a

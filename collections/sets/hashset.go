@@ -13,11 +13,11 @@ package sets
 import (
 	"slices"
 
+	"github.com/qianwj/typed/adt"
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/collections/maps"
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/adt"
 )
 
 // HashSet is an unordered collection of unique comparable values.

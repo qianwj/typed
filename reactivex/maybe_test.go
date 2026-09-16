@@ -118,9 +118,9 @@ func TestMaybe_Await_Success(t *testing.T) {
 
 	m := NewMaybe(func() (string, bool, error) { return "x", true, nil })
 
-	v, present, err := m.Await()
-	if err != nil || !present || v != "x" {
-		t.Errorf("Await = (%q, %v, %v), want (\"x\", true, nil)", v, present, err)
+	v, err := m.Await().Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != "x" {
+		t.Errorf("Await = (%v, %v), want (\"x\", true, nil)", v, err)
 	}
 	if !m.Done() {
 		t.Error("Done() = false after Await")
@@ -132,9 +132,9 @@ func TestMaybe_Await_Complete(t *testing.T) {
 
 	m := NewMaybe(func() (string, bool, error) { return "", false, nil })
 
-	v, present, err := m.Await()
-	if err != nil || present || v != "" {
-		t.Errorf("Await = (%q, %v, %v), want (\"\", false, nil)", v, present, err)
+	v, err := m.Await().Unwrap()
+	if err != nil || v.IsPresent() {
+		t.Errorf("Await = (%v, %v), want (\"\", false, nil)", v, err)
 	}
 }
 
@@ -143,11 +143,11 @@ func TestMaybe_Await_Error(t *testing.T) {
 
 	m := NewMaybe(func() (string, bool, error) { return "", false, errSentinelMaybe })
 
-	_, present, err := m.Await()
+	v, err := m.Await().Unwrap()
 	if !errors.Is(err, errSentinelMaybe) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
-	if present {
+	if v.IsPresent() {
 		t.Error("present = true on error, want false")
 	}
 }
@@ -164,7 +164,7 @@ func TestMaybe_AwaitWithContext_CancelBeforeStart(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, _, err := m.AwaitWithContext(ctx)
+	_, err := m.AwaitWithContext(ctx).Unwrap()
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err = %v, want context.Canceled", err)
 	}
@@ -179,9 +179,9 @@ func TestMaybe_AwaitWithContext_Done(t *testing.T) {
 	t.Parallel()
 
 	m := NewMaybe(func() (int, bool, error) { return 99, true, nil })
-	v, present, err := m.AwaitWithContext(context.Background())
-	if err != nil || !present || v != 99 {
-		t.Errorf("AwaitWithContext = (%d, %v, %v), want (99, true, nil)", v, present, err)
+	v, err := m.AwaitWithContext(context.Background()).Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != 99 {
+		t.Errorf("AwaitWithContext = (%v, %v), want (99, true, nil)", v, err)
 	}
 }
 
@@ -216,9 +216,9 @@ func TestMaybe_Map_Success(t *testing.T) {
 	m := NewMaybe(func() (int, bool, error) { return 5, true, nil }).
 		Map(func(n int) string { return "x" + string(rune('0'+n)) })
 
-	v, present, err := m.Await()
-	if err != nil || !present || v != "x5" {
-		t.Errorf("Map Await = (%q, %v, %v), want (\"x5\", true, nil)", v, present, err)
+	v, err := m.Await().Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != "x5" {
+		t.Errorf("Map Await = (%v, %v), want (\"x5\", true, nil)", v, err)
 	}
 }
 
@@ -228,9 +228,9 @@ func TestMaybe_Map_CompletePassesThrough(t *testing.T) {
 	m := NewMaybe(func() (int, bool, error) { return 0, false, nil }).
 		Map(func(int) string { t.Error("f should not run on complete"); return "" })
 
-	_, present, err := m.Await()
-	if err != nil || present {
-		t.Errorf("Await = (_, %v, %v), want (_, false, nil)", present, err)
+	v, err := m.Await().Unwrap()
+	if err != nil || v.IsPresent() {
+		t.Errorf("Await = (%v, %v), want (_, false, nil)", v, err)
 	}
 }
 
@@ -240,11 +240,11 @@ func TestMaybe_Map_ErrorPassesThrough(t *testing.T) {
 	m := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe }).
 		Map(func(int) string { t.Error("f should not run on error"); return "" })
 
-	_, present, err := m.Await()
+	v, err := m.Await().Unwrap()
 	if !errors.Is(err, errSentinelMaybe) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
-	if present {
+	if v.IsPresent() {
 		t.Error("present = true on error, want false")
 	}
 }
@@ -256,9 +256,9 @@ func TestMaybe_FlatMap_Success(t *testing.T) {
 	outer := NewMaybe(func() (int, bool, error) { return 1, true, nil }).
 		FlatMap(func(int) *Maybe[string] { return inner })
 
-	v, present, err := outer.Await()
-	if err != nil || !present || v != "inner" {
-		t.Errorf("FlatMap Await = (%q, %v, %v), want (\"inner\", true, nil)", v, present, err)
+	v, err := outer.Await().Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != "inner" {
+		t.Errorf("FlatMap Await = (%v, %v), want (\"inner\", true, nil)", v, err)
 	}
 }
 
@@ -271,9 +271,9 @@ func TestMaybe_FlatMap_OuterComplete(t *testing.T) {
 			return nil
 		})
 
-	_, present, err := outer.Await()
-	if err != nil || present {
-		t.Errorf("Await = (_, %v, %v), want (_, false, nil)", present, err)
+	v, err := outer.Await().Unwrap()
+	if err != nil || v.IsPresent() {
+		t.Errorf("Await = (%v, %v), want (_, false, nil)", v, err)
 	}
 }
 
@@ -284,9 +284,9 @@ func TestMaybe_Zip_BothPresent(t *testing.T) {
 	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
 	zipped := a.Zip(b, func(x, y int) int { return x*x + y*y })
 
-	v, present, err := zipped.Await()
-	if err != nil || !present || v != 25 {
-		t.Errorf("Zip Await = (%d, %v, %v), want (25, true, nil)", v, present, err)
+	v, err := zipped.Await().Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != 25 {
+		t.Errorf("Zip Await = (%v, %v), want (25, true, nil)", v, err)
 	}
 }
 
@@ -297,9 +297,9 @@ func TestMaybe_Zip_LeftComplete(t *testing.T) {
 	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
-	_, present, err := zipped.Await()
-	if err != nil || present {
-		t.Errorf("Await = (_, %v, %v), want (_, false, nil)", present, err)
+	v, err := zipped.Await().Unwrap()
+	if err != nil || v.IsPresent() {
+		t.Errorf("Await = (%v, %v), want (_, false, nil)", v, err)
 	}
 }
 
@@ -310,7 +310,7 @@ func TestMaybe_Zip_LeftError(t *testing.T) {
 	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
-	_, _, err := zipped.Await()
+	_, err := zipped.Await().Unwrap()
 	if !errors.Is(err, errSentinelMaybe) {
 		t.Errorf("err = %v, want sentinel", err)
 	}
@@ -323,9 +323,9 @@ func TestMaybe_AndThen_RunsNextOnSuccess(t *testing.T) {
 	second := NewMaybe(func() (string, bool, error) { return "next", true, nil })
 	seq := first.AndThen(second)
 
-	v, present, err := seq.Await()
-	if err != nil || !present || v != "next" {
-		t.Errorf("AndThen Await = (%q, %v, %v), want (\"next\", true, nil)", v, present, err)
+	v, err := seq.Await().Unwrap()
+	if err != nil || v.IsEmpty() || v.Get() != "next" {
+		t.Errorf("AndThen Await = (%v, %v), want (\"next\", true, nil)", v, err)
 	}
 }
 
@@ -339,9 +339,9 @@ func TestMaybe_AndThen_SkipsNextOnComplete(t *testing.T) {
 	})
 	seq := first.AndThen(second)
 
-	_, present, err := seq.Await()
-	if err != nil || present {
-		t.Errorf("Await = (_, %v, %v), want (_, false, nil)", present, err)
+	v, err := seq.Await().Unwrap()
+	if err != nil || v.IsPresent() {
+		t.Errorf("Await = (%v, %v), want (_, false, nil)", v, err)
 	}
 }
 
@@ -355,7 +355,7 @@ func TestMaybe_AndThen_SkipsNextOnError(t *testing.T) {
 	})
 	seq := first.AndThen(second)
 
-	_, _, err := seq.Await()
+	_, err := seq.Await().Unwrap()
 	if !errors.Is(err, errSentinelMaybe) {
 		t.Errorf("err = %v, want sentinel", err)
 	}

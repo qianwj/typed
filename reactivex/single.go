@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+
+	"github.com/qianwj/typed/adt"
 )
 
 // Single[T] is a reactive container that emits exactly one value or
@@ -99,35 +101,23 @@ func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscripti
 }
 
 // Await blocks until the Single has terminated and returns its result
-// as (T, error). It is safe to call Await multiple times; subsequent
+// as adt.Result[T]. Source errors produce Failure; successful values,
+// including nil, produce Success. It is safe to call Await multiple times; subsequent
 // calls return the same cached result without re-running fn.
 //
 // Await cannot be cancelled. Use [AwaitWithContext] when the caller
 // needs cancellation or a deadline.
-func (s *Single[T]) Await() (T, error) {
-	return s.await(context.Background())
+func (s *Single[T]) Await() adt.Result[T] {
+	return adt.Wrap(s.await(context.Background()))
 }
 
 // AwaitWithContext blocks until the Single has terminated or ctx is
-// canceled. On normal termination it returns (value, nil). On ctx
-// cancellation it returns (zero, ctx.Err()); the underlying source
-// is not started if ctx is already done.
-func (s *Single[T]) AwaitWithContext(ctx context.Context) (T, error) {
-	if s.Done() {
-		return s.val, s.err
-	}
-	if err := ctx.Err(); err != nil {
-		var zero T
-		return zero, err
-	}
-	s.startProducer()
-	select {
-	case <-s.doneCh:
-		return s.val, s.err
-	case <-ctx.Done():
-		var zero T
-		return zero, ctx.Err()
-	}
+// canceled. It returns the cached Result on termination or Failure(ctx.Err())
+// on cancellation. An already completed Single takes precedence over ctx.
+// Otherwise, an already canceled ctx prevents the source from starting.
+// Canceling a wait does not cancel an already running source.
+func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T] {
+	return adt.Wrap(s.await(ctx))
 }
 
 // Done reports whether the Single has terminated (either with a value
@@ -145,7 +135,7 @@ func (s *Single[T]) Done() bool {
 // FlatMap when the transformation can itself fail.
 func (s *Single[T]) Map[R any](f func(T) R) *Single[R] {
 	return NewSingle(func() (R, error) {
-		v, err := s.Await()
+		v, err := s.await(context.Background())
 		if err != nil {
 			var zero R
 			return zero, err
@@ -163,12 +153,12 @@ func (s *Single[T]) Map[R any](f func(T) R) *Single[R] {
 // from a cache lookup).
 func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R] {
 	return NewSingle(func() (R, error) {
-		v, err := s.Await()
+		v, err := s.await(context.Background())
 		if err != nil {
 			var zero R
 			return zero, err
 		}
-		return f(v).Await()
+		return f(v).await(context.Background())
 	})
 }
 
@@ -182,12 +172,12 @@ func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R] {
 // combination can fail.
 func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Single[R] {
 	return NewSingle(func() (R, error) {
-		l, lErr := s.Await()
+		l, lErr := s.await(context.Background())
 		if lErr != nil {
 			var zero R
 			return zero, lErr
 		}
-		r, rErr := other.Await()
+		r, rErr := other.await(context.Background())
 		if rErr != nil {
 			var zero R
 			return zero, rErr
@@ -205,11 +195,11 @@ func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Singl
 // type.
 func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R] {
 	return NewSingle(func() (R, error) {
-		if _, err := s.Await(); err != nil {
+		if _, err := s.await(context.Background()); err != nil {
 			var zero R
 			return zero, err
 		}
-		return next.Await()
+		return next.await(context.Background())
 	})
 }
 
@@ -243,6 +233,10 @@ func (s *Single[T]) runProducer() {
 func (s *Single[T]) await(ctx context.Context) (T, error) {
 	if s.Done() {
 		return s.val, s.err
+	}
+	if err := ctx.Err(); err != nil {
+		var zero T
+		return zero, err
 	}
 	s.startProducer()
 	select {

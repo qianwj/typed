@@ -3,9 +3,9 @@ package lists
 import (
 	"slices"
 
+	"github.com/qianwj/typed/adt"
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
-	"github.com/qianwj/typed/adt"
 )
 
 // ---------- LinkedList ----------

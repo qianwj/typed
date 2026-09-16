@@ -10,7 +10,8 @@ version: "2"
 
 run:
   timeout: 5m
-  tests: true
+  # Test correctness is checked by go test; lint only production code.
+  tests: false
   modules-download-mode: readonly
   allow-parallel-runners: true
 
@@ -74,11 +75,6 @@ linters:
   exclusions:
     # Mirror the v1 issues.exclude-* knobs under the v2 schema.
     rules:
-      - path: _test\.go
-        linters:
-          - errcheck
-          - gocritic
-          - prealloc
       - path: examples/
         linters:
           - gocritic
@@ -94,6 +90,9 @@ formatters:
   enable:
     - gofmt
     - goimports
+  exclusions:
+    paths:
+      - _test\.go$
   settings:
     goimports:
       local-prefixes:

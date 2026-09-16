@@ -16,24 +16,24 @@
 
 </div>
 
-Typed is a **fluent, type-safe Go generics toolkit**.
-Concrete generic types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`,
-`HashSet[T]`, `Stream[T]`, `Subject[T]`) compose through left-to-right
-chainable transforms (`Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
-`Take`, `Drop`, `SortBy`, `Distinct`, `Concat`), backed by the supporting
-abstractions (`Option[T]`, `Result[T]`, `IsNil`, `Equals`) that the rest
-of the toolkit is built on. The operator vocabulary is intentionally
-familiar to anyone who has used Java Streams, .NET LINQ, or JavaScript
-array pipelines — without inheriting their runtime model. On the async
-side, `reactivex.Observable[T]` adds a typed event stream with explicit
+A **fluent, type-safe Go generics toolkit**. Compose concrete generic
+types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`,
+`Stream[T]`) through left-to-right chainable transforms (`Filter`,
+`Map[R]`, `FlatMap[R]`, `Reduce[R]`, `Take`, `Drop`, `Distinct`,
+`SortBy`, `Concat`), backed by the supporting abstractions
+(`Option[T]`, `Result[T]`, `Either[L, R]`, `IsNil`, `Equals`) that the
+rest of the toolkit is built on. The operator vocabulary follows the
+de facto naming used by Java Streams, .NET LINQ, and JavaScript array
+pipelines — without inheriting their runtime model. On the async side,
+`reactivex.Observable[T]` adds a typed event stream with explicit
 demand, configurable backpressure, and a first-class multicast
 `Subject[T]`.
 
 ## Why Typed
 
-Go's `for` loop is clear and should remain the default for simple logic.
+Go's `for` loop is clear and should stay the default for simple logic.
 The trouble starts when a collection goes through several transforms:
-nested functions, scattered `if err != nil` blocks, and `(T, bool)` returns
+nested functions, scattered `if err != nil` blocks, `(T, bool)` returns
 that do not chain.
 
 ```go
@@ -54,58 +54,48 @@ names := lists.ArrayListOf(users...).
     Collect()
 ```
 
-For laziness, the same collection becomes a stream explicitly:
+For laziness, the same source becomes a stream explicitly:
 
 ```go
-profiles := lists.ArrayListOf(users...).
-    Stream().
+profiles := stream.Of(users...).
     Filter(isAdult).
     Map(toProfile).
     Take(100).
     Collect()
 ```
 
+## Modules
+
+| Module | Path | What's in it |
+|---|---|---|
+| `collections` | `github.com/qianwj/typed/collections` | `ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`, `Stack[T]`, `Stream[T]`, `Range[T]` |
+| `collections/lists` | (sub-module) | `ArrayList[T]`, `LinkedList[T]` with fluent transforms |
+| `collections/queues` | (sub-module) | `Queue[T]`, `Deque[T]`, `PriorityQueue[T]` |
+| `collections/stream` | (sub-module) | `Stream[T]` — the fluent lazy layer over `iter.Seq[T]` |
+| `adt` | `github.com/qianwj/typed/adt` | `Option[T]`, `Result[T]`, `Either[L, R]` |
+| `reactivex` | `github.com/qianwj/typed/reactivex` | `Observable[T]`, `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure |
+| `concurrency` | `github.com/qianwj/typed/concurrency` | `BoundedBlockingQueue[T]`, `UnboundedBlockingQueue[T]`, `Group`, `Semaphore`, `Pool[T]` |
+| `control` | `github.com/qianwj/typed/control` | `If`/`IfGet`, `Repeat`/`RepeatE`, pattern matching |
+| `utils/objects` | `github.com/qianwj/typed/utils/objects` | `IsNil[T]`, `Equals[T]` |
+| `utils/json` | `github.com/qianwj/typed/utils/json` | `Encode[T]`, `Decode[T]` (Result-style on `encoding/json/v2`) |
+
+Each top-level package and sub-package is its own Go module — pull in
+only what you use.
+
 ## Highlights
 
-- 🧱 **Concrete generic types** — `ArrayList[T]`, `LinkedList[T]`,
-  `HashMap[K, V]`, `HashSet[T]`, `Stack[T]`, `Queue[T]`, `Deque[T]`,
-  `Stream[T]`, `Subject[T]`. No runtime type assertions, no `any`-shaped
-  surprises.
-- 🪄 **Fluent transforms** — `Filter`, `Map[R]`, `FlatMap[R]`, `Reduce[R]`,
-  `Take`, `Drop`, `Distinct`, `SortBy`, `Concat`. All return concrete
-  types under Go 1.27's generic methods.
-- 🟢 **Option / Result** — `Option[T]` for "may be absent",
-  `Result[T]` for "may fail". Both bridge cleanly to `(T, error)` and
-  compose with the collection API.
-- 📡 **Typed async streams** — `reactivex.Observable[T]` with explicit
-  demand (`Request(n)`), per-subscription backpressure (`WithBuffer`,
-  `OverflowStrategy`), and a hot multicast `Subject[T]`.
-- 🧠 **Smart equality** — `objects.Equals[T]` understands
-  `func (T) Equal(T) bool`, normalises nil-vs-empty slices / maps, and
-  is nil-safe for typed-nil pointers.
-- 🪶 **Bounded memory** — head-offset `ArrayList` with periodic
-  compaction, slot zeroing on `Stack.Pop` and `Remove*`, so popped
-  references do not leak through the backing array.
-- 🧵 **Bounded & unbounded blocking queues** —
-  `concurrency.BoundedBlockingQueue[T]` is a fixed-capacity FIFO with
-  `Push` / `Poll` (blocking) and `TryPush` / `TryPoll` (non-blocking),
-  backed by a single `chan T`. `concurrency.UnboundedBlockingQueue[T]`
-  is the sibling that never blocks `Push`; ring buffer + mutex + cond
-  under the hood. Both expose context-aware variants
-  (`PushWithContext` / `PollWithContext`).
-- 🧵 **Structured concurrency** — `concurrency.Group` is an
-  `errgroup`-style helper with two failure policies: `Strict` (any
-  task error fails the group, ctx cancels siblings) and `BestEffort`
-  (tasks run to completion; only succeeds if all succeed, otherwise
-  returns the aggregated errors). Built on `sync.WaitGroup` directly,
-  no external dependencies.
+- **Concrete types, not interfaces.** `ArrayList[T]`, `LinkedList[T]`, etc. are concrete generic structs. Go 1.27's generic methods (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) need concrete receivers.
+- **Fluent transforms return concrete types.** `Filter`, `Map[R]`, `FlatMap[R]`, `Take`, `Drop`, `Distinct`, `SortBy`, `Concat` chain on the same type — no boxing into `any`.
+- **`Option[T]` / `Result[T]` / `Either[L, R]`.** Absence and failure are first-class types. Both `Option` and `Result` bridge to `(T, error)` cleanly.
+- **No reflection in the hot path.** Only `utils/objects` uses reflection (for `IsNil`/`Equals`), and only there.
+- **Bounded memory.** `ArrayList` uses a head-offset layout with periodic compaction at `head >= 64`. `Stack.Pop` and `Remove*` zero the freed slot so popped references are GC-eligible.
+- **Typed async streams.** `reactivex.Observable[T]` with explicit demand (`Request(n)`) and per-subscription backpressure (`OverflowStrategy`).
+- **Synchronous concurrency primitives.** `BoundedBlockingQueue[T]`, `UnboundedBlockingQueue[T]`, `Group` (Strict / BestEffort), `Semaphore`, `Pool[T]`. Backed by `chan T` / `sync.WaitGroup` / `sync.Cond` directly — no third-party deps.
 
 ## Install
 
 ```bash
 go get github.com/qianwj/typed/collections
-go get github.com/qianwj/typed/adt
-go get github.com/qianwj/typed/adt
 go get github.com/qianwj/typed/adt
 go get github.com/qianwj/typed/reactivex
 go get github.com/qianwj/typed/control
@@ -114,8 +104,7 @@ go get github.com/qianwj/typed/utils/objects
 go get github.com/qianwj/typed/utils/json
 ```
 
-Each sub-package is its own Go module, so you can pull in only what you
-use. Requires **Go 1.27+** for generic methods on concrete types.
+Requires **Go 1.27+** for generic methods on concrete types.
 
 ## Quick start
 
@@ -123,23 +112,28 @@ use. Requires **Go 1.27+** for generic methods on concrete types.
 import (
     "github.com/qianwj/typed/collections"
     "github.com/qianwj/typed/collections/lists"
-    "github.com/qianwj/typed/adt"
+    "github.com/qianwj/typed/collections/queues"
+    "github.com/qianwj/typed/collections/stream"
     "github.com/qianwj/typed/adt"
 )
 
-// Eager transform
+// Eager fluent transform
 adults := lists.ArrayListOf(users...).
     Filter(func(u User) bool { return u.Age >= 18 }).
     Map(func(u User) string { return u.Name }).
     Collect()
 
-// Option-based access — no (T, bool) dance
 first := adults.First().OrElse("(none)")
 
-// Linear structures
-s := collections.NewStack[int]()
-s.Push(1); s.Push(2); s.Push(3)
-top := s.Pop().OrElse(0) // 3
+// Lazy pipeline over an iter.Seq
+profiles := stream.Of(users...).
+    Filter(isAdult).
+    Map(toProfile).
+    Take(100).
+    Collect()
+
+// Option-based access — no (T, bool) dance
+top := collections.NewStack[int]().Push(1).Push(2).Push(3).Pop().OrElse(0)
 
 // Result: thread a (T, error) through combinators
 v, err := adt.Wrap(loadConfig(path)).
@@ -148,148 +142,90 @@ v, err := adt.Wrap(loadConfig(path)).
     Unwrap()
 if err != nil { return err }
 use(v)
+
+// Top-K with a comparator
+top3 := queues.NewPriorityQueue(3, cmp.Less[int])
+top3.Push(42); top3.Push(7); top3.Push(99); top3.Push(1)
+for top3.Size() > 0 {
+    fmt.Println(top3.Pop().Get()) // 1, 7, 42
+}
 ```
-
-## Table of contents
-
-- [Design principles](#design-principles)
-- [What ships today](#what-ships-today)
-- [Documentation](#documentation)
-- [Operator reference](#operator-reference)
-- [Laziness and execution boundaries](#laziness-and-execution-boundaries)
-- [Memory model](#memory-model)
-- [Concurrency](#concurrency)
-- [Error handling](#error-handling)
-- [Go version](#go-version)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [Bug reports](#bug-reports)
-- [License](#license)
 
 ## Design principles
 
-- **Type safety first.** Use Go generics and avoid `any`, reflection,
-  and runtime type assertions wherever possible. `Option[T]` carries
-  an explicit `present` flag rather than relying on a nil check, so it
-  works for any `T` including value types such as `int`, `string`, and
-  `struct{}`.
-- **Concrete types over interfaces.** `ArrayList[T]` and the rest are
-  concrete generic types, not interfaces. Go 1.27's generic methods
-  (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) only work on concrete
-  receivers; an interface would break fluent chaining.
-- **Option-based access.** Every accessor that can fail by absence
-  returns `adt.Option[T]` rather than `(T, bool)`. The convention
-  is uniform across `ArrayList.Get / First / Last / Find / MinBy / MaxBy / RemoveFirst / RemoveLast`, `LinkedList`, `Stack`, `Queue`, and `Deque`.
-- **Bounded memory.** `ArrayList` uses a head-offset layout with
-  periodic compaction so the retained capacity of a long-running
-  head-drained list is bounded by the high-water mark of in-flight
-  elements plus a constant, not by the all-time maximum the list ever
-  saw. `Stack.Pop`, `ArrayList.RemoveFirst / RemoveLast`, and
-  `Deque.PopFront / PopBack` zero the freed slot so the runtime's
-  reachability walk does not keep popped references alive.
-- **Option laziness.** Collection operations are eager; `Stream[T]`
-  is the explicit lazy layer, backed by Go's `iter.Seq[T]`.
-- **Composability.** Collections, iterators, and `Stream` can be
-  combined into new data sources; the snapshot contract on `Stream()`
-  keeps mutations from leaking into in-flight pipelines.
-- **Early termination.** `First`, `Any`, `All`, `Find`, `Take`, and
-  the `Option`-returning accessors stop as soon as the answer is
-  known.
-- **Opt-in, not a replacement.** Typed is a fluent layer on top of
-  idiomatic Go; simple logic should remain easy to write with
-  `for range` over a slice or map. Existing code that prefers plain
-  slices, maps, and `chan T` is unaffected.
+- **Type safety first.** Generics, no `any`, no reflection in the hot path. `Option[T]` carries an explicit `present` flag rather than a nil check, so it works for value types like `int`, `string`, and `struct{}`.
+- **Concrete types, not interfaces.** Generic methods (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) require concrete receivers. `ArrayList[T]` is a struct, not an `interface{}`.
+- **`Option`-based access.** Every accessor that can fail by absence returns `Option[T]`, not `(T, bool)`. Same convention across `ArrayList`, `LinkedList`, `Stack`, `Queue`, `Deque`, `PriorityQueue`.
+- **Bounded memory.** `ArrayList` head-offset layout with compaction at `head >= 64` bounds retained capacity by the high-water mark of in-flight elements plus a constant, not by all-time maximum. `Pop` / `Remove*` zero freed slots so popped references are GC-eligible.
+- **Eager collections, lazy streams.** `ArrayList.Filter` runs immediately. `ArrayList.Stream()` (and `stream.Of(iter.Seq)`) gives a `Stream[T]`-backed lazy layer.
+- **Composable but opt-in.** Simple logic stays as `for range`. Typed is a fluent layer, not a replacement for idiomatic Go.
 
-## What ships today
+## What ships
 
 ### Collection types
 
-| Type | Kind | Source | Notes |
-| --- | --- | --- | --- |
-| `ArrayList[T]` | Concrete generic struct | `collections/lists` | Head-offset `[]T`; O(1) `Add` / `AddFirst` / `RemoveFirst` / `RemoveLast`; periodic compaction at head ≥ 64. |
-| `LinkedList[T]` | Concrete generic struct | `collections/lists` | Doubly-linked; O(1) head / tail, O(i) random access. |
-| `HashMap[K, V]` | Concrete generic struct | `collections/maps` | Open-addressed hash table; `K comparable`. |
-| `HashSet[T]` | Concrete generic struct | `collections/sets` | `T comparable`; built on the same hash-table machinery. |
-| `Stack[T]` | Concrete generic struct | `collections` | Single-ended LIFO; `[]T` with explicit slot zeroing on `Pop`. |
-| `Queue[T]` | Concrete generic struct | `collections` | Single-ended FIFO; thin wrapper over `ArrayList[T]`. |
-| `Deque[T]` | Concrete generic struct | `collections` | Double-ended; thin wrapper over `LinkedList[T]`. All operations are strict O(1). |
-| `Stream[T]` | Concrete generic struct | `collections/stream` | Lazy, single-use pipeline over `iter.Seq[T]`. |
-
-### Parent-package constructors
-
-| Function | Source | Notes |
-| --- | --- | --- |
-| `Range[T constraints.Integer](start, end T) Stream[T]` | `collections` | Lazy iota-style `[start, end)` stream. |
+| Type | Source | Notes |
+|---|---|---|
+| `ArrayList[T]` | `collections/lists` | Head-offset `[]T`; O(1) `Add` / `AddFirst` / `RemoveFirst` / `RemoveLast`; periodic compaction at `head >= 64`. |
+| `LinkedList[T]` | `collections/lists` | Doubly-linked; O(1) head/tail. |
+| `HashMap[K, V]` | `collections/maps` | Open-addressed hash table; `K comparable`. |
+| `HashSet[T]` | `collections/sets` | `T comparable`; same hash-table machinery. |
+| `Stack[T]` | `collections` | LIFO; `[]T` with explicit slot zeroing on `Pop`. |
+| `Queue[T]` | `collections/queues` | FIFO; thin wrapper over `ArrayList[T]`. |
+| `Deque[T]` | `collections/queues` | Double-ended; thin wrapper over `LinkedList[T]`; strict O(1) on both ends. |
+| `PriorityQueue[T]` | `collections/queues` | Heap-backed; comparator-ordered; bounded or unbounded top-K. |
+| `Stream[T]` | `collections/stream` | Lazy single-use pipeline over `iter.Seq[T]`. |
+| `Range[T]` | `collections` | Integer half-open interval as a `Stream[T]` factory. |
 
 ### Abstraction types
 
 | Type | Source | Notes |
-| --- | --- | --- |
-| `adt.Option[T]` | `adt` | Present / absent value, no nil check on `T`. |
-| `adt.Either[L, R]` | `adt` | Tagged-union value type; `Left` = failure, `Right` = success by convention. Safe accessors return `Option`. `Fold` for the canonical branch-pick pattern. |
-| `adt.Result[T]` | `adt` | Success / failure; `Unwrap` returns `(T, error)`, `Wrap` is the forward bridge from `(T, error)`, `Recover` does error-aware fallback that always returns a `T`. |
-| `json.Encode[T] / Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
-| `objects.Equaler` (interface, optional) | `utils/objects` | Hint interface `Equal(any) bool`; not required for `Equals` to dispatch. |
-| `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch (handles typed nil, `func (T) Equal(T) bool`, `time.Time.Equal`). |
+|---|---|---|
+| `adt.Option[T]` | `adt` | Present / absent value; explicit `present` flag, no nil check on `T`. |
+| `adt.Result[T]` | `adt` | Success / failure. `Wrap` / `Unwrap` bridge to `(T, error)`. `Recover` for error-aware fallback. |
+| `adt.Either[L, R]` | `adt` | Tagged-union; safe accessors return `Option`. `Fold` for branch-pick. |
+| `json.Encode[T]` / `Decode[T]` | `utils/json` | `encoding/json/v2`-backed `Result`-style codec. |
+| `objects.IsNil[T]`, `objects.Equals[T]` | `utils/objects` | Reflection-based nil check and equality dispatch. |
+
+### Reactive streams
+
+| Type / function | Source | Notes |
+|---|---|---|
+| `Observable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Request(n)`) and `OnError` / `OnComplete` terminals. |
+| `Subject[T]` | `reactivex` | Hot multicast publisher; `WithBuffer` / `WithOverflow` for backpressure. |
+| `Single[T]`, `Maybe[T]` | `reactivex` | Reactive containers for "exactly one" and "zero or one" emissions. Await returns `Result[T]` / `Result[Option[T]]`, respectively. |
+| `OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`. |
 
 ### Control flow
 
 | Type / function | Source | Notes |
-| --- | --- | --- |
-| `control.Repeat(times, f)` / `RepeatE(times, f) (int, error)` | `control` | "Do this N times" loops; `RepeatE` stops at the first non-nil error and returns the number of successful iterations. |
-| `control.If[T](condition, onTrue, onFalse)` / `IfGet[T](condition, onTrue, onFalse)` | `control` | `If` selects eagerly evaluated values; `IfGet` calls only the selected callback, exactly once. |
-| `match.Pattern[T]`, `match.Value[T]`, `match.Type(any)` | `control/match` | First-match-wins pattern matching: `Pattern[T]` for value tests, `Type` for dynamic-type dispatch. |
-
-Go's argument evaluation rules mean `If(user != nil, user.Name, "anonymous")` still panics for a nil user. Use `IfGet` callbacks or `adt.OfNullable(user).Map(...).OrElse(...)` for optional values. See the [conditional-value guide](./docs/control/README.md#if-and-ifget) for examples and compiler semantics.
-
-### Reactive streams
-
-| Type | Source | Notes |
-| --- | --- | --- |
-| `reactivex.Observable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Subscription.Request(n)`) and `OnError` / `OnComplete` terminals. |
-| `reactivex.Subject[T]` | `reactivex` | Hot multicast publisher and subscriber; configured with `WithBuffer` / `WithOverflow`. |
-| `reactivex.Single[T]` | `reactivex` | Reactive container that emits exactly one value or one error. `Await` / `Subscribe` for blocking / callback consumption; `Map` / `FlatMap` / `Zip` / `AndThen` for composition. |
-| `reactivex.Maybe[T]` | `reactivex` | Reactive container that emits zero-or-one value or one error — three terminal states (success / complete / error). |
-| `reactivex.OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`. |
-| Sources: `Just`, `FromSlice`, `FromChannel`, `FromChannelWithOptions`, `FromSeq`, `Create`, `Interval` | `reactivex` | Cold and hot source constructors. |
-| Operators: `Map[R]`, `Filter`, `Take`, `Skip`, `Scan[R]`, `Reduce` | `reactivex` | All wrapping-style; no goroutines or queues of their own. |
+|---|---|---|
+| `control.If[T]`, `IfGet[T]` | `control` | `If` selects eager values; `IfGet` evaluates only the chosen callback. |
+| `control.Repeat`, `RepeatE` | `control` | "Do N times"; `RepeatE` stops at the first non-nil error. |
+| `match.Pattern[T]`, `match.Value[T]`, `match.Type` | `control/match` | First-match-wins pattern matching. |
 
 ### Concurrency primitives
 
 | Type | Source | Notes |
-| --- | --- | --- |
-| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (capacity rounded up to a power of two); `Push` / `Poll` block, `TryPush` / `TryPoll` do not; `TryPoll` returns `adt.Option[T]`. A thin generic wrapper around `chan T`. `0 B/op`, `0 allocs/op` on the hot path. |
-| `UnboundedBlockingQueue[T]` | `concurrency` | Unbounded FIFO; `Push` never blocks, `Poll` blocks when empty. Ring buffer + `sync.Mutex` + `*sync.Cond` under the hood. Same `Push` / `Poll` / `WithContext` / `Try*` surface as `BoundedBlockingQueue`. |
-| `Group` | `concurrency` | `errgroup`-style structured concurrency with two failure policies — `Strict` (any task error fails the group, ctx cancels siblings) and `BestEffort` (tasks run to completion; only succeeds if all succeed, otherwise returns `*BestEffortError`). Built on `sync.WaitGroup` directly, no external dependencies. |
-| `Pool[T]` | `concurrency` | Typed `sync.Pool` with `NewPool(creator)`, `Get() adt.Option[T]`, and `Put(T)` for temporary object reuse. Missing or nil results yield an empty Option; callers reset objects and relinquish access after Put. |
-
-## Documentation
-
-Per-package API reference and examples, in English and Chinese:
-
-- [docs/README.md](./docs/README.md) — index
-- [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `Stream`, `Range`
-- [control](./docs/control/README.md) — `If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
-- [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
-- [concurrency](./docs/concurrency/README.md) — blocking queues, `Group`, `Semaphore`, and `Pool[T]`
-- [adt](./docs/adt/README.md) — `Option[T]`
-- [adt](./docs/adt/README.md) — `Result[T]`
-- [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
-- [utils/json](./docs/utils/json/README.md) — `Encode` / `Decode` on `encoding/json/v2`
+|---|---|---|
+| `BoundedBlockingQueue[T]` | `concurrency` | Fixed-capacity FIFO (`chan T` wrapper); `Push` / `Poll` block, `TryPush` / `TryPoll` non-blocking. |
+| `UnboundedBlockingQueue[T]` | `concurrency` | Ring buffer + `sync.Mutex` + `*sync.Cond`; `Push` never blocks. |
+| `Group` | `concurrency` | `errgroup`-style structured concurrency; `Strict` / `BestEffort` modes. |
+| `Semaphore` | `concurrency` | Counting semaphore (fixed unit weights); `Acquire` / `Release` / `TryAcquire` / `AcquireWithContext`. |
+| `Pool[T]` | `concurrency` | Typed `sync.Pool` with `NewPool(creator)`, `Get() Option[T]`, `Put(T)`. |
 
 ## Operator reference
 
 Operator names follow the de facto vocabulary shared by Java Streams,
-.NET LINQ, and JavaScript array methods, so the API reads naturally
-if you've used any of them. The table below maps the common aliases
-to their Typed counterpart.
+.NET LINQ, and JavaScript array methods, so the API reads naturally if
+you've used any of them.
 
 | Operation | Typed |
-| --- | --- |
-| `stream()` | `ArrayListOf(...).Stream()` |
+|---|---|
+| `stream()` | `ArrayListOf(...).Stream()` / `stream.Of(iter.Seq[T])` |
 | `filter` / `where` | `Filter` |
-| `map` / `select` | `Map` |
-| `flatMap` / `selectMany` | `FlatMap` |
+| `map` / `select` | `Map[R]` |
+| `flatMap` / `selectMany` | `FlatMap[R]` |
 | `distinct` | `Distinct` |
 | `sorted` | `Sort` / `SortBy` |
 | `limit` / `take` | `Take` |
@@ -301,42 +237,12 @@ to their Typed counterpart.
 | `reduce` | `Reduce` |
 | `collect(toList())` | `Collect` |
 | `forEach` | `ForEach` |
-| `Option.of` / `ofNullable` | `adt.Of` / `adt.OfNullable` |
-| `Option.orElse` | `OrElse` |
-| `Stream` lazy | `Stream[T]` |
-| `IntStream.range` | `Range(start, end) Stream[T]` |
-| `Deque` (Java) | `Deque[T]` (LinkedList-backed) |
+| `IntStream.range` | `Range(start, end)` |
 
 Typed is not a port of any one library. The fluent API is built on
 top of Go's own generics, `iter.Seq[T]`, and explicit `error` returns;
 the operator names are simply the de facto vocabulary engineers
 already know.
-
-## Laziness and execution boundaries
-
-A typical `Stream` pipeline looks like:
-
-```text
-source → intermediate operation → intermediate operation → terminal operation
-```
-
-For example:
-
-```go
-adults := lists.ArrayListOf(users...).
-    Stream().
-    Filter(isAdult).
-    Map(toProfile).
-    Take(100).
-    Collect()
-```
-
-Before `Collect`, `Filter`, `Map`, and `Take` only describe the
-pipeline. The terminal operation starts consumption, and `Take(100)`
-can stop the underlying source as soon as enough values have been
-produced. `Stream()` creates a snapshot of the source at call time, so
-later mutations to the source collection do not affect the in-flight
-pipeline.
 
 ## Memory model
 
@@ -344,15 +250,16 @@ pipeline.
 the discarded prefix back to zero once `head >= 64`. The retained
 capacity of a long-running head-drained list is therefore bounded by
 the high-water mark of in-flight elements plus 64, not by the all-time
-maximum the list ever saw. Reference elements popped from the front
-are eligible for GC as soon as `RemoveFirst` zeros the freed slot. The
-reference-handling tests in `collections/lists/arraylist_test.go` and
-`collections/{stack,queue,deque}_test.go` use `runtime.SetFinalizer`
-to assert that all popped boxes' finalizers run.
+maximum the list ever saw. Reference elements popped from the front are
+eligible for GC as soon as `RemoveFirst` zeros the freed slot. The
+reference-handling tests in `collections/lists/arraylist_test.go`,
+`collections/stack_test.go`, and `collections/queues/queue_test.go` use
+`runtime.SetFinalizer` to assert that all popped boxes' finalizers run.
 
-`Stack.Pop` is the slice-backed equivalent: it shrinks the backing
-array and explicitly zeros the popped slot, so a `Stack[T]` of
-pointers does not leak references through out-of-range slots.
+`Stack.Pop`, `Queue.Pop`, `Deque.PopFront` / `PopBack`, and the
+`ArrayList.Remove*` paths all zero the freed slot — a
+`*collections.Stack[int]` of pointers does not leak references
+through out-of-range slots.
 
 ## Concurrency
 
@@ -360,27 +267,32 @@ None of the collection types are safe for concurrent mutation. The
 standard Go pattern — a single goroutine owns the collection,
 communication happens over channels — applies unchanged. `Stream` is
 not parallel by default; ordinary `Map` will not silently become
-concurrent. The toolkit does not introduce a new concurrency model; it
-follows Go's explicit one.
+concurrent. The toolkit does not introduce a new concurrency model;
+it follows Go's explicit one.
 
-For the rare case where the toolkit's own surface area is a better fit
-than `chan T` — non-blocking probes (`TryPush` / `TryPoll`), context-aware
+For the cases where the toolkit's own surface area is a better fit than
+`chan T` — non-blocking probes (`TryPush` / `TryPoll`), context-aware
 blocking (`PushWithContext` / `PollWithContext`), an `Option`-based
-return for non-blocking reads, a single generic type to express "a
+return for non-blocking reads, a single generic type for "a
 fixed-capacity blocking queue", or `errgroup`-style structured
-concurrency with a typed `fn(ctx)` signature — the [`concurrency`
-package](./docs/concurrency/README.md) ships
+concurrency with a typed `fn(ctx)` signature — the
+[`concurrency` package](./docs/concurrency/README.md) ships
 [`BoundedBlockingQueue[T]`](./docs/concurrency/README.md#boundedblockingqueuet)
-(a thin wrapper around `chan T`, so per-op overhead is essentially
-zero), [`UnboundedBlockingQueue[T]`](./docs/concurrency/README.md#unboundedblockingqueuet)
+(a thin wrapper around `chan T`, per-op overhead ≈ 0),
+[`UnboundedBlockingQueue[T]`](./docs/concurrency/README.md#unboundedblockingqueuet)
 (ring buffer + mutex + cond, since the Go runtime has no "unbounded
-buffered channel"), and [`Group`](./docs/concurrency/README.md#group)
-(strict or best-effort structured concurrency on top of
-`sync.WaitGroup`). Reach for `BoundedBlockingQueue` when you want
-backpressure via capacity; reach for `UnboundedBlockingQueue` when
-`Push` must never block; reach for `Group` when you have a fan-out
-of goroutines and want the first error or the aggregated failures
-without writing the boilerplate yourself.
+buffered channel"),
+[`Group`](./docs/concurrency/README.md#group) (strict or best-effort
+structured concurrency on top of `sync.WaitGroup`),
+[`Semaphore`](./docs/concurrency/README.md#semaphore) (counting
+semaphore with fixed unit weights), and
+[`Pool[T]`](./docs/concurrency/README.md#poolt) (typed `sync.Pool`).
+
+Reach for `BoundedBlockingQueue` when you want backpressure via
+capacity; `UnboundedBlockingQueue` when `Push` must never block;
+`Group` when you have a fan-out of goroutines and want the first
+error or aggregated failures; `Semaphore` to cap concurrent access
+to a resource; `Pool[T]` for temporary object reuse.
 
 ## Error handling
 
@@ -399,37 +311,44 @@ port, _ := adt.Wrap(lookupPort()).
 chain with `Unwrap` instead.
 
 For collection pipelines that need to surface errors, the recommended
-pattern is to convert the error path into an absent `Option[T]`
-(e.g. `OfNullable` on a lookup that returns `(T, error)`) and keep the
+pattern is to convert the error path into an absent `Option[T]` (e.g.
+`OfNullable` on a lookup that returns `(T, error)`) and keep the
 success path on the regular fluent API.
+
+## Documentation
+
+Per-package API reference and examples, in English and Chinese:
+
+- [docs/README.md](./docs/README.md) — index, with per-module roadmaps
+- [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `PriorityQueue`, `Stream`, `Range`
+- [adt](./docs/adt/README.md) — `Option[T]`, `Result[T]`, `Either[L, R]`
+- [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
+- [concurrency](./docs/concurrency/README.md) — blocking queues, `Group`, `Semaphore`, `Pool[T]`
+- [control](./docs/control/README.md) — `If`/`IfGet`, `Repeat`/`RepeatE`, pattern matching
+- [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
+- [utils/json](./docs/utils/json/README.md) — `Encode`/`Decode` on `encoding/json/v2`
 
 ## Stability and SemVer
 
 Every module is published under [Semantic Versioning 2.0.0](https://semver.org/).
-The pre-`v1.0.0` numbering is chosen on purpose:
+Pre-`v1.0.0` numbering is chosen on purpose:
 
-- **`0.0.x` (current).** No API stability guarantee. The toolkit is
-  intentionally small enough that the cost of editing a method
-  signature is low, and the audience is small enough that the cost of
-  breaking an early adopter is also low. Patch releases (`0.0.x`)
-  contain only bug fixes; anything that touches a public signature,
-  exported type, or the documented behaviour of an existing
-  operator is a **minor** bump (`0.0.x` → `0.(x+1).0`).
-- **`0.y.0` (planned once a module reaches feature freeze).** Public
-  types, exported function signatures, and the documented
-  behaviour of an operator are frozen. Patch releases contain only
-  bug fixes and documentation; no new API surface. A module is
-  promoted to this tier when its API has been exercised for at
-  least one minor cycle without changes.
-- **`v1.0.0`.** Reserved for the modules the maintainer is willing
-  to backport bug fixes to. Until then, "use at HEAD" is the
-  recommended installation mode.
+- **`0.0.x` (current).** No API stability guarantee. Anything that
+  touches a public signature, exported type, or the documented
+  behaviour of an operator is a **minor** bump (`0.0.x` →
+  `0.(x+1).0`). Patches are bug fixes only.
+- **`0.y.0`** (planned once a module reaches feature freeze). Public
+  types, function signatures, and operator behaviour are frozen.
+  Promoted when the API has been exercised for at least one minor
+  cycle without changes.
+- **`v1.0.0`** is reserved for modules the maintainer is willing to
+  backport bug fixes to.
 
-### What changes between minor releases will look like
+### What counts as a breaking change
 
 - Renaming an exported type or method.
-- Changing a generic receiver type (e.g. swapping `Map(func(T) R)`
-  for `Map(func(context.Context, T) (R, error))`).
+- Changing a generic receiver type (e.g. swapping `Map(func(T) R)` for
+  `Map(func(context.Context, T) (R, error))`).
 - Adding new required fields to a public struct.
 - Changing a documented invariant (e.g. "`Map` returns an empty
   observable on a nil slice", "`MinBy` panics on an empty list").
@@ -458,15 +377,12 @@ concurrency/v0.0.1
 ```
 
 A change to one module's tag never implies a change to another.
-`utils/v0.0.2` may ship the same week as `reactivex/v0.0.1`, or
-years later; the prefixes are independent.
+`utils/v0.0.2` may ship the same week as `reactivex/v0.0.1`, or years
+later; the prefixes are independent.
 
-### How to find a breaking change
-
-Every release notes a `BREAKING:` line for any signature or
-behaviour change. The diff between the previous and current
-`vX.Y.Z` tag is the authoritative changelog; release notes
-summarise it but do not replace it.
+Every release notes a `BREAKING:` line for any signature or behaviour
+change. The diff between the previous and current `vX.Y.Z` tag is the
+authoritative changelog.
 
 ## Go version
 
@@ -483,130 +399,104 @@ such as `Stream[T].Map[R]`, `Option[T].Map[R]`, and
 
 ## Roadmap
 
-Done:
+**Done** across modules:
 
-- [x] `ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]` with
-      fluent methods.
-- [x] Eager collection operations: `Filter`, `Map[R]`, `FlatMap[R]`,
-      `Reduce[R]`, `Collect`, `ForEach`, `Peek`, `Concat`.
-- [x] Order-dependent operations on lists: `Get`, `Insert`, `RemoveAt`,
-      `First`, `Last`, `Find`, `Take`, `Drop`, `Distinct`, `SortBy`,
-      `MinBy`, `MaxBy`.
-- [x] Option-based access: `Get` / `First` / `Last` / `Find` /
-      `MinBy` / `MaxBy` / `RemoveFirst` / `RemoveLast` and `Stack` /
-      `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back` return
-      `Option[T]`.
-- [x] `Stream[T]` adapter backed by `iter.Seq[T]`, with
-      early-terminating terminals.
-- [x] Linear structures: `Stack[T]`, `Queue[T]`, `Deque[T]`.
-- [x] Parent-package helpers: `Range[T constraints.Integer](start, end T)
-      Stream[T]` for iota-style integer sequences.
-- [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]`
-      utilities.
-- [x] `control.If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match` pattern matching.
-- [x] `reactivex` package: `Observable[T]` / `Publisher[T]` /
-      `Subscriber[T]`, `Subject[T]`, `WithBuffer` / `WithOverflow`
-      backpressure, `Map` / `Filter` / `Take` / `Skip` / `Scan` /
-      `Reduce` operators.
-- [x] `concurrency` package: `BoundedBlockingQueue[T]` (array-backed
-      ring buffer, blocking + non-blocking variants, race-tested).
-- [x] `utils/json` Result-style codec on top of `encoding/json/v2`.
-- [x] `concurrency.Pool[T]`: typed temporary object reuse backed by `sync.Pool`.
-- [x] Bounded memory: head-offset `ArrayList` with periodic compaction,
-      slot-zeroing on `Stack.Pop` and the list `Remove*` paths.
-- [x] Tests with the race detector on every module. Live coverage is
-      reported per module via Codecov — see the badge above.
+- `ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]` with
+  fluent methods.
+- Eager collection operations: `Filter`, `Map[R]`, `FlatMap[R]`,
+  `Reduce[R]`, `Collect`, `ForEach`, `Peek`, `Concat`.
+- Order-dependent operations on lists: `Get`, `Insert`, `RemoveAt`,
+  `First`, `Last`, `Find`, `Take`, `Drop`, `Distinct`, `SortBy`,
+  `MinBy`, `MaxBy`.
+- Option-based access on `ArrayList` / `LinkedList` / `Stack` /
+  `Queue` / `Deque` / `PriorityQueue` (every "take one" returns
+  `Option[T]`).
+- `Stream[T]` adapter backed by `iter.Seq[T]`, with early-terminating
+  terminals.
+- Synchronous queues under `collections/queues`: `Queue[T]`,
+  `Deque[T]`, `PriorityQueue[T]` (the latter with bounded top-K
+  semantics).
+- `Option[T]` / `Result[T]` / `Either[L, R]` / `IsNil[T]` / `Equals[T]`.
+- `control.If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
+  pattern matching.
+- `reactivex.Observable[T]` / `Publisher[T]` / `Subscriber[T]`,
+  `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure, operators.
+- `concurrency.BoundedBlockingQueue[T]`,
+  `UnboundedBlockingQueue[T]`, `Group`, `Semaphore`, `Pool[T]`.
+- `utils/json` Result-style codec on top of `encoding/json/v2`.
+- Bounded memory: head-offset `ArrayList` with periodic compaction;
+  slot-zeroing on `Stack.Pop`, `Queue.Pop`, `Deque.PopFront`,
+  `Deque.PopBack`, and the list `Remove*` paths.
+- Tests with the race detector on every module. Live coverage is
+  reported per module via Codecov — see the badge above.
 
-Open:
+**Open** (next-tier candidates; promoted on demand, not preemptively):
 
-- [ ] Error-aware collection operations (`MapE`, `FilterE`, `CollectE`)
-      as a first-class pipeline alternative to `Result[T]`-per-element.
-- [ ] Benchmarks for `ArrayList` head-side ops, `LinkedList`
-      iteration, `HashMap` resize behaviour, and `Stream` pipeline
-      overhead.
-- [ ] Iterators (`iter.Seq[T]`) as a first-class output of the
-      collection types, parallel to `Stream()`.
+- Error-aware collection operations (`MapE`, `FilterE`, `CollectE`)
+  as a first-class pipeline alternative to `Result[T]`-per-element.
+- Iterators (`iter.Seq[T]`) as a first-class output of the collection
+  types, parallel to `Stream()`.
+- Per-module benchmarks (see each module's `roadmap.md` for the
+  specifics).
+
+Per-module roadmaps live in each module's `docs/<module>/roadmap.md`.
 
 ## Contributing
 
-The toolkit is intentionally small, but contributions are welcome. Before
-opening a pull request, please skim the principles below so the review goes
-faster for everyone.
+The toolkit is intentionally small, but contributions are welcome.
 
-- **Scope per module.** Each top-level package (`collections`, `control`,
-  `reactivex`, `concurrency`, `adt`, `adt`,
-  `utils/objects`, `utils/json`) ships as an **independent Go module** and
-  has its own version tag prefix (see [Stability and SemVer](#stability-and-semver)).
-  A PR that touches more than one module should call that out explicitly
-  in the description and explain why cross-module coordination is needed;
-  otherwise the maintainer will ask you to split it.
-- **Discuss before you build.** For anything beyond a small bug fix or
-  documentation typo, file an issue first so we can agree on the shape of
-  the change. Things that look like "just adding a method" often turn into
-  SemVer / API-surface decisions (see [the Stability chapter](#stability-and-semver)
-  for what counts as breaking).
+- **Scope per module.** Each top-level package and sub-package ships
+  as an independent Go module with its own version tag prefix
+  (see [Stability and SemVer](#stability-and-semver)). A PR that
+  touches more than one module should call that out explicitly and
+  explain why cross-module coordination is needed; otherwise the
+  maintainer will ask you to split it.
+- **Discuss before you build.** For anything beyond a small bug fix
+  or documentation typo, file an issue first so the shape of the
+  change can be agreed on. Things that look like "just adding a
+  method" often turn into SemVer / API-surface decisions.
 - **Tests are required.** A PR that changes behaviour must come with
-  `go test ./...` passing **with `-race`** on the affected module. The
-  toolkit's correctness story depends on it; PRs without a regression test
-  will be asked to add one.
-- **Linting must stay clean.** Run `golangci-lint run ./...` against the
-  module you changed before pushing. The CI workflow runs the same
-  configuration (`./.golangci.yml`) on every push and PR.
+  `go test ./...` passing **with `-race`** on the affected module.
+- **Linting must stay clean.** Run `golangci-lint run ./...` on the
+  module you changed before pushing.
 - **Public API is sacred.** If your change touches an exported type,
   method, function, or constant, the PR description must call it out
-  explicitly and tag it as `BREAKING:`, `feat:`, or `fix:` so the release
-  notes can be written correctly. See the [Per-module release tag
-  format](#per-module-release-tag-format) section for the tagging
-  conventions.
+  explicitly and tag it `BREAKING:`, `feat:`, or `fix:` so the release
+  notes can be written correctly.
 - **Commit hygiene.** One logical change per commit. Bug fixes and
-  refactors should not be mixed with feature work in the same commit, and
-  each commit message should make sense on its own.
-- **Coding style.** Match the file you are editing. The codebase does not
-  introduce new dependencies without discussion; do the same. When in
-  doubt, read two neighbouring files first.
+  refactors should not be mixed with feature work in the same commit.
 
-The standard flow:
-
-1. Fork the repository and create a topic branch off `main`.
-2. Make your change, run `go test -race ./...` and `golangci-lint run`
-   on the affected module, push the branch.
-3. Open a pull request against `qianwj/typed:main` with a clear
-   description, a link to the issue it closes (if any), and the
-   `BREAKING:` / `feat:` / `fix:` tag if applicable.
+The standard flow: fork the repository and create a topic branch off
+`main`; make your change; run `go test -race ./...` and
+`golangci-lint run`; push the branch; open a pull request against
+`qianwj/typed:main`.
 
 ## Bug reports
 
-Please use the [issue tracker](https://github.com/qianwj/typed/issues) on
-GitHub. Before opening a new issue, search to make sure it is not already
-filed (including closed ones — the fix may have landed on a different
-module's branch and not yet been tagged).
+Use the [issue tracker](https://github.com/qianwj/typed/issues).
+Search to make sure the bug is not already filed (including closed
+ones — the fix may have landed on a different module's branch and not
+yet been tagged).
 
 A good bug report includes:
 
 - **Goal.** One sentence: what were you trying to do with Typed?
-- **Module and version.** Which module is affected (`collections`,
-  `reactivex`, `concurrency`, ...), and at which commit / tag? `git rev-parse HEAD`
-  inside the module directory, or the module's `vX.Y.Z` tag, is enough.
-- **Environment.** `go version`, `go env GOOS GOARCH`, and (if relevant)
-  the OS / kernel version.
-- **Reproduction.** The smallest self-contained snippet that triggers the
-  bug. The preferred form is a Go test or a `go run`-able file; the
-  `gist`-style "here are ten lines of code that compile" report is
-  usually not enough to reproduce.
-- **Expected vs actual.** What you expected to happen, what actually
-  happened, and the exact error / panic / log output. For panics,
-  include the full stack trace.
+- **Module and version.** `git rev-parse HEAD` inside the module
+  directory, or the module's `vX.Y.Z` tag.
+- **Environment.** `go version`, `go env GOOS GOARCH`.
+- **Reproduction.** The smallest self-contained snippet that
+  triggers the bug. The preferred form is a Go test or a
+  `go run`-able file.
+- **Expected vs actual.** What you expected, what actually happened,
+  and the exact error / panic / log output. For panics, include the
+  full stack trace.
 - **Race / data-race reports.** If you suspect a data race, say so
-  explicitly and include the `-race` output verbatim. Most concurrency
-  bugs in this toolkit only surface with `go test -race` or the runtime
-  race detector attached to a long-running process.
-- **Workarounds.** Anything you tried that got you past the bug, even if
-  it is ugly — it often reveals the underlying assumption.
+  explicitly and include the `-race` output verbatim.
 
-Security issues should **not** go through the public tracker. Use GitHub's
-[private security reporting](https://github.com/qianwj/typed/security/advisories/new)
-flow so the maintainer can coordinate a fix before disclosure.
+Security issues should **not** go through the public tracker. Use
+GitHub's [private security reporting](https://github.com/qianwj/typed/security/advisories/new)
+flow.
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE).
+[MIT](./LICENSE).
