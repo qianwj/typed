@@ -1,4 +1,4 @@
-package collections
+package queues
 
 import (
 	"github.com/qianwj/typed/collections/lists"

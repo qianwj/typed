@@ -4,8 +4,9 @@
 
 Generic collections and a synchronous data-flow layer. `collections` ships four families of containers and one lazy stream tool:
 
-- `Stack[T]` / `Queue[T]` / `Deque[T]` — basic linear containers; "take one" returns `option.Option[T]`.
-- `queues.PriorityQueue[T]` — bounded-or-unbounded comparator-ordered binary heap with `Push` / `Pop` / `Peek` / `Len` / `Capacity`.
+- `Stack[T]` — top-level LIFO container; "take one" returns `option.Option[T]`.
+- `queues.Queue[T]` / `queues.Deque[T]` — FIFO and double-ended containers, now under the `queues` subpackage alongside `PriorityQueue`.
+- `queues.PriorityQueue[T]` — bounded-or-unbounded comparator-ordered binary heap with `Push` / `Pop` / `Peek` / `Size` / `Capacity`.
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — lists with immutable-style transforms (`Filter` / `Map` / `Take` / `Drop` / `Concat` / `Distinct` / `SortBy`).
 - `maps.HashMap[K, V]` — hash table with `Keys` / `Values` / `Entries` / `Filter*` / `MapValues` / `Concat`.
 - `maps.TreeMap[K, V]` — AVL-tree map with comparator ordering, neighbor lookups, and range queries.
@@ -21,7 +22,8 @@ Every collection implements `MarshalJSON` / `UnmarshalJSON`. The element type on
 
 - [Import](#import)
 - [`iterable.Iterable[T]`](#iterableiterablet)
-- [`Stack[T]` / `Queue[T]` / `Deque[T]`](#stackt--queuet--dequet)
+- [`Stack[T]`](#stackt)
+- [`queues.Queue[T]` / `queues.Deque[T]`](#queuesqueuet--queuesdequet)
 - [`queues.PriorityQueue[T]`](#queuespriorityqueuet)
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
@@ -79,9 +81,9 @@ linked := lists.LinkedListFrom(array)
 
 ---
 
-## `Stack[T]` / `Queue[T]` / `Deque[T]`
+## `Stack[T]`
 
-All three are constructed as struct pointers, returning `*Stack[T]` and the like. Every "take one" operation returns `option.Option[T]` rather than `(T, bool)`, so it composes naturally with the `Stream` / `Result` chains.
+`NewStack[T]() *Stack[T]` constructs an empty LIFO container. Every "take one" operation returns `option.Option[T]` rather than `(T, bool)`, so it composes naturally with the `Stream` / `Result` chains.
 
 ```go
 s := collections.NewStack[int]()
@@ -94,9 +96,42 @@ s.Pop().IsEmpty()              // true
 s.Pop()                        // option.Empty[int](), no panic
 ```
 
+| Method | Behaviour |
+| --- | --- |
+| `NewStack[T]()` | Construct an empty stack. |
+| `Push(v T)` | Push `v` onto the top. |
+| `Pop() Option[T]` | Pop the top, or `Empty[T]()` if empty. |
+| `Peek() Option[T]` | Return the top without removing it, or `Empty[T]()` if empty. |
+| `Size() int` | Current size. |
+| `IsEmpty() bool` | True iff `Size() == 0`. |
+| `Clear()` | Discard all elements. |
+| `MarshalJSON` / `UnmarshalJSON` | Standard JSON round-trip — the top is the last element of the array. |
+
+`Pop` / `Peek` on an empty stack return `option.Empty[T]()` and do not panic; `Peek` leaves the stack unchanged.
+
+---
+
+## `queues.Queue[T]` / `queues.Deque[T]`
+
+`Queue` and `Deque` live under the [`queues`](https://pkg.go.dev/github.com/qianwj/typed/collections/queues) subpackage, alongside [`PriorityQueue`](#queuespriorityqueuet) — all three synchronous queue types are grouped there.
+
+```go
+import "github.com/qianwj/typed/collections/queues"
+
+q := queues.NewQueue[int]()
+q.Push(1); q.Push(2)
+v, _ := q.Peek().Get()         // 1
+v, _ = q.Pop().Get()           // 1
+v, _ = q.Pop().Get()           // 2
+
+d := queues.NewDeque[int]()
+d.PushBack(1); d.PushFront(0); d.PushBack(2)
+d.PopFront().Get()             // 0
+d.PopBack().Get()              // 2
+```
+
 | Type | Construct | Key methods |
 |---|---|---|
-| `Stack[T]` | `NewStack[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 | `Queue[T]` | `NewQueue[T]()` | `Push(v) / Pop() Option[T] / Peek() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 | `Deque[T]` | `NewDeque[T]()` | `PushFront(v) / PushBack(v) / PopFront() Option[T] / PopBack() Option[T] / Front() Option[T] / Back() Option[T] / Size() / IsEmpty() / Clear() / MarshalJSON / UnmarshalJSON` |
 
@@ -160,9 +195,9 @@ q := queues.NewPriorityQueue(0, less)
 
 **Bounded-mode complexity.** `Push` scans the heap for the boundary (`max by less`, which lives somewhere in the leaves), making bounded `Push` O(K + log K) rather than O(log K). The K-factor is the linear scan; acceptable for typical small K (top-N queries, bounded caches). `Pop` and `Peek` are O(log K) / O(1) regardless of capacity.
 
-**Concurrency.** `PriorityQueue` is synchronous (no internal locking) and lives in the `collections` package — the same single-goroutine contract as `Queue[T]` and `Stack[T]`. For cross-goroutine use, wrap with a `sync.Mutex` or feed it through a `concurrency.Group`. The roadmap originally sketched `Push` / `Poll` / `TryPoll` (the `BoundedBlockingQueue` verbs), but a synchronous container has no natural blocking `Poll`, so the API mirrors `collections.Queue` instead — `Push` + `Pop` (instead of `TryPoll`).
+**Concurrency.** `PriorityQueue` is synchronous (no internal locking) and lives in the `collections/queues` subpackage — the same single-goroutine contract as [`Queue[T]`](#queuesqueuet--queuesdequet) and [`Stack[T]`](#stackt). For cross-goroutine use, wrap with a `sync.Mutex` or feed it through a `concurrency.Group`. The roadmap originally sketched `Push` / `Poll` / `TryPoll` (the `BoundedBlockingQueue` verbs), but a synchronous container has no natural blocking `Poll`, so the API mirrors `Queue` instead — `Push` + `Pop` (instead of `TryPoll`).
 
-**Memory model.** Backed by a single `[]T` that grows via `append` on every push. Freed slots are zeroed in `Pop` so a pointer-typed `T` is not pinned in the backing array after removal, matching `collections.Stack` and `collections.Queue`.
+**Memory model.** Backed by a single `[]T` that grows via `append` on every push. Freed slots are zeroed in `Pop` so a pointer-typed `T` is not pinned in the backing array after removal, matching [`Stack[T]`](#stackt) and [`Queue[T]`](#queuesqueuet--queuesdequet).
 
 ---
 
@@ -278,7 +313,7 @@ Doubly-linked list with sentinel nodes. `NewLinkedList[T any]() *LinkedList[T]` 
 | `Values() *ArrayList[V]` | Values (unordered). |
 | `Entries() *ArrayList[Entry[K, V]]` | `Entry` is `{K, V}`; `MarshalJSON` produces `{"k": v}`. |
 | `ForEach(func(K, V))` | Walk without changing the map. |
-| `Stream() stream.Stream[Entry[K, V]]` | Lazy stream. |
+| `Stream() stream.MapStream[K, V]` | Lazy pipeline over a key-value snapshot; `Collect()` returns `map[K]V`. Iteration order is unspecified. |
 | `Collect() map[K]V` | Export as a Go built-in `map`. |
 | `MarshalJSON / UnmarshalJSON` | `{"k": v, ...}` form. |
 
@@ -320,7 +355,7 @@ m.Range(10, 30).Collect() // entries for 10 and 20
 | `Range(from, to)` | Ordered snapshot stream over `[from, to)` under the comparator; O(log n + k) for k results. Equal or reversed bounds yield an empty stream. |
 | `ForEach(func(K, V))` | Visits all entries in comparator order; callbacks must not mutate the tree. |
 | `Keys() / Values() / Entries()` | Independent ArrayLists in key order. |
-| `Stream()` | Ordered snapshot `Stream[Entry[K, V]]`. |
+| `Stream() stream.MapStream[K, V]` | Snapshot pairs in comparator order; `Collect()` returns `map[K]V` without ordering. |
 | `Collect() map[K]V` | Independent native map; ordering is lost. |
 | `Filter(p) / MapValues[R](f)` | New TreeMaps retaining the comparator; O(n log n). |
 | `MarshalJSON / UnmarshalJSON` | JSON object, without comparator ordering guarantees. |

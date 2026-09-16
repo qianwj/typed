@@ -58,12 +58,12 @@ import (
 //
 // # API shape
 //
-// Push / Pop / Peek / Len mirror the collections.Queue surface
-// area one-for-one. The roadmap sketched Push / Poll / TryPoll
-// (the BoundedBlockingQueue verbs), but in a synchronous container
-// Poll has no natural meaning distinct from TryPoll — it cannot
-// block. To keep the API consistent with collections.Queue we drop
-// Poll and use Pop instead.
+// Push / Pop / Peek / Size mirror the [Queue] surface area
+// one-for-one. The roadmap sketched Push / Poll / TryPoll (the
+// concurrency.BoundedBlockingQueue verbs), but in a synchronous
+// container Poll has no natural meaning distinct from TryPoll
+// — it cannot block. To keep the API consistent with [Queue] we
+// drop Poll and use Pop instead.
 type PriorityQueue[T any] struct {
 	// heap is a binary heap ordered by `less`. The heap invariant
 	// is maintained locally after every Push / Pop — see heapifyUp
@@ -208,8 +208,8 @@ func (q *PriorityQueue[T]) Pop() adt.Option[T] {
 	n := len(q.heap) - 1
 	q.heap[0] = q.heap[n]
 	// Zero the freed slot so a pointer-typed T is not pinned in
-	// the backing array after removal — mirrors collections.Stack
-	// / collections.Queue.
+	// the backing array after removal — mirrors [collections.Stack]
+	// / [Queue].
 	var zero T
 	q.heap[n] = zero
 	q.heap = q.heap[:n]
@@ -229,11 +229,12 @@ func (q *PriorityQueue[T]) Peek() adt.Option[T] {
 }
 
 // Size returns the current number of elements in the queue.
-// Named to match the [collections.Stack] / [collections.Queue] /
-// [collections.Deque] / [collections.BoundedBlockingQueue]
-// convention; the underlying stdlib [container/heap] uses Len,
+// Named to match the [collections.Stack] / [Queue] / [Deque] /
+// concurrency.BoundedBlockingQueue convention (all the queue
+// types in the toolkit, including the ones in the concurrency
+// package); the underlying stdlib [container/heap] uses Len,
 // which the toolkit deliberately deviates from for naming
-// consistency.
+// consistency across all queue-like types.
 func (q *PriorityQueue[T]) Size() int {
 	return len(q.heap)
 }

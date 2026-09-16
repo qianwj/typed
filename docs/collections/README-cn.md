@@ -5,6 +5,7 @@
 - `Stack[T]` / `Queue[T]` / `Deque[T]` — 基本线性容器，返回 `option.Option[T]` 表示"无值"。
 - `lists.ArrayList[T]` / `lists.LinkedList[T]` — 列表，提供不可变式 transform（`Filter`/`Map`/`Take`/`Drop`/`Concat`/`Distinct`/`SortBy`）。
 - `maps.HashMap[K, V]` — 哈希表，提供 `Keys`/`Values`/`Entries`/`Filter*`/`MapValues`/`Concat`。
+- `maps.TreeMap[K, V]` — AVL 平衡树映射，支持比较器排序、邻近键查询和区间查询。
 - `sets.HashSet[T]` — 哈希集合，提供集合代数（`Union`/`Intersect`/`Difference`/`SymmetricDifference`）以及同型 transform。
 - `stream.Stream[T]` — `iter.Seq[T]` 之上的惰性流，可链接 `Filter`/`Map`/`FlatMap`/`Take`/`Drop`/`Distinct`/`Concat`/`SortBy`/`Reduce`/`Count`/`Find` 等终结操作。
 - `collections.Range[T]` — 整数半开区间到 `Stream[T]` 的工厂。
@@ -21,6 +22,7 @@
 - [`lists.ArrayList[T]`](#listsarraylistt)
 - [`lists.LinkedList[T]`](#listslinkedlistt)
 - [`maps.HashMap[K, V]`](#mapshashmapk-v)
+- [`maps.TreeMap[K, V]`](#mapstreemapk-v)
 - [`sets.HashSet[T]`](#setshashsett)
 - [`stream.Stream[T]`](#streamstreamt)
 - [`collections.Range[T]`](#collectionsranget)
@@ -209,7 +211,7 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 | `Values() *ArrayList[V]` | 值集合（无序）。 |
 | `Entries() *ArrayList[Entry[K, V]]` | `Entry` 是 `{K, V}` 结构体，`MarshalJSON` 产出 `{"k": v}`。 |
 | `ForEach(func(K, V))` | 不改表遍历。 |
-| `Stream() stream.Stream[Entry[K, V]]` | 惰性流。 |
+| `Stream() stream.MapStream[K, V]` | 基于键值快照的惰性流；`Collect()` 返回 `map[K]V`，遍历顺序不确定。 |
 | `Collect() map[K]V` | 导出为 Go 内置 `map`。 |
 | `MarshalJSON / UnmarshalJSON` | `{"k": v, ...}` 形式。 |
 
@@ -218,6 +220,47 @@ max := sorted.MaxBy(func(a, b int) int { return a - b }).OrElse(0) // 6
 `Filter(p) / FilterKeys(p) / FilterValues(p) *HashMap[K, V]` — 返回新表。
 `MapValues[R](f func(K, V) R) *HashMap[K, R]` — 值类型变换。
 `Concat(other) *HashMap[K, V]` — 同键时 `other` 覆盖当前表。
+
+---
+
+## `maps.TreeMap[K, V]`
+
+基于 AVL 平衡树的有序映射。用 `NewTreeMap[K comparable, V any](compare func(K, K) int)` 或 `TreeMapOf(compare, entries...)` 构造。自然顺序可传标准库 `cmp` 包的 `cmp.Compare[K]`，交换比较参数即可降序。
+
+比较器必须定义一致的全序。比较结果为零就视为同一个键，即使 Go 的 `==` 判断不同；更新时保留最初存入的键。键存入后，其比较结果必须保持稳定。nil 比较器会 panic，TreeMap 零值不可直接使用。
+
+```go
+m := maps.NewTreeMap[int, string](cmp.Compare[int])
+m.Put(30, "thirty")
+m.Put(10, "ten")
+m.Put(20, "twenty")
+
+m.Keys().Collect()      // [10, 20, 30]
+m.Floor(25).Get()       // Entry{Key: 20, Value: "twenty"}
+m.Higher(20).Get()      // Entry{Key: 30, Value: "thirty"}
+m.Range(10, 30).Collect() // entries for 10 and 20
+```
+
+| 方法 | 行为 |
+|---|---|
+| `Put(k, v) V / PutIfAbsent(k, v)` | 插入或替换，返回约定与 HashMap 一致；O(log n)。 |
+| `Get(k) (V, bool) / GetOrDefault(k, fallback) / Contains(k)` | 按比较器查询；O(log n)。 |
+| `Remove(k) (V, bool)` | 删除并返回旧值及是否存在；O(log n)。 |
+| `Size() / IsEmpty() / Clear()` | 大小、是否为空、清空；清空后保留比较器。 |
+| `First() / Last()` | 最小/最大键对应的 `adt.Option[Entry[K, V]]`；O(log n)。 |
+| `Floor(k) / Ceiling(k)` | 不大于/不小于 k 的最近条目；返回 `adt.Option[Entry[K, V]]`，O(log n)。 |
+| `Lower(k) / Higher(k)` | 严格前驱/后继；返回 `adt.Option[Entry[K, V]]`，O(log n)。 |
+| `Range(from, to)` | 比较器顺序下 `[from, to)` 的有序快照流；k 项结果耗时 O(log n + k)，相等或反向边界返回空流。 |
+| `ForEach(func(K, V))` | 按比较器顺序遍历；回调不得修改树结构。 |
+| `Keys() / Values() / Entries()` | 按键顺序返回独立 ArrayList。 |
+| `Stream() stream.MapStream[K, V]` | 按比较器顺序提供键值快照；`Collect()` 返回不保留顺序的 `map[K]V`。 |
+| `Collect() map[K]V` | 独立的原生 map，不保留顺序。 |
+| `Filter(p) / MapValues[R](f)` | 保留比较器，返回新 TreeMap；O(n log n)。 |
+| `MarshalJSON / UnmarshalJSON` | JSON 对象，不保证成员按比较器排序。 |
+
+没有匹配项时，邻近键查询返回空 Option。快照及转换结果具有独立容器存储，元素本身为浅拷贝。TreeMap 不支持无同步的并发修改。
+
+JSON 解码前必须先用比较器构造 TreeMap。解码保留比较器，成功时替换条目，`null` 清空，输入非法则保留原数据。若对象中存在 Go 键不同但比较器判断相等的键，会合并且不保证哪一个值胜出。
 
 ---
 

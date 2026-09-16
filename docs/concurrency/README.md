@@ -456,5 +456,5 @@ process()
 ## See also
 
 - [`reactivex`](../../reactivex/README.md) — typed async event streams with explicit demand and configurable backpressure. If the work being queued is "events to deliver to many subscribers", an `Observable` is usually a better fit than a queue.
-- [`collections.Queue`](../collections/README.md#stackt--queuet--dequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Option[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
+- [`queues.Queue`](../collections/README.md#queuesqueuet--queuesdequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Option[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
 - [`chan T`](https://go.dev/ref/spec#Channel_types) in the standard library — `BoundedBlockingQueue` wraps it directly.

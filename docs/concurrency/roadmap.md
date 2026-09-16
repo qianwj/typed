@@ -12,7 +12,7 @@ The conventions used by every new type here:
 - `WithContext` suffix for ctx-aware blocking variants.
 - `Try` prefix for the non-blocking variant.
 - Option returns use `option.Option[T]` (matching
-  [`collections.Queue`](../collections/README.md#stackt--queuet--dequet)
+  [`queues.Queue`](../collections/README.md#queuesqueuet--queuesdequet)
   and the rest of the toolkit).
 - `*Or[T]` helpers for tests where the convention is "(value, ok)".
 - Zero value not usable; construct with `New*`.
