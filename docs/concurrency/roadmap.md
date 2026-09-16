@@ -39,8 +39,11 @@ The package ships these types today:
   completion and `Wait()` returns nil if every task succeeded, the
   bare single error if exactly one task failed, or a
   `*BestEffortError` aggregating all failures otherwise.
-  `WithLimit(n)` (set at construction) caps concurrent tasks via a
-  semaphore channel. `WaitWithContext(ctx)` is the ctx-aware wait
+  `WithLimit(n)` (set at construction) caps concurrent tasks via
+  the toolkit's [`Semaphore`](#semaphore) primitive (the cap is a
+  `*Semaphore` rather than a duplicated inline `chan struct{}`, so
+  the public `Semaphore` doc is the single source of truth for the
+  blocking semantics). `WaitWithContext(ctx)` is the ctx-aware wait
   variant: it returns the outcome-based error if all tasks finish
   before ctx fires, otherwise `ctx.Err()` — goroutines are abandoned,
   not killed (callers wanting the eventual outcome follow up with

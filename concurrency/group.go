@@ -67,7 +67,9 @@ func WithMode(m Mode) Option {
 
 // WithLimit caps the number of concurrently-running tasks spawned via
 // [Group.Go] at n. Calls to [Group.Go] beyond the cap block until a slot
-// is freed. A non-positive n means no limit.
+// is freed; the cap is implemented internally as a [*Semaphore] so the
+// blocking semantics are identical to calling [Semaphore.Acquire] at
+// the start of every task. A non-positive n means no limit.
 func WithLimit(n int) Option {
 	return func(c *groupConfig) { c.limit = n }
 }
@@ -81,11 +83,11 @@ type Group struct {
 
 	wg sync.WaitGroup
 
-	// sem is nil if no limit was configured, otherwise it has capacity
-	// cfg.limit and slots are sent on at the start of each Go call and
-	// received from at the end. Sending on a full chan blocks; that's the
-	// concurrency cap.
-	sem chan struct{}
+	// sem is nil if no limit was configured, otherwise it caps the
+	// number of concurrently-running tasks at cfg.limit via the
+	// toolkit's typed [Semaphore] primitive. See [Semaphore] for the
+	// blocking / over-release semantics; Group inherits them as-is.
+	sem *Semaphore
 
 	ctx    context.Context // derived from parent in NewGroup, canceled by cancel()
 	cancel context.CancelFunc
@@ -136,7 +138,7 @@ func NewGroup(parent context.Context, opts ...Option) *Group {
 		cancel: cancel,
 	}
 	if cfg.limit > 0 {
-		g.sem = make(chan struct{}, cfg.limit)
+		g.sem = NewSemaphore(cfg.limit)
 	}
 	return g
 }
@@ -159,13 +161,13 @@ func (g *Group) Go(fn func(ctx context.Context) error) {
 	g.wg.Add(1)
 
 	if g.sem != nil {
-		g.sem <- struct{}{}
+		g.sem.Acquire()
 	}
 
 	go func() {
 		defer func() {
 			if g.sem != nil {
-				<-g.sem
+				g.sem.Release()
 			}
 			g.wg.Done()
 		}()
