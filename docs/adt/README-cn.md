@@ -17,6 +17,7 @@
 - [`Option[T]`](#optionalt)
 - [`Result[T]`](#resultt)
 - [`Either[L, R]`](#eitherl-r)
+- [`Cast[T]`](#castt)
 - [如何选择](#如何选择)
 - [相关阅读](#相关阅读)
 
@@ -257,6 +258,19 @@ result := adt.Left[string, int]("missing").
     })
 fmt.Println(result.Right().Get()) // value: 42
 ```
+
+## `Cast[T]`
+
+`Cast[T any](v any) Result[T]` 执行类型断言，类型不匹配时不会 panic。目标为具体类型时，动态类型必须与其相同；目标为接口时，动态类型必须实现该接口。它不会执行 `int32` 到 `int64` 这样的类型转换。
+
+```go
+adt.Cast[int](42).OrElse(0)           // 42
+adt.Cast[int64](int32(42)).IsFailure() // true
+adt.Cast[int](nil).IsFailure()        // true
+adt.Cast[*int]((*int)(nil)).IsSuccess() // true：类型匹配的 typed nil
+```
+
+断言失败时，错误包含实际类型与目标类型。nil 接口断言失败；类型匹配的 typed nil 断言成功并保留原值，这与将 typed nil 视为缺失的 `OfNullable` 不同。返回结果可继续使用 `Map`、`FlatMap`、`OrElse` 或 `Unwrap`。
 
 ## 如何选择
 

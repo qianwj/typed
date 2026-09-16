@@ -17,6 +17,7 @@ Typed algebraic data types — value types that explicitly model "present vs abs
 - [`Option[T]`](#optionalt)
 - [`Result[T]`](#resultt)
 - [`Either[L, R]`](#eitherl-r)
+- [`Cast[T]`](#castt)
 - [Choosing between them](#choosing-between-them)
 - [See also](#see-also)
 
@@ -257,6 +258,19 @@ result := adt.Left[string, int]("missing").
     })
 fmt.Println(result.Right().Get()) // value: 42
 ```
+
+## `Cast[T]`
+
+`Cast[T any](v any) Result[T]` performs a type assertion without panicking on a mismatch. A concrete target requires an identical dynamic type; an interface target requires that the dynamic type implement it. This does not perform conversions such as `int32` to `int64`.
+
+```go
+adt.Cast[int](42).OrElse(0)           // 42
+adt.Cast[int64](int32(42)).IsFailure() // true
+adt.Cast[int](nil).IsFailure()        // true
+adt.Cast[*int]((*int)(nil)).IsSuccess() // true: matching typed nil
+```
+
+A failed assertion returns an error describing the actual and target types. A nil interface fails; a matching typed nil succeeds and is preserved, unlike `OfNullable`, which treats typed nil as absent. Results compose with `Map`, `FlatMap`, `OrElse`, and `Unwrap`.
 
 ## Choosing between them
 

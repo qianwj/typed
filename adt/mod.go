@@ -25,3 +25,23 @@
 // module gives them a distinct import path so consumers can depend
 // on the value types without pulling in unrelated `utils/*` code.
 package adt
+
+import (
+	"fmt"
+	"reflect"
+)
+
+// Cast asserts v's dynamic type as T and returns the outcome as a Result.
+// It performs a type assertion, not a conversion: an int32 cannot be cast
+// to int64. For an interface T, v's dynamic type must implement T.
+//
+// A mismatch or a nil interface returns Failure with the actual and target
+// types in the error. A matching typed nil returns Success containing that
+// nil value. Cast does not panic on a failed assertion.
+func Cast[T any](v any) Result[T] {
+	value, ok := v.(T)
+	if !ok {
+		return Failure[T](fmt.Errorf("adt.Cast: cannot assert %T as %v", v, reflect.TypeFor[T]()))
+	}
+	return Success(value)
+}
