@@ -15,7 +15,7 @@
 
 ### 控制流
 
-- 🔁 [`control`](./control/README-cn.md) —— `Repeat` / `RepeatE` 与 `control/match` 模式匹配(`Pattern[T]` + 链式 `Case` / `Type`)。
+- 🔁 [`control`](./control/README-cn.md) —— `If` / `IfGet` 条件取值、`Repeat` / `RepeatE` 循环与 `control/match` 模式匹配(`Pattern[T]` + 链式 `Case` / `Type`)。
 
 ### 并发原语
 

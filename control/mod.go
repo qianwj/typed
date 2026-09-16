@@ -1,6 +1,9 @@
 // Package control holds generic control-flow helpers that do not
 // fit the pattern-matching subpackage.
 //
+// If selects between eagerly evaluated values; IfGet invokes only the
+// selected callback. Both return a value of the same generic type T.
+//
 // The two primitives here cover the "do this N times" shape:
 //
 //   - Repeat is the simple loop helper. It runs f exactly

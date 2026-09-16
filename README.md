@@ -237,7 +237,10 @@ use(v)
 | Type / function | Source | Notes |
 | --- | --- | --- |
 | `control.Repeat(times, f)` / `RepeatE(times, f) (int, error)` | `control` | "Do this N times" loops; `RepeatE` stops at the first non-nil error and returns the number of successful iterations. |
+| `control.If[T](condition, onTrue, onFalse)` / `IfGet[T](condition, onTrue, onFalse)` | `control` | `If` selects eagerly evaluated values; `IfGet` calls only the selected callback, exactly once. |
 | `match.Pattern[T]`, `match.Value[T]`, `match.Type(any)` | `control/match` | First-match-wins pattern matching: `Pattern[T]` for value tests, `Type` for dynamic-type dispatch. |
+
+Go's argument evaluation rules mean `If(user != nil, user.Name, "anonymous")` still panics for a nil user. Use `IfGet` callbacks or `adt.OfNullable(user).Map(...).OrElse(...)` for optional values. See the [conditional-value guide](./docs/control/README.md#if-and-ifget) for examples and compiler semantics.
 
 ### Reactive streams
 
@@ -265,7 +268,7 @@ Per-package API reference and examples, in English and Chinese:
 
 - [docs/README.md](./docs/README.md) — index
 - [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `Stream`, `Range`
-- [control](./docs/control/README.md) — `Repeat` / `RepeatE` and `control/match`
+- [control](./docs/control/README.md) — `If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
 - [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
 - [concurrency](./docs/concurrency/README.md) — `BoundedBlockingQueue[T]` (blocking + non-blocking, fixed capacity)
 - [adt](./docs/adt/README.md) — `Option[T]`
@@ -499,7 +502,7 @@ Done:
       Stream[T]` for iota-style integer sequences.
 - [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]`
       utilities.
-- [x] `control.Repeat` / `RepeatE` and `control/match` pattern matching.
+- [x] `control.If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match` pattern matching.
 - [x] `reactivex` package: `Observable[T]` / `Publisher[T]` /
       `Subscriber[T]`, `Subject[T]`, `WithBuffer` / `WithOverflow`
       backpressure, `Map` / `Filter` / `Take` / `Skip` / `Scan` /

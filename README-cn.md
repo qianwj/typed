@@ -176,7 +176,10 @@ use(v)
 | 类型 / 函数 | 源码 | 说明 |
 | --- | --- | --- |
 | `control.Repeat(times, f)` / `RepeatE(times, f) (int, error)` | `control` | "做 N 次"循环;`RepeatE` 在首次非 nil 错误处停,返回已成功次数。 |
+| `control.If[T](condition, onTrue, onFalse)` / `IfGet[T](condition, onTrue, onFalse)` | `control` | `If` 从提前求值的参数中取值；`IfGet` 只执行选中的回调，恰好一次。 |
 | `match.Pattern[T]`、`match.Value[T]`、`match.Type(any)` | `control/match` | 首个匹配获胜的模式匹配:`Pattern[T]` 测试值,`Type` 按动态类型分派。 |
+
+受 Go 实参求值规则限制，`If(user != nil, user.Name, "匿名")` 在 user 为 nil 时仍会 panic。可用 `IfGet` 回调，或通过 `adt.OfNullable(user).Map(...).OrElse(...)` 表达可选值。示例与编译器语义说明见[条件取值文档](./docs/control/README-cn.md#if-与-ifget)。
 
 ### 响应式流
 
@@ -204,7 +207,7 @@ use(v)
 
 - [docs/README-cn.md](./docs/README-cn.md) —— 索引
 - [collections](./docs/collections/README-cn.md) —— `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stack` / `Queue` / `Deque` / `Stream` / `Range`
-- [control](./docs/control/README-cn.md) —— `Repeat` / `RepeatE` 与 `control/match`
+- [control](./docs/control/README-cn.md) —— `If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match`
 - [reactivex](./docs/reactivex/README-cn.md) —— `Observable` / `Subject` / 背压 / 算子
 - [concurrency](./docs/concurrency/README-cn.md) —— `BoundedBlockingQueue[T]`(阻塞 + 非阻塞,固定容量)
 - [adt](./docs/adt/README-cn.md) —— `Option[T]`
@@ -354,7 +357,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] 线性结构:`Stack[T]`、`Queue[T]`、`Deque[T]`。
 - [x] 父包辅助函数:`Range[T constraints.Integer](start, end T) Stream[T]`,iota 风格的整数序列。
 - [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` 工具集。
-- [x] `control.Repeat` / `RepeatE` 与 `control/match` 模式匹配。
+- [x] `control.If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match` 模式匹配。
 - [x] `reactivex` 包:`Observable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
 - [x] `concurrency` 包:`BoundedBlockingQueue[T]`(数组环形缓冲,阻塞 + 非阻塞双 API,通过 race 测试)。
 - [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。

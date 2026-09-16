@@ -15,7 +15,7 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 
 ### Control flow
 
-- 🔁 [`control`](./control/README.md) — `Repeat` / `RepeatE` and `control/match` pattern matching (`Pattern[T]` plus chained `Case` / `Type`).
+- 🔁 [`control`](./control/README.md) — `If` / `IfGet` conditional values, `Repeat` / `RepeatE` loops, and `control/match` pattern matching (`Pattern[T]` plus chained `Case` / `Type`).
 
 ### Concurrency primitives
 

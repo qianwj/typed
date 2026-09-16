@@ -2,7 +2,7 @@
 
 控制流辅助。两个子包：
 
-- [`control`](#control) — `Repeat` / `RepeatE`，简洁的"做 N 次"循环原语。
+- [`control`](#control) — `If` / `IfGet` 条件取值，以及 `Repeat` / `RepeatE` 循环原语。
 - [`control/match`](#controlmatch) — 类型安全、首个匹配获胜的模式匹配（`Pattern[T]` + 链式 `Case` / `Type`）。
 
 需要 Go 1.27+（链式方法带自己的类型参数）。
@@ -13,6 +13,7 @@
 
 - [包导入](#包导入)
 - [`control`](#control)
+  - [`If` 与 `IfGet`](#if-与-ifget)
   - [`Repeat(times, f)`](#repeattimes-f)
   - [`RepeatE(times, f) (int, error)`](#repeateetimes-f-int-error)
   - [与 `collections.Range` 的关系](#与-collectionsrange-的关系)
@@ -38,9 +39,44 @@ import (
 ## `control`
 
 ```go
+func If[T any](condition bool, onTrue, onFalse T) T
+func IfGet[T any](condition bool, onTrue, onFalse func() T) T
 func Repeat(times int, f func())
 func RepeatE(times int, f func() error) (int, error)
 ```
+
+### `If` 与 `IfGet`
+
+`If` 从两个同为 `T` 类型的值中选择一个返回：
+
+```go
+label := control.If(enabled, "开启", "关闭")
+```
+
+**两个值参数都会在调用前求值。** 这是 Go 语言规定、编译器执行的规则，并非编译器 bug 或 `If` 的实现选择。普通库函数无法提供 Java 中短路求值的 `condition ? a : b` 语法，这需要语言和编译器支持。例如，`control.If(user != nil, user.Name, "匿名")` 在 `user` 为 nil 时仍会 panic。
+
+需要延迟计算时，将计算放进 `IfGet` 的回调。只有选中的回调会执行，且恰好执行一次：
+
+```go
+type User struct { Name string }
+var user *User
+name := control.IfGet(user != nil,
+    func() string { return user.Name },
+    func() string { return "匿名" },
+) // "匿名"
+```
+
+选中的回调为 nil 时会 panic；未选中的回调可以为 nil。创建回调的表达式仍然在调用前求值，因此需要延迟的计算必须放进回调体内。
+
+对于可选值，可以用 [`adt.Option`](../adt/README-cn.md) 直接表达存在或缺失。导入 `github.com/qianwj/typed/adt` 后，上面的 `user` 也可以这样处理：
+
+```go
+name := adt.OfNullable(user).
+    Map(func(u *User) string { return u.Name }).
+    OrElse("匿名")
+```
+
+空 Option 不执行 `Map`。默认值也需要延迟计算时，使用 `OrElseGet(func() string { ... })`；`OrElse` 的参数仍会提前求值。
 
 ### `Repeat(times, f)`
 

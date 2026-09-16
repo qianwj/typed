@@ -4,7 +4,7 @@
 
 Control-flow helpers. Two sub-packages:
 
-- [`control`](#control) — `Repeat` / `RepeatE`, concise "do this N times" loop primitives.
+- [`control`](#control) — `If` / `IfGet` for conditional values and `Repeat` / `RepeatE` for loops.
 - [`control/match`](#controlmatch) — type-safe, first-match-wins pattern matching (`Pattern[T]` plus chained `Case` / `Type`).
 
 Go 1.27+ is required because the fluent chain methods declare their own type parameters.
@@ -15,6 +15,7 @@ Go 1.27+ is required because the fluent chain methods declare their own type par
 
 - [Import](#import)
 - [`control`](#control)
+  - [`If` and `IfGet`](#if-and-ifget)
   - [`Repeat(times, f)`](#repeattimes-f)
   - [`RepeatE(times, f) (int, error)`](#repeateetimes-f-int-error)
   - [Relationship to `collections.Range`](#relationship-to-collectionsrange)
@@ -40,9 +41,44 @@ import (
 ## `control`
 
 ```go
+func If[T any](condition bool, onTrue, onFalse T) T
+func IfGet[T any](condition bool, onTrue, onFalse func() T) T
 func Repeat(times int, f func())
 func RepeatE(times int, f func() error) (int, error)
 ```
+
+### `If` and `IfGet`
+
+`If` selects between two values of the same type `T`:
+
+```go
+label := control.If(enabled, "enabled", "disabled")
+```
+
+**Both value arguments are evaluated before the call.** This is Go's language-defined rule, enforced by the compiler, not a compiler bug or a choice in `If`'s implementation. A library function cannot provide Java's short-circuit `condition ? a : b` syntax; that requires language/compiler support. For example, `control.If(user != nil, user.Name, "anonymous")` still panics when `user` is nil.
+
+Use `IfGet` to defer computations inside callbacks. Only the selected callback runs, exactly once:
+
+```go
+type User struct { Name string }
+var user *User
+name := control.IfGet(user != nil,
+    func() string { return user.Name },
+    func() string { return "anonymous" },
+) // "anonymous"
+```
+
+The selected callback must be non-nil or the call panics; the unselected callback may be nil. Expressions that create callbacks are still evaluated before the call, so deferred work must be inside their bodies.
+
+For optional values, [`adt.Option`](../adt/README.md) expresses presence or absence directly. With `github.com/qianwj/typed/adt` imported, the same `user` can be handled as:
+
+```go
+name := adt.OfNullable(user).
+    Map(func(u *User) string { return u.Name }).
+    OrElse("anonymous")
+```
+
+An absent Option skips `Map`. Use `OrElseGet(func() string { ... })` when the fallback also needs deferred evaluation; `OrElse` evaluates its argument eagerly.
 
 ### `Repeat(times, f)`
 
