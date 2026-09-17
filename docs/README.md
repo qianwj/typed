@@ -11,7 +11,7 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 ### Collections and synchronous streams
 
 - 📚 [`collections`](./collections/README.md) — `Stack` / `Queue` / `Deque` / `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stream`, plus `collections.Range`.
-- 📡 [`reactivex`](./reactivex/README.md) — asynchronous event streams: `Observable` / `Publisher` / `Subscriber` / `Subject`, backpressure, sources and operators.
+- 📡 [`reactivex`](./reactivex/README.md) — asynchronous event streams: `Flowable` / `Publisher` / `Subscriber` / `Subject`, backpressure, sources and operators.
 
 ### Control flow
 

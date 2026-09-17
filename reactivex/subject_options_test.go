@@ -142,7 +142,7 @@ func TestCollect_ErrorAndCancellation(t *testing.T) {
 		_ = obs // not used; the Subject path below is the actual test
 		s := NewSubject[int]()
 		s.OnError(want)
-		values, err := subjectAsObservable(s).ToSlice(context.Background())
+		values, err := subjectAsFlowable(s).ToSlice(context.Background())
 		if err == nil || !errors.Is(err, want) {
 			t.Fatalf("err = %v, want %v", err, want)
 		}
@@ -155,7 +155,7 @@ func TestCollect_ErrorAndCancellation(t *testing.T) {
 		want := errors.New("boom")
 		s := NewSubject[int]()
 		s.OnError(want)
-		sum, err := Collect(context.Background(), subjectAsObservable(s), 100,
+		sum, err := Collect(context.Background(), subjectAsFlowable(s), 100,
 			func(acc, v int) int { return acc + v })
 		if err == nil || !errors.Is(err, want) {
 			t.Fatalf("err = %v, want %v", err, want)
@@ -190,10 +190,10 @@ func TestCollect_ErrorAndCancellation(t *testing.T) {
 	})
 }
 
-// subjectAsObservable wraps a hot Subject in an Observable so ToSlice /
-// Collect can subscribe to it through the standard Observable API.
-func subjectAsObservable[T any](s *Subject[T]) Observable[T] {
-	return Observable[T]{
+// subjectAsFlowable wraps a hot Subject in a Flowable so ToSlice /
+// Collect can subscribe to it through the standard Flowable API.
+func subjectAsFlowable[T any](s *Subject[T]) Flowable[T] {
+	return Flowable[T]{
 		subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 			return s.Subscribe(ctx, out)
 		},

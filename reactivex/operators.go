@@ -6,16 +6,16 @@ import (
 )
 
 // Map applies f to each upstream value and forwards its result as an R.
-// It is lazy: f is not invoked until the returned Observable is subscribed to.
+// It is lazy: f is not invoked until the returned Flowable is subscribed to.
 // On a non-nil error, Map forwards that error and cancels the upstream handle.
 // Panics from f are not recovered or converted into errors.
 //
 // f receives the subscription context and executes inline in the upstream
 // notification path. Map adds neither a queue nor a worker goroutine, and
 // forwards demand unchanged. The result type R may differ from T because
-// Observable is a concrete type with a Go 1.27 generic method.
-func (o Observable[T]) Map[R any](f func(context.Context, T) (R, error)) Observable[R] {
-	return Observable[R]{subscribe: func(ctx context.Context, out Subscriber[R]) Subscription {
+// Flowable is a concrete type with a Go 1.27 generic method.
+func (o Flowable[T]) Map[R any](f func(context.Context, T) (R, error)) Flowable[R] {
+	return Flowable[R]{subscribe: func(ctx context.Context, out Subscriber[R]) Subscription {
 		return o.Subscribe(ctx, &mapSubscriber[T, R]{out: out, ctx: ctx, f: f})
 	}}
 }
@@ -53,8 +53,8 @@ func (s *mapSubscriber[T, R]) OnComplete()       { s.out.OnComplete() }
 // rejected values do not exhaust downstream demand. A request for one match
 // can therefore inspect many upstream values, or wait indefinitely on an
 // infinite source with no matches. Predicate panics are not recovered.
-func (o Observable[T]) Filter(predicate func(T) bool) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func (o Flowable[T]) Filter(predicate func(T) bool) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		return o.Subscribe(ctx, &filterSubscriber[T]{out: out, predicate: predicate})
 	}}
 }
@@ -87,8 +87,8 @@ func (s *filterSubscriber[T]) OnComplete()       { s.out.OnComplete() }
 // The count is independent for each subscription. Take does not add demand or
 // clamp forwarded requests to n; the limit is enforced as values arrive.
 // Cancelling upstream does not forcibly interrupt work already executing there.
-func (o Observable[T]) Take(n uint64) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func (o Flowable[T]) Take(n uint64) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		return o.Subscribe(ctx, &takeSubscriber[T]{out: out, left: n})
 	}}
 }
@@ -140,8 +140,8 @@ func (s *takeSubscriber[T]) OnComplete() {
 // Skipped values are still consumed from the source. Each one requests a
 // replacement so the prefix does not use up downstream's outstanding demand.
 // Like Filter, Skip creates no asynchronous boundary of its own.
-func (o Observable[T]) Skip(n uint64) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func (o Flowable[T]) Skip(n uint64) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		return o.Subscribe(ctx, &skipSubscriber[T]{out: out, left: n})
 	}}
 }
@@ -174,10 +174,10 @@ func (s *skipSubscriber[T]) OnComplete()       { s.out.OnComplete() }
 //
 // Each subscription initializes an accumulator from initial, but reference
 // values such as maps and slices are not cloned. Use immutable accumulators or
-// separate observable instances when subscriptions must not share mutable data.
+// separate flowable instances when subscriptions must not share mutable data.
 // f runs inline, once per input, and demand is forwarded unchanged.
-func (o Observable[T]) Scan[R any](initial R, f func(R, T) R) Observable[R] {
-	return Observable[R]{subscribe: func(ctx context.Context, out Subscriber[R]) Subscription {
+func (o Flowable[T]) Scan[R any](initial R, f func(R, T) R) Flowable[R] {
+	return Flowable[R]{subscribe: func(ctx context.Context, out Subscriber[R]) Subscription {
 		return o.Subscribe(ctx, &scanSubscriber[T, R]{out: out, value: initial, f: f})
 	}}
 }
@@ -207,8 +207,8 @@ func (s *scanSubscriber[T, R]) OnComplete()                  { s.out.OnComplete(
 // not translate a request for one result into demand for all inputs. Use
 // ForEach or ToSlice to request all inputs, or explicitly supply enough demand
 // when using Subscribe. A single request can otherwise leave reduction waiting.
-func (o Observable[T]) Reduce(f func(T, T) T) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func (o Flowable[T]) Reduce(f func(T, T) T) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		return o.Subscribe(ctx, &reduceSubscriber[T]{out: out, f: f})
 	}}
 }

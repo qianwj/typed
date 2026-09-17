@@ -30,9 +30,9 @@ type Subscriber[T any] interface {
 	OnComplete()
 }
 
-// Publisher is the subscription boundary implemented by Observable and Subject.
+// Publisher is the subscription boundary implemented by Flowable and Subject.
 // Accept a Publisher when a component only consumes notifications; use the
-// concrete Observable type when building a fluent operator pipeline.
+// concrete Flowable type when building a fluent operator pipeline.
 //
 // The interface does not imply replay, independent inputs or multicast. Those
 // properties come from the source: a slice can be iterated again, whereas two
@@ -136,17 +136,3 @@ func (s *subscription) acquire(ctx context.Context) bool {
 	s.demand--
 	return true
 }
-
-// Observable describes a typed source and its operator chain. Constructing or
-// copying an Observable does not start consumption; subscribing does.
-//
-// Each subscription creates new operator state. Source resources are not
-// necessarily duplicated: FromChannel subscriptions share their input, and
-// FromSlice subscriptions share the original backing array. The zero value
-// has no source and cannot be subscribed to; use a constructor such as Just.
-type Observable[T any] struct {
-	// subscribe is private so sources control lifecycle setup.
-	subscribe func(context.Context, Subscriber[T]) Subscription
-}
-
-var _ Publisher[any] = Observable[any]{}

@@ -11,7 +11,7 @@
 ### 集合与同步流
 
 - 📚 [`collections`](./collections/README-cn.md) —— `Stack` / `Queue` / `Deque` / `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stream`,以及 `collections.Range`。
-- 📡 [`reactivex`](./reactivex/README-cn.md) —— 异步事件流:`Observable` / `Publisher` / `Subscriber` / `Subject`、背压、源与算子。
+- 📡 [`reactivex`](./reactivex/README-cn.md) —— 异步事件流:`Flowable` / `Publisher` / `Subscriber` / `Subject`、背压、源与算子。
 
 ### 控制流
 

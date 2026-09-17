@@ -16,7 +16,7 @@
 
 </div>
 
-Typed 是一个**面向 Go 泛型的链式类型安全工具集**。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`）通过从左到右、可一路链下去的 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`）组合而成，背后是支撑整个工具集的抽象（`Option[T]`、`Result[T]`、`IsNil`、`Equals`）。操作符的命名是有意沿用业界通用词汇，对熟悉 Java Streams、.NET LINQ 或 JavaScript 数组管道的工程师会很顺手，但**不沿用它们各自的运行时模型**。异步一侧，`reactivex.Observable[T]` 提供了强类型的事件流：显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
+Typed 是一个**面向 Go 泛型的链式类型安全工具集**。具体的泛型类型（`ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stream[T]`、`Subject[T]`）通过从左到右、可一路链下去的 transform（`Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`SortBy`、`Distinct`、`Concat`）组合而成，背后是支撑整个工具集的抽象（`Option[T]`、`Result[T]`、`IsNil`、`Equals`）。操作符的命名是有意沿用业界通用词汇，对熟悉 Java Streams、.NET LINQ 或 JavaScript 数组管道的工程师会很顺手，但**不沿用它们各自的运行时模型**。异步一侧，`reactivex.Flowable[T]` 提供了强类型的事件流：显式需求、可配置背压，以及一等公民的多播 `Subject[T]`。
 
 ## 为什么选 Typed
 
@@ -56,7 +56,7 @@ profiles := lists.ArrayListOf(users...).
 - 🧱 **具体泛型类型** —— `ArrayList[T]`、`LinkedList[T]`、`HashMap[K, V]`、`HashSet[T]`、`Stack[T]`、`Queue[T]`、`Deque[T]`、`Stream[T]`、`Subject[T]`。无运行时类型断言,没有 `any` 带来的意外。
 - 🪄 **链式 transform** —— `Filter`、`Map[R]`、`FlatMap[R]`、`Reduce[R]`、`Take`、`Drop`、`Distinct`、`SortBy`、`Concat`。借 Go 1.27 泛型方法,全部返回具体类型。
 - 🟢 **Option / Result** —— `Option[T]` 表示"可能缺席",`Result[T]` 表示"可能失败"。两者都能干净地与 `(T, error)` 互转,也能和集合 API 拼装。
-- 📡 **强类型异步流** —— `reactivex.Observable[T]`,显式需求(`Request(n)`)、按订阅配置背压(`WithBuffer`、`OverflowStrategy`),以及热多播的 `Subject[T]`。
+- 📡 **强类型异步流** —— `reactivex.Flowable[T]`,显式需求(`Request(n)`)、按订阅配置背压(`WithBuffer`、`OverflowStrategy`),以及热多播的 `Subject[T]`。
 - 🧠 **更智能的相等** —— `objects.Equals[T]` 理解 `func (T) Equal(T) bool`、对 nil/空集合做归一化,对 typed nil 指针 nil 安全。
 - 🪶 **有界内存** —— `ArrayList` 用 head-offset 布局并周期性压缩,`Stack.Pop` 和 `Remove*` 路径把释放的槽位清零,被弹出的引用不会因底层数组残留。
 - 🧵 **有界与无界阻塞队列** —— `concurrency.BoundedBlockingQueue[T]` 是固定容量的 FIFO,`Push` / `Poll` 阻塞,`TryPush` / `TryPoll` 不阻塞,底层是单个 `chan T`。`concurrency.UnboundedBlockingQueue[T]` 是它的兄弟类型,`Push` 永不阻塞,底层是环形缓冲区 + mutex + cond。两者都暴露了带 context 的变体(`PushWithContext` / `PollWithContext`)。
@@ -185,7 +185,7 @@ use(v)
 
 | 类型 | 源码 | 说明 |
 | --- | --- | --- |
-| `reactivex.Observable[T]`、`Publisher[T]`、`Subscriber[T]` | `reactivex` | 强类型异步流,显式需求(`Subscription.Request(n)`)与 `OnError` / `OnComplete` 终止信号。 |
+| `reactivex.Flowable[T]`、`Publisher[T]`、`Subscriber[T]` | `reactivex` | 强类型异步流,显式需求(`Subscription.Request(n)`)与 `OnError` / `OnComplete` 终止信号。 |
 | `reactivex.Subject[T]` | `reactivex` | 热多播发布者 + 订阅者;通过 `WithBuffer` / `WithOverflow` 配置。 |
 | `reactivex.Single[T]` | `reactivex` | reactive 容器，恰好发一个值或一个 error。`Await` / `AwaitWithContext` 返回 `adt.Result[T]`，`Subscribe` 用于回调消费。 |
 | `reactivex.Maybe[T]` | `reactivex` | reactive 容器，包含有值、空完成、错误三种终态。`Await` / `AwaitWithContext` 返回 `adt.Result[adt.Option[T]]`，空完成是成功结果。 |
@@ -209,7 +209,7 @@ use(v)
 - [docs/README-cn.md](./docs/README-cn.md) —— 索引
 - [collections](./docs/collections/README-cn.md) —— `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stack` / `Queue` / `Deque` / `Stream` / `Range`
 - [control](./docs/control/README-cn.md) —— `If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match`
-- [reactivex](./docs/reactivex/README-cn.md) —— `Observable` / `Subject` / 背压 / 算子
+- [reactivex](./docs/reactivex/README-cn.md) —— `Flowable` / `Subject` / 背压 / 算子
 - [concurrency](./docs/concurrency/README-cn.md) —— 阻塞队列、`Group`、`Semaphore` 与 `Pool[T]`
 - [adt](./docs/adt/README-cn.md) —— `Option[T]`
 - [adt](./docs/adt/README-cn.md) —— `Result[T]`
@@ -308,7 +308,7 @@ port, _ := adt.Wrap(lookupPort()).
 - 重命名导出类型或方法。
 - 修改泛型接收者(比如 `Map(func(T) R)` 改成 `Map(func(context.Context, T) (R, error))`)。
 - 给公开 struct 加新的必填字段。
-- 改写文档里已有的不变量(例如 "`Map` 对 nil slice 返回空 observable"、"`MinBy` 在空列表上 panic")。
+- 改写文档里已有的不变量(例如 "`Map` 对 nil slice 返回空 flowable"、"`MinBy` 在空列表上 panic")。
 
 ### 不算破坏性变更
 
@@ -359,7 +359,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] 父包辅助函数:`Range[T constraints.Integer](start, end T) Stream[T]`,iota 风格的整数序列。
 - [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` 工具集。
 - [x] `control.If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match` 模式匹配。
-- [x] `reactivex` 包:`Observable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
+- [x] `reactivex` 包:`Flowable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
 - [x] `concurrency` 包:`BoundedBlockingQueue[T]`(数组环形缓冲,阻塞 + 非阻塞双 API,通过 race 测试)。
 - [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。
 - [x] `concurrency.Pool[T]`：基于 `sync.Pool` 的泛型临时对象复用。

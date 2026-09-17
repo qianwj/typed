@@ -489,4 +489,4 @@ collections.Range[int](0, 5).
 
 - Most return values are `option.Option[T]`; see [`adt`](../adt/README.md).
 - The error flow uses `result.Result[T]`; see [`adt`](../adt/README.md).
-- For asynchronous / multi-subscriber scenarios, use `reactivex.Observable[T]`; see [`reactivex`](../reactivex/README.md). The `Stream` here is a synchronous, single-consumer model — the two do not interoperate.
+- For asynchronous / multi-subscriber scenarios, use `reactivex.Flowable[T]`; see [`reactivex`](../reactivex/README.md). The `Stream` here is a synchronous, single-consumer model — the two do not interoperate.

@@ -7,15 +7,15 @@ import (
 	"time"
 )
 
-// Just creates a cold observable that emits values in order and completes.
+// Just creates a cold flowable that emits values in order and completes.
 // Every subscription starts at the first value. With no arguments, the source
 // completes without emitting a value or waiting for demand.
 //
 // Just delegates to FromSlice. Passing an existing slice with values... retains
 // that slice's backing array; it does not make a defensive copy.
-func Just[T any](values ...T) Observable[T] { return FromSlice(values) }
+func Just[T any](values ...T) Flowable[T] { return FromSlice(values) }
 
-// FromSlice creates a cold observable that iterates values in slice order.
+// FromSlice creates a cold flowable that iterates values in slice order.
 // Each subscription starts its own producer goroutine and demand gate. Nil
 // and empty slices both complete without producing a value.
 //
@@ -23,8 +23,8 @@ func Just[T any](values ...T) Observable[T] { return FromSlice(values) }
 // concurrently with a subscription; copy it before construction when a stable
 // snapshot is required. Subscriber callbacks run on the producer goroutine,
 // so a slow callback also slows this source.
-func FromSlice[T any](values []T) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func FromSlice[T any](values []T) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		s := newSubscription()
 		watchContext(ctx, s)
 		out.OnSubscribe(s)
@@ -52,7 +52,7 @@ func FromSlice[T any](values []T) Observable[T] {
 // Returning false from the emission callback stops iteration. This cannot
 // interrupt a sequence blocked inside its own code before yielding a value;
 // such sequences need their own cooperative cancellation.
-func FromSeq[T any](seq iter.Seq[T]) Observable[T] {
+func FromSeq[T any](seq iter.Seq[T]) Flowable[T] {
 	return Create(func(ctx context.Context, emit func(T) bool, complete func()) {
 		for v := range seq {
 			if !emit(v) {
@@ -70,7 +70,7 @@ func FromSeq[T any](seq iter.Seq[T]) Observable[T] {
 // Subscriptions read from the same channel and compete for values. For a
 // broadcast feed, send values through a Subject instead. Channel closure
 // completes the stream once any value already read has been delivered.
-func FromChannel[T any](ch <-chan T) Observable[T] {
+func FromChannel[T any](ch <-chan T) Flowable[T] {
 	return FromChannelWithOptions(ch)
 }
 
@@ -94,9 +94,9 @@ func FromChannel[T any](ch <-chan T) Observable[T] {
 //	    reactivex.WithBuffer(64),
 //	    reactivex.WithOverflow(reactivex.OverflowError),
 //	)
-func FromChannelWithOptions[T any](ch <-chan T, options ...BackpressureOption) Observable[T] {
+func FromChannelWithOptions[T any](ch <-chan T, options ...BackpressureOption) Flowable[T] {
 	config := applyBackpressureOptions(options)
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		s := newBufferedSubscription(out, config, config.overflow != OverflowBlock || config.buffer > 0, nil)
 		watchContext(ctx, s)
 		out.OnSubscribe(s)
@@ -136,8 +136,8 @@ func FromChannelWithOptions[T any](ch <-chan T, options ...BackpressureOption) O
 // The producer owns its resources and should release them with defer. Cancelling
 // the Subscription does not cancel the supplied context itself or interrupt
 // unrelated blocking work; context-aware I/O must use a caller-owned context.
-func Create[T any](run func(context.Context, func(T) bool, func())) Observable[T] {
-	return Observable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
+func Create[T any](run func(context.Context, func(T) bool, func())) Flowable[T] {
+	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
 		s := newSubscription()
 		watchContext(ctx, s)
 		out.OnSubscribe(s)
@@ -176,7 +176,7 @@ func Create[T any](run func(context.Context, func(T) bool, func())) Observable[T
 //
 // In the current implementation the constructor's ctx argument is not used;
 // the context supplied to Subscribe or ForEach controls the ticker loop.
-func Interval(ctx context.Context, period time.Duration) Observable[uint64] {
+func Interval(ctx context.Context, period time.Duration) Flowable[uint64] {
 	return Create(func(ctx context.Context, emit func(uint64) bool, complete func()) {
 		ticker := time.NewTicker(period)
 		defer ticker.Stop()

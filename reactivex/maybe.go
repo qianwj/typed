@@ -22,19 +22,19 @@ import (
 // Use Maybe when the absence of a value is meaningful, e.g. "looked
 // up the cache key, no entry" or "scanned the topic, no message
 // pending". Use [Single] when missing data is always an error, and
-// [Observable] when there can be many values.
+// [Flowable] when there can be many values.
 //
 // Construct with [NewMaybe]; consume via [Subscribe], [Await] /
 // [AwaitWithContext], or [Done] for a non-blocking check. Compose
 // with [Map] / [FlatMap] / [Zip] / [AndThen].
 //
-// # Comparison with Single and Observable
+// # Comparison with Single and Flowable
 //
 //   - Single: always emits exactly one terminal event (value or
 //     error); never a 'no value' state.
 //   - Maybe: emits one of three terminal events (value, no-value,
 //     error).
-//   - Observable: emits 0..N values, then complete or error.
+//   - Flowable: emits 0..N values, then complete or error.
 //
 // Like [Single], fn runs at most once and the result is shared
 // across every subscriber.

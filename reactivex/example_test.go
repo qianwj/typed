@@ -8,7 +8,7 @@ import (
 	"github.com/qianwj/typed/reactivex"
 )
 
-// ExampleJust shows the simplest cold observable: a fixed list of
+// ExampleJust shows the simplest cold flowable: a fixed list of
 // values that completes after delivering them. ToSlice blocks until
 // the source completes (or ctx is cancelled) and returns the collected
 // values plus a nil error.

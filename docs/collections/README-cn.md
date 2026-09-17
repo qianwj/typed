@@ -387,4 +387,4 @@ collections.Range[int](0, 5).
 
 - 返回值大量用 `option.Option[T]`，见 [`adt`](../adt/README-cn.md)。
 - 错误流请用 `result.Result[T]`，见 [`adt`](../adt/README-cn.md)。
-- 异步 / 多订阅请用 `reactivex.Observable[T]`，见 [`reactivex`](../reactivex/README-cn.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。
+- 异步 / 多订阅请用 `reactivex.Flowable[T]`，见 [`reactivex`](../reactivex/README-cn.md)。本包的 `Stream` 是同步单次消费模型，两者不互通。

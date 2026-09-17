@@ -7,10 +7,10 @@ import (
 	"github.com/qianwj/typed/reactivex"
 )
 
-// BenchmarkObservable_JustToSlice measures the round-trip throughput
+// BenchmarkFlowable_JustToSlice measures the round-trip throughput
 // of a finite cold source: subscribe, request everything, collect.
 // This is the "every-value-matters" baseline for the toolkit.
-func BenchmarkObservable_JustToSlice(b *testing.B) {
+func BenchmarkFlowable_JustToSlice(b *testing.B) {
 	const n = 1024
 	seed := make([]int, n)
 	for i := range seed {
@@ -26,11 +26,11 @@ func BenchmarkObservable_JustToSlice(b *testing.B) {
 	}
 }
 
-// BenchmarkObservable_FilterMapToSlice measures the wrapping-style
+// BenchmarkFlowable_FilterMapToSlice measures the wrapping-style
 // pipeline cost: each operator is a Subscribe adapter that forwards
 // notifications without adding queues or goroutines. The total
 // per-element cost is the sum of operator dispatch overhead.
-func BenchmarkObservable_FilterMapToSlice(b *testing.B) {
+func BenchmarkFlowable_FilterMapToSlice(b *testing.B) {
 	const n = 1024
 	seed := make([]int, n)
 	for i := range seed {
@@ -49,10 +49,10 @@ func BenchmarkObservable_FilterMapToSlice(b *testing.B) {
 	}
 }
 
-// BenchmarkObservable_TakeEarlyTermination exercises the early-termination
+// BenchmarkFlowable_TakeEarlyTermination exercises the early-termination
 // path of Take. Even though the source is large, the collector
 // should not pull more than the requested count.
-func BenchmarkObservable_TakeEarlyTermination(b *testing.B) {
+func BenchmarkFlowable_TakeEarlyTermination(b *testing.B) {
 	const n = 1 << 16 // large source
 	seed := make([]int, n)
 	for i := range seed {
@@ -68,10 +68,10 @@ func BenchmarkObservable_TakeEarlyTermination(b *testing.B) {
 	}
 }
 
-// BenchmarkObservable_ForEachNoCallbacks measures the overhead of the
+// BenchmarkFlowable_ForEachNoCallbacks measures the overhead of the
 // callback-style subscriber with all callbacks nil. This is the
 // lowest-overhead way to drive a cold source to completion.
-func BenchmarkObservable_ForEachNoCallbacks(b *testing.B) {
+func BenchmarkFlowable_ForEachNoCallbacks(b *testing.B) {
 	const n = 256
 	seed := make([]int, n)
 	for i := range seed {

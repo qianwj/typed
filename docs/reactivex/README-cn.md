@@ -2,7 +2,7 @@
 
 强类型、显式订阅、按需推送、可配置背压的异步事件流。本包与 [`collections`](../collections/README-cn.md) 的 `Stream` 无关：`Stream` 是同步单消费，`reactivex` 处理订阅生命周期、异步输入与多播。
 
-需要 Go 1.27+（`Observable.Map[R]` / `Observable.Scan[R]` 等方法自带类型参数）。
+需要 Go 1.27+（`Flowable.Map[R]` / `Flowable.Scan[R]` 等方法自带类型参数）。
 
 > **Typed** 工具集的一部分。Looking for the English version? See [README.md](./README.md)。
 
@@ -10,7 +10,7 @@
 
 - [包导入](#包导入)
 - [核心类型](#核心类型)
-  - [`Observable[T]`](#observablet)
+  - [`Flowable[T]`](#flowablet)
   - [`Publisher[T]`](#publishert)
   - [`Subscriber[T]`](#subscribert)
   - [`Subscription`](#subscription)
@@ -36,19 +36,19 @@ import "github.com/qianwj/typed/reactivex"
 
 ## 核心类型
 
-### `Observable[T]`
+### `Flowable[T]`
 
-`Observable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数在 Go 1.27 之前无法放在 `Publisher` 接口上。
+`Flowable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数在 Go 1.27 之前无法放在 `Publisher` 接口上。
 
-`Observable` 的零值没有源、不能订阅。构造必须用 `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval` 等。
+`Flowable` 的零值没有源、不能订阅。构造必须用 `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval` 等。
 
 ```go
-var _ reactivex.Publisher[int] = reactivex.Observable[int]{}
+var _ reactivex.Publisher[int] = reactivex.Flowable[int]{}
 ```
 
 ### `Publisher[T]`
 
-只关心"能否订阅"的窄接口。`Observable[T]` 和 `Subject[T]` 都实现了它。组件只消费通知时用 `Publisher`；构建流式算子链用 `Observable`。
+只关心"能否订阅"的窄接口。`Flowable[T]` 和 `Subject[T]` 都实现了它。组件只消费通知时用 `Publisher`；构建流式算子链用 `Flowable`。
 
 ```go
 type Publisher[T any] interface {
@@ -97,13 +97,13 @@ type Subscription interface {
 ## 源
 
 ```go
-func Just[T any](values ...T) Observable[T]
-func FromSlice[T any](values []T) Observable[T]
-func FromChannel[T any](ch <-chan T) Observable[T]
-func FromChannelWithOptions[T any](ch <-chan T, opts ...BackpressureOption) Observable[T]
-func FromSeq[T any](seq iter.Seq[T]) Observable[T]
-func Create[T any](run func(ctx context.Context, emit func(T) bool, complete func())) Observable[T]
-func Interval(ctx context.Context, period time.Duration) Observable[uint64]
+func Just[T any](values ...T) Flowable[T]
+func FromSlice[T any](values []T) Flowable[T]
+func FromChannel[T any](ch <-chan T) Flowable[T]
+func FromChannelWithOptions[T any](ch <-chan T, opts ...BackpressureOption) Flowable[T]
+func FromSeq[T any](seq iter.Seq[T]) Flowable[T]
+func Create[T any](run func(ctx context.Context, emit func(T) bool, complete func())) Flowable[T]
+func Interval(ctx context.Context, period time.Duration) Flowable[uint64]
 ```
 
 | 源 | 关键性质 |
@@ -122,12 +122,12 @@ func Interval(ctx context.Context, period time.Duration) Observable[uint64]
 
 | 算子 | 签名 | 语义 |
 |---|---|---|
-| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Observable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error → 整条链发 `OnError(err)` 并完成。`f` 必须能感知 `context`，与切片风格的 `collections` 不同。 |
-| `Filter` | `Filter(predicate func(T) bool) Observable[T]` | 谓词为 `false` 时跳过。 |
-| `Take` | `Take(n uint64) Observable[T]` | 取前 `n` 个。 |
-| `Skip` | `Skip(n uint64) Observable[T]` | 跳过头 `n` 个。 |
-| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Observable[R]` | 每一步发累加器；初始值在收到第一个值之前**不**发。 |
-| `Reduce` | `Reduce(f func(T, T) T) Observable[T]` | 折成单个值；空流 `OnComplete` 而不补发。 |
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error → 整条链发 `OnError(err)` 并完成。`f` 必须能感知 `context`，与切片风格的 `collections` 不同。 |
+| `Filter` | `Filter(predicate func(T) bool) Flowable[T]` | 谓词为 `false` 时跳过。 |
+| `Take` | `Take(n uint64) Flowable[T]` | 取前 `n` 个。 |
+| `Skip` | `Skip(n uint64) Flowable[T]` | 跳过头 `n` 个。 |
+| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Flowable[R]` | 每一步发累加器；初始值在收到第一个值之前**不**发。 |
+| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | 折成单个值；空流 `OnComplete` 而不补发。 |
 
 `Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 都是**包装型**算子 —— 它们用下游 `Subscriber` 包一层，**不**自己开 goroutine、**不**自带队列。
 

@@ -25,7 +25,7 @@ types (`ArrayList[T]`, `LinkedList[T]`, `HashMap[K, V]`, `HashSet[T]`,
 rest of the toolkit is built on. The operator vocabulary follows the
 de facto naming used by Java Streams, .NET LINQ, and JavaScript array
 pipelines — without inheriting their runtime model. On the async side,
-`reactivex.Observable[T]` adds a typed event stream with explicit
+`reactivex.Flowable[T]` adds a typed event stream with explicit
 demand, configurable backpressure, and a first-class multicast
 `Subject[T]`.
 
@@ -73,7 +73,7 @@ profiles := stream.Of(users...).
 | `collections/queues` | (sub-module) | `Queue[T]`, `Deque[T]`, `PriorityQueue[T]` |
 | `collections/stream` | (sub-module) | `Stream[T]` — the fluent lazy layer over `iter.Seq[T]` |
 | `adt` | `github.com/qianwj/typed/adt` | `Option[T]`, `Result[T]`, `Either[L, R]` |
-| `reactivex` | `github.com/qianwj/typed/reactivex` | `Observable[T]`, `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure |
+| `reactivex` | `github.com/qianwj/typed/reactivex` | `Flowable[T]`, `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure |
 | `concurrency` | `github.com/qianwj/typed/concurrency` | `BoundedBlockingQueue[T]`, `UnboundedBlockingQueue[T]`, `Group`, `Semaphore`, `Pool[T]` |
 | `control` | `github.com/qianwj/typed/control` | `If`/`IfGet`, `Repeat`/`RepeatE`, pattern matching |
 | `utils/objects` | `github.com/qianwj/typed/utils/objects` | `IsNil[T]`, `Equals[T]` |
@@ -89,7 +89,7 @@ only what you use.
 - **`Option[T]` / `Result[T]` / `Either[L, R]`.** Absence and failure are first-class types. Both `Option` and `Result` bridge to `(T, error)` cleanly.
 - **No reflection in the hot path.** Only `utils/objects` uses reflection (for `IsNil`/`Equals`), and only there.
 - **Bounded memory.** `ArrayList` uses a head-offset layout with periodic compaction at `head >= 64`. `Stack.Pop` and `Remove*` zero the freed slot so popped references are GC-eligible.
-- **Typed async streams.** `reactivex.Observable[T]` with explicit demand (`Request(n)`) and per-subscription backpressure (`OverflowStrategy`).
+- **Typed async streams.** `reactivex.Flowable[T]` with explicit demand (`Request(n)`) and per-subscription backpressure (`OverflowStrategy`).
 - **Synchronous concurrency primitives.** `BoundedBlockingQueue[T]`, `UnboundedBlockingQueue[T]`, `Group` (Strict / BestEffort), `Semaphore`, `Pool[T]`. Backed by `chan T` / `sync.WaitGroup` / `sync.Cond` directly — no third-party deps.
 
 ## Install
@@ -191,7 +191,7 @@ for top3.Size() > 0 {
 
 | Type / function | Source | Notes |
 |---|---|---|
-| `Observable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Request(n)`) and `OnError` / `OnComplete` terminals. |
+| `Flowable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Request(n)`) and `OnError` / `OnComplete` terminals. |
 | `Subject[T]` | `reactivex` | Hot multicast publisher; `WithBuffer` / `WithOverflow` for backpressure. |
 | `Single[T]`, `Maybe[T]` | `reactivex` | Reactive containers for "exactly one" and "zero or one" emissions. Await returns `Result[T]` / `Result[Option[T]]`, respectively. |
 | `OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`. |
@@ -322,7 +322,7 @@ Per-package API reference and examples, in English and Chinese:
 - [docs/README.md](./docs/README.md) — index, with per-module roadmaps
 - [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `PriorityQueue`, `Stream`, `Range`
 - [adt](./docs/adt/README.md) — `Option[T]`, `Result[T]`, `Either[L, R]`
-- [reactivex](./docs/reactivex/README.md) — `Observable`, `Subject`, backpressure, operators
+- [reactivex](./docs/reactivex/README.md) — `Flowable`, `Subject`, backpressure, operators
 - [concurrency](./docs/concurrency/README.md) — blocking queues, `Group`, `Semaphore`, `Pool[T]`
 - [control](./docs/control/README.md) — `If`/`IfGet`, `Repeat`/`RepeatE`, pattern matching
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
@@ -351,7 +351,7 @@ Pre-`v1.0.0` numbering is chosen on purpose:
   `Map(func(context.Context, T) (R, error))`).
 - Adding new required fields to a public struct.
 - Changing a documented invariant (e.g. "`Map` returns an empty
-  observable on a nil slice", "`MinBy` panics on an empty list").
+  flowable on a nil slice", "`MinBy` panics on an empty list").
 
 ### What does not count as a breaking change
 
@@ -419,7 +419,7 @@ such as `Stream[T].Map[R]`, `Option[T].Map[R]`, and
 - `Option[T]` / `Result[T]` / `Either[L, R]` / `IsNil[T]` / `Equals[T]`.
 - `control.If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
   pattern matching.
-- `reactivex.Observable[T]` / `Publisher[T]` / `Subscriber[T]`,
+- `reactivex.Flowable[T]` / `Publisher[T]` / `Subscriber[T]`,
   `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure, operators.
 - `concurrency.BoundedBlockingQueue[T]`,
   `UnboundedBlockingQueue[T]`, `Group`, `Semaphore`, `Pool[T]`.

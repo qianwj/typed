@@ -1,15 +1,15 @@
 // Package reactivex provides typed asynchronous event streams with explicit
 // subscriptions, consumer demand and configurable overflow behavior.
 //
-// # Observable and Publisher
+// # Flowable and Publisher
 //
-// Observable[T] is the concrete pipeline type. Its operators construct new
-// observables without starting a producer; Subscribe, ForEach and ToSlice
+// Flowable[T] is the concrete pipeline type. Its operators construct new
+// flowables without starting a producer; Subscribe, ForEach and ToSlice
 // start consumption. Publisher[T] is the smaller interface for components
 // that only need to subscribe. Subject[T] implements both Publisher[T] and
 // Subscriber[T], providing a hot multicast entry point.
 //
-// Observable is concrete so transformations such as Map[R] can declare their
+// Flowable is concrete so transformations such as Map[R] can declare their
 // own result type under Go 1.27's generic methods. These method-level type
 // parameters do not belong on the Publisher interface.
 //

@@ -12,7 +12,7 @@ import (
 // one error. It combines a Result-producing source with a Future-like
 // subscription model.
 //
-// Compared to Observable[T]:
+// Compared to Flowable[T]:
 //
 //   - Cardinality is fixed at 1: a Single terminates with either
 //     OnSuccess(T) or OnError(error). There is no OnComplete-without-
@@ -22,7 +22,7 @@ import (
 //     delivered; the Subscriber does not call Request.
 //   - There is no per-subscription replay: a Single runs its source
 //     function once and caches the result, so every subscriber sees
-//     the same outcome. Use Observable if you want a fresh execution
+//     the same outcome. Use Flowable if you want a fresh execution
 //     per subscriber.
 //
 // Construct with [NewSingle]; consume either reactively via [Subscribe]

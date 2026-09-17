@@ -5,39 +5,6 @@ import (
 	"sync"
 )
 
-// Subscribe starts this source and its operator chain for subscriber. The
-// source invokes OnSubscribe during setup so initial demand can be requested
-// before values arrive. No automatic demand is added by this method.
-//
-// A nil ctx is treated as context.Background. subscriber must be non-nil, and
-// the Observable must have been constructed with a source. The returned handle
-// controls only this subscription. Callback execution may begin before this
-// method returns, so initialize shared callback state before subscribing.
-func (o Observable[T]) Subscribe(ctx context.Context, subscriber Subscriber[T]) Subscription {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return o.subscribe(ctx, subscriber)
-}
-
-// ForEach subscribes with callbacks and requests the maximum uint64 demand.
-// It is the convenience form for callers that want every available value
-// without manually replenishing demand. Any callback may be nil, in which
-// case the corresponding notification is ignored.
-//
-// The call returns a Subscription; it does not wait for normal completion.
-// Call Cancel to stop consumption, or use ToSlice for finite result collection.
-// Callbacks execute in the source's delivery context, not necessarily the
-// calling goroutine. With nil onError, upstream errors are ignored.
-func (o Observable[T]) ForEach(ctx context.Context, onNext func(T), onError func(error), onComplete func()) Subscription {
-	s := &callbackSubscriber[T]{onNext: onNext, onError: onError, onComplete: onComplete}
-	sub := o.Subscribe(ctx, s)
-	if sub != nil {
-		sub.Request(^uint64(0))
-	}
-	return sub
-}
-
 // ToSlice starts a subscription and blocks until completion, an upstream error
 // or cancellation of ctx. It requests maximum demand and appends received
 // values in delivery order. Empty input returns a non-nil empty slice.
@@ -53,7 +20,7 @@ func (o Observable[T]) ForEach(ctx context.Context, onNext func(T), onError func
 // Collection retains every value in memory and cannot complete normally for
 // an infinite source. Bound such sources before collecting. A nil ctx means
 // context.Background.
-func (o Observable[T]) ToSlice(ctx context.Context) ([]T, error) {
+func (o Flowable[T]) ToSlice(ctx context.Context) ([]T, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -110,7 +77,7 @@ func (o Observable[T]) ToSlice(ctx context.Context) ([]T, error) {
 //	total, err := reactivex.Collect(ctx, reactivex.Just(1, 2, 3), 0,
 //	    func(sum, value int) int { return sum + value })
 //	// On success, total is 6.
-func Collect[T, R any](ctx context.Context, o Observable[T], initial R, f func(R, T) R) (R, error) {
+func Collect[T, R any](ctx context.Context, o Flowable[T], initial R, f func(R, T) R) (R, error) {
 	result := initial
 	values, err := o.ToSlice(ctx)
 	if err != nil {
@@ -120,34 +87,4 @@ func Collect[T, R any](ctx context.Context, o Observable[T], initial R, f func(R
 		result = f(result, value)
 	}
 	return result, nil
-}
-
-// callbackSubscriber adapts optional callbacks without adding scheduling or
-// synchronization. Demand is supplied by the ForEach method that creates it.
-type callbackSubscriber[T any] struct {
-	sub        Subscription
-	onNext     func(T)
-	onError    func(error)
-	onComplete func()
-}
-
-func (s *callbackSubscriber[T]) OnSubscribe(sub Subscription) { s.sub = sub }
-
-// The callback adapter deliberately does not synchronize callbacks. Sources
-// define whether callbacks are serialized; callers needing shared state should
-// provide their own mutex or channel.
-func (s *callbackSubscriber[T]) OnNext(v T) {
-	if s.onNext != nil {
-		s.onNext(v)
-	}
-}
-func (s *callbackSubscriber[T]) OnError(err error) {
-	if s.onError != nil {
-		s.onError(err)
-	}
-}
-func (s *callbackSubscriber[T]) OnComplete() {
-	if s.onComplete != nil {
-		s.onComplete()
-	}
 }

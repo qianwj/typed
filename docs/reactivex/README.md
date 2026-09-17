@@ -4,7 +4,7 @@
 
 Typed, subscription-explicit, demand-driven, configurable-backpressure asynchronous event streams. This package is unrelated to the `Stream` in [`collections`](../collections/README.md): `Stream` is synchronous, single-consumer; `reactivex` handles subscription lifetimes, asynchronous inputs, and multicast.
 
-Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan[R]` declare their own type parameters.
+Go 1.27+ is required because methods like `Flowable.Map[R]` / `Flowable.Scan[R]` declare their own type parameters.
 
 > Part of the **Typed** toolkit. Looking for the Chinese version? See [README-cn.md](./README-cn.md).
 
@@ -12,7 +12,7 @@ Go 1.27+ is required because methods like `Observable.Map[R]` / `Observable.Scan
 
 - [Import](#import)
 - [Core types](#core-types)
-  - [`Observable[T]`](#observablet)
+  - [`Flowable[T]`](#flowablet)
   - [`Publisher[T]`](#publishert)
   - [`Subscriber[T]`](#subscribert)
   - [`Subscription`](#subscription)
@@ -38,19 +38,19 @@ Blocking consumption of `Single` and `Maybe` returns types from `github.com/qian
 
 ## Core types
 
-### `Observable[T]`
+### `Flowable[T]`
 
-`Observable[T]` is a concrete type, not an interface — that lets transform operators (`Map[R]`, `Scan[R]`, ...) declare their own result type `R`. Method-level type parameters like these do not fit on the `Publisher` interface under Go 1.27.
+`Flowable[T]` is a concrete type, not an interface — that lets transform operators (`Map[R]`, `Scan[R]`, ...) declare their own result type `R`. Method-level type parameters like these do not fit on the `Publisher` interface under Go 1.27.
 
-The zero value of `Observable` has no source and cannot be subscribed to. Always construct via `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval`.
+The zero value of `Flowable` has no source and cannot be subscribed to. Always construct via `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval`.
 
 ```go
-var _ reactivex.Publisher[int] = reactivex.Observable[int]{}
+var _ reactivex.Publisher[int] = reactivex.Flowable[int]{}
 ```
 
 ### `Publisher[T]`
 
-A narrow interface for components that only care about "can I subscribe?". Both `Observable[T]` and `Subject[T]` implement it. Use `Publisher` when the consumer only wants notifications; use `Observable` when building a fluent operator chain.
+A narrow interface for components that only care about "can I subscribe?". Both `Flowable[T]` and `Subject[T]` implement it. Use `Publisher` when the consumer only wants notifications; use `Flowable` when building a fluent operator chain.
 
 ```go
 type Publisher[T any] interface {
@@ -99,13 +99,13 @@ type Subscription interface {
 ## Sources
 
 ```go
-func Just[T any](values ...T) Observable[T]
-func FromSlice[T any](values []T) Observable[T]
-func FromChannel[T any](ch <-chan T) Observable[T]
-func FromChannelWithOptions[T any](ch <-chan T, opts ...BackpressureOption) Observable[T]
-func FromSeq[T any](seq iter.Seq[T]) Observable[T]
-func Create[T any](run func(ctx context.Context, emit func(T) bool, complete func())) Observable[T]
-func Interval(ctx context.Context, period time.Duration) Observable[uint64]
+func Just[T any](values ...T) Flowable[T]
+func FromSlice[T any](values []T) Flowable[T]
+func FromChannel[T any](ch <-chan T) Flowable[T]
+func FromChannelWithOptions[T any](ch <-chan T, opts ...BackpressureOption) Flowable[T]
+func FromSeq[T any](seq iter.Seq[T]) Flowable[T]
+func Create[T any](run func(ctx context.Context, emit func(T) bool, complete func())) Flowable[T]
+func Interval(ctx context.Context, period time.Duration) Flowable[uint64]
 ```
 
 | Source | Key properties |
@@ -124,12 +124,12 @@ func Interval(ctx context.Context, period time.Duration) Observable[uint64]
 
 | Operator | Signature | Semantics |
 |---|---|---|
-| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Observable[R]` | Calls `f` on each `OnNext`. If `f` returns an error, the chain emits `OnError(err)` and completes. `f` receives the `context`, which differs from the slicing-style `collections` API. |
-| `Filter` | `Filter(predicate func(T) bool) Observable[T]` | Drops values for which the predicate returns `false`. |
-| `Take` | `Take(n uint64) Observable[T]` | Take the first `n` values. |
-| `Skip` | `Skip(n uint64) Observable[T]` | Skip the first `n` values. |
-| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Observable[R]` | Emits the accumulator at each step; the initial value is **not** emitted before the first input. |
-| `Reduce` | `Reduce(f func(T, T) T) Observable[T]` | Folds to a single value; an empty stream finishes with `OnComplete` and does not emit a substitute. |
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | Calls `f` on each `OnNext`. If `f` returns an error, the chain emits `OnError(err)` and completes. `f` receives the `context`, which differs from the slicing-style `collections` API. |
+| `Filter` | `Filter(predicate func(T) bool) Flowable[T]` | Drops values for which the predicate returns `false`. |
+| `Take` | `Take(n uint64) Flowable[T]` | Take the first `n` values. |
+| `Skip` | `Skip(n uint64) Flowable[T]` | Skip the first `n` values. |
+| `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Flowable[R]` | Emits the accumulator at each step; the initial value is **not** emitted before the first input. |
+| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | Folds to a single value; an empty stream finishes with `OnComplete` and does not emit a substitute. |
 
 `Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` are all **wrapping** operators: they layer over the downstream `Subscriber` and do **not** start their own goroutine or maintain their own queue.
 
@@ -207,11 +207,11 @@ func (s *Subject[T]) OnComplete()
 
 `Single[T]` is a reactive container that emits **exactly one** value or **exactly one** error. It is the typed equivalent of a Future combined with a reactive subscription model.
 
-Compared to `Observable[T]`:
+Compared to `Flowable[T]`:
 
 - **Cardinality is fixed at 1.** A `Single` terminates with `OnSuccess(T)` or `OnError(error)`; there is no "no value arrived" state, so callers never have to distinguish "the result is still pending" from "no result will ever arrive".
 - **No demand tracking.** At most one value is delivered, so the subscriber does not call `Request`.
-- **No per-subscription replay.** `fn` runs once and the result is cached; every subscriber sees the same outcome. Use `Observable` if you want a fresh execution per subscriber.
+- **No per-subscription replay.** `fn` runs once and the result is cached; every subscriber sees the same outcome. Use `Flowable` if you want a fresh execution per subscriber.
 
 ```go
 type Single[T any] struct { /* ... */ }
@@ -248,9 +248,9 @@ The source and `Await` both return `Result[T]`: `Success(value)` or `Failure[T](
 | `Zip` | Wait for both this `Single` and `other`, then run `combine(left, right)`. The first error wins. |
 | `AndThen` | On success, run `next` and return its adt. The original value is discarded; use `FlatMap` if `next` depends on it. |
 
-### Comparison with `Observable`
+### Comparison with `Flowable`
 
-| | `Observable[T]` | `Single[T]` |
+| | `Flowable[T]` | `Single[T]` |
 | --- | --- | --- |
 | Cardinality | 0..N | exactly 1 |
 | Terminal states | `OnNext*` then `OnComplete` or `OnError` | `OnSuccess(T)` or `OnError(error)` |
@@ -323,9 +323,9 @@ name := value.OrElse("anonymous") // empty completion uses the fallback
 
 All operators propagate the three states: `Map` / `FlatMap` / `Zip` / `AndThen` pass `OnComplete` through unchanged (the user's `f` is not invoked on the complete-without-value branch). Errors always short-circuit the chain.
 
-### Comparison with `Single` and `Observable`
+### Comparison with `Single` and `Flowable`
 
-| | `Observable[T]` | `Single[T]` | `Maybe[T]` |
+| | `Flowable[T]` | `Single[T]` | `Maybe[T]` |
 | --- | --- | --- | --- |
 | Cardinality | 0..N | exactly 1 | 0 or 1 |
 | Terminal states | complete / error | success / error | success / complete / error |
