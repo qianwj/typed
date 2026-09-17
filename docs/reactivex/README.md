@@ -205,48 +205,54 @@ func (s *Subject[T]) OnComplete()
 
 ## `Single[T]`
 
+`Single` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewSingle`.
+
 `Single[T]` is a reactive container that emits **exactly one** value or **exactly one** error. It is the typed equivalent of a Future combined with a reactive subscription model.
 
 Compared to `Flowable[T]`:
 
 - **Cardinality is fixed at 1.** A `Single` terminates with `OnSuccess(T)` or `OnError(error)`; there is no "no value arrived" state, so callers never have to distinguish "the result is still pending" from "no result will ever arrive".
 - **No demand tracking.** At most one value is delivered, so the subscriber does not call `Request`.
-- **No per-subscription replay.** `fn` runs once and the result is cached; every subscriber sees the same outcome. Use `Flowable` if you want a fresh execution per subscriber.
+- **Shared execution.** `fn` runs once and the result is cached; subscribers arriving after completion also receive that outcome. Use `Flowable` if you want a fresh execution per subscriber.
 
 ```go
 type Single[T any] struct { /* ... */ }
 
-func NewSingle[T any](fn func() adt.Result[T]) *Single[T]
+func NewSingle[T any](fn func() adt.Result[T]) Single[T]
 
 // Reactive subscription
-func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
+func (s Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
 
 // Blocking consumption
-func (s *Single[T]) Await() adt.Result[T]
-func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
+func (s Single[T]) Await() adt.Result[T]
+func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 
 // Non-blocking check
-func (s *Single[T]) Done() bool
+func (s Single[T]) Done() bool
 
 // Composition
-func (s *Single[T]) Map[R any](f func(T) R) *Single[R]
-func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R]
-func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Single[R]
-func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
+func (s Single[T]) Map[R any](f func(T) R) Single[R]
+func (s Single[T]) FlatMap[R any](f func(T) Single[R]) Single[R]
+func (s Single[T]) Zip[U, R any](other Single[U], combine func(T, U) R) Single[R]
+func (s Single[T]) AndThen[R any](next Single[R]) Single[R]
 ```
 
 The source and `Await` both return `Result[T]`: `Success(value)` or `Failure[T](err)`. For an existing `(T, error)` function, return `adt.Wrap(loadConfig())` from the source closure. To use Go's `(T, error)` form, call `single.Await().Unwrap()`; otherwise compose directly with Result methods such as `Map` and `OrElse`.
 
 `AwaitWithContext` returns `Failure(ctx.Err())` when the wait is canceled. An already completed result takes precedence over cancellation; otherwise an already canceled context prevents starting the source. Canceling a wait does not cancel a running source or overwrite its eventual result.
 
+`Subscribe` returns without waiting for user code, including when the result is cached. Its `Subscription.Done()` closes after callback delivery or immediately on cancellation. `Cancel` suppresses a callback whose delivery has not started, without stopping the shared source or interrupting an in-flight callback. `Single.Done()` and `Await` observe the terminal result independently of subscriber callbacks.
+
 ### Composition
+
+Composition is lazy and connects completion callbacks: operators do not call `Await` internally or park a goroutine for each stage. Starting consumption uses an asynchronous entry point, and each source runs in its own goroutine at most once. Transforms and pending subscription callbacks execute outside internal locks on the completing goroutine; cached subscriptions are delivered asynchronously. Slow transforms or callbacks delay other continuations on the same goroutine, so they should not synchronously wait for a dependent continuation to run.
 
 | Operator | Behaviour |
 | --- | --- |
 | `Map` | Apply `f(value)` on success; pass errors through unchanged. `f` must be infallible. |
 | `FlatMap` | On success, run `f(value)` and return the resulting `Single`. The chain produces a fresh `Single`; the inner `Single` runs only if the outer succeeded. |
-| `Zip` | Wait for both this `Single` and `other`, then run `combine(left, right)`. The first error wins. |
-| `AndThen` | On success, run `next` and return its adt. The original value is discarded; use `FlatMap` if `next` depends on it. |
+| `Zip` | Observe this `Single` first, then `other` on success, and run `combine(left, right)`. A left error short-circuits the right source. |
+| `AndThen` | On success, run `next` and return its result. The original value is discarded; use `FlatMap` if `next` depends on it. |
 
 ### Comparison with `Flowable`
 
@@ -266,6 +272,8 @@ The source and `Await` both return `Result[T]`: `Success(value)` or `Failure[T](
 
 ## `Maybe[T]`
 
+`Maybe` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewMaybe`.
+
 `Maybe[T]` generalises `Single` by adding a third terminal state: the producer may legitimately complete **without a value**. It models "looked up the key, no entry" or "scanned the queue, no message pending" — cases where absence is a normal outcome rather than an error.
 
 Terminal states:
@@ -277,25 +285,25 @@ Terminal states:
 ```go
 type Maybe[T any] struct { /* ... */ }
 
-func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) *Maybe[T]
+func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) Maybe[T]
 // Success(Of(value)) → OnSuccess; Success(Empty[T]()) → OnComplete.
 // Failure[Option[T]](err) → OnError.
 
-func (m *Maybe[T]) Subscribe(
+func (m Maybe[T]) Subscribe(
     onSuccess func(T),
     onComplete func(),
     onError func(error),
 ) Subscription
 
-func (m *Maybe[T]) Await() adt.Result[adt.Option[T]]
-func (m *Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
+func (m Maybe[T]) Await() adt.Result[adt.Option[T]]
+func (m Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
 
-func (m *Maybe[T]) Done() bool
+func (m Maybe[T]) Done() bool
 
-func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R]
-func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R]
-func (m *Maybe[T]) Zip[U, R any](other *Maybe[U], combine func(T, U) R) *Maybe[R]
-func (m *Maybe[T]) AndThen[R any](next *Maybe[R]) *Maybe[R]
+func (m Maybe[T]) Map[R any](f func(T) R) Maybe[R]
+func (m Maybe[T]) FlatMap[R any](f func(T) Maybe[R]) Maybe[R]
+func (m Maybe[T]) Zip[U, R any](other Maybe[U], combine func(T, U) R) Maybe[R]
+func (m Maybe[T]) AndThen[R any](next Maybe[R]) Maybe[R]
 ```
 
 The outer Result describes success or failure; the inner Option describes whether a successful completion emitted a value:
@@ -322,6 +330,8 @@ name := value.OrElse("anonymous") // empty completion uses the fallback
 ### Composition
 
 All operators propagate the three states: `Map` / `FlatMap` / `Zip` / `AndThen` pass `OnComplete` through unchanged (the user's `f` is not invoked on the complete-without-value branch). Errors always short-circuit the chain.
+
+Execution and subscription cancellation follow Single's rules above. Maybe also composes through completion callbacks, preserving empty completion without waiting goroutines. `Zip` observes the left side first; a left error or empty completion skips the right source.
 
 ### Comparison with `Single` and `Flowable`
 

@@ -197,7 +197,7 @@ func TestSingle_FlatMap_Success(t *testing.T) {
 
 	inner := NewSingle(func() adt.Result[string] { return adt.Success[string]("inner") })
 	outer := NewSingle(func() adt.Result[int] { return adt.Success[int](5) }).
-		FlatMap(func(n int) *Single[string] {
+		FlatMap(func(n int) Single[string] {
 			return inner
 		})
 
@@ -211,9 +211,9 @@ func TestSingle_FlatMap_OuterError(t *testing.T) {
 	t.Parallel()
 
 	outer := NewSingle(func() adt.Result[int] { return adt.Failure[int](errSentinelSingle) }).
-		FlatMap(func(int) *Single[string] {
+		FlatMap(func(int) Single[string] {
 			t.Error("FlatMap f should not run on outer error")
-			return nil
+			return Single[string]{}
 		})
 
 	_, err := outer.Await().Unwrap()

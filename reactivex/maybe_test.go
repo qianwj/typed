@@ -256,7 +256,7 @@ func TestMaybe_FlatMap_Success(t *testing.T) {
 
 	inner := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Success(adt.Of[string]("inner")) })
 	outer := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](1)) }).
-		FlatMap(func(int) *Maybe[string] { return inner })
+		FlatMap(func(int) Maybe[string] { return inner })
 
 	v, err := outer.Await().Unwrap()
 	if err != nil || v.IsEmpty() || v.Get() != "inner" {
@@ -268,9 +268,9 @@ func TestMaybe_FlatMap_OuterComplete(t *testing.T) {
 	t.Parallel()
 
 	outer := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) }).
-		FlatMap(func(int) *Maybe[string] {
+		FlatMap(func(int) Maybe[string] {
 			t.Error("FlatMap f should not run on outer complete")
-			return nil
+			return Maybe[string]{}
 		})
 
 	v, err := outer.Await().Unwrap()

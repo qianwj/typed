@@ -51,7 +51,7 @@ func TestMaybeCompositionStatesAndLaziness(t *testing.T) {
 						}
 						return adt.Success(adt.Of[*int](right.value))
 					})
-					var composed *Maybe[*int]
+					var composed Maybe[*int]
 					switch operator {
 					case "Map":
 						composed = source.Map(func(v *int) *int {
@@ -59,7 +59,7 @@ func TestMaybeCompositionStatesAndLaziness(t *testing.T) {
 							return v
 						})
 					case "FlatMap":
-						composed = source.FlatMap(func(*int) *Maybe[*int] {
+						composed = source.FlatMap(func(*int) Maybe[*int] {
 							transformCalls.Add(1)
 							return next
 						})

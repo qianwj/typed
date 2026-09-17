@@ -203,26 +203,36 @@ func (s *Subject[T]) OnComplete()
 
 ## `Single[T]`
 
+`Single` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewSingle` 创建。
+
 `Single` 以一个值或一个错误结束。生产者最多执行一次，多次等待共享同一个结果。
 
 ```go
-func NewSingle[T any](fn func() adt.Result[T]) *Single[T]
-func (s *Single[T]) Await() adt.Result[T]
-func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
+func NewSingle[T any](fn func() adt.Result[T]) Single[T]
+func (s Single[T]) Await() adt.Result[T]
+func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 ```
 
 生产者和 `Await` 均返回 `Result[T]`：成功为 `Success(value)`，失败为 `Failure[T](err)`。适配已有的 `(T, error)` 函数时，可以在生产者闭包中返回 `adt.Wrap(loadConfig())`。可以直接调用 Result 的 `Map`、`OrElse` 等方法，也可以通过 `single.Await().Unwrap()` 转成 `(T, error)`。
 
 `AwaitWithContext` 在等待取消或超时时返回 `Failure(ctx.Err())`。已完成的结果优先于 context 的取消状态；尚未完成时，已取消的 context 会阻止生产者启动。取消等待不会停止已运行的生产者，也不会覆盖其最终结果。
 
+`Subscribe` 不等待用户代码执行，源已完成时也会异步交付缓存结果。订阅的 `Done()` 在回调返回或订阅取消时关闭。`Cancel` 会阻止尚未开始交付的回调，但不会停止共享生产者或打断执行中的回调。`Single.Done()` 和 `Await` 只等待终态，不等待订阅回调结束。
+
+组合保持惰性，通过完成回调连接计算，不在算子内部调用 `Await`，也不为每一层保留等待的 goroutine。消费从异步入口启动，各生产者按需在自己的 goroutine 中执行一次。转换函数和待通知的订阅回调在完成结果的 goroutine 上、内部锁之外执行；完成后的新订阅则异步通知。慢转换或回调会延迟同一 goroutine 上的后续通知，因此不应同步等待依赖这些通知的计算。
+
+`Zip` 先观察左侧，左侧成功后才启动右侧；左侧失败会跳过右侧。
+
 ## `Maybe[T]`
+
+`Maybe` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewMaybe` 创建。
 
 `Maybe` 在 Single 的基础上增加“正常完成但没有值”的状态。生产者返回 `Result[Option[T]]`，外层区分成功和失败，内层区分有值和空完成。
 
 ```go
-func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) *Maybe[T]
-func (m *Maybe[T]) Await() adt.Result[adt.Option[T]]
-func (m *Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
+func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) Maybe[T]
+func (m Maybe[T]) Await() adt.Result[adt.Option[T]]
+func (m Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
 ```
 
 外层 Result 表示成功或失败，内层 Option 表示成功完成后有没有值：
@@ -247,6 +257,8 @@ name := value.OrElse("匿名") // 空完成时使用默认值
 ```
 
 `Map`、`FlatMap`、`Zip`、`AndThen` 会传播空完成和错误，只有有值分支才执行对应转换或后续源。
+
+执行和订阅取消规则与 Single 相同。Maybe 同样通过完成回调组合计算，空完成不需要占用等待的 goroutine。`Zip` 左侧为空或失败时，会跳过右侧。
 
 ## 例子
 
