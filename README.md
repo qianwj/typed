@@ -87,7 +87,7 @@ only what you use.
 - **Concrete types, not interfaces.** `ArrayList[T]`, `LinkedList[T]`, etc. are concrete generic structs. Go 1.27's generic methods (`Map[R]`, `FlatMap[R]`, `Reduce[R]`) need concrete receivers.
 - **Fluent transforms return concrete types.** `Filter`, `Map[R]`, `FlatMap[R]`, `Take`, `Drop`, `Distinct`, `SortBy`, `Concat` chain on the same type — no boxing into `any`.
 - **`Option[T]` / `Result[T]` / `Either[L, R]`.** Absence and failure are first-class types. Both `Option` and `Result` bridge to `(T, error)` cleanly.
-- **No reflection in the hot path.** Only `utils/objects` uses reflection (for `IsNil`/`Equals`), and only there.
+- **Explicit nil handling.** `Option.Of` stores values directly; `OfNullable` and `utils/objects` use reflection when checking nil or comparing dynamic values.
 - **Bounded memory.** `ArrayList` uses a head-offset layout with periodic compaction at `head >= 64`. `Stack.Pop` and `Remove*` zero the freed slot so popped references are GC-eligible.
 - **Typed async streams.** `reactivex.Flowable[T]` with explicit demand (`Request(n)`) and per-subscription backpressure (`OverflowStrategy`).
 - **Synchronous concurrency primitives.** `BoundedBlockingQueue[T]`, `UnboundedBlockingQueue[T]`, `Group` (Strict / BestEffort), `Semaphore`, `Pool[T]`. Backed by `chan T` / `sync.WaitGroup` / `sync.Cond` directly — no third-party deps.
@@ -483,6 +483,16 @@ The toolkit is intentionally small, but contributions are welcome.
   notes can be written correctly.
 - **Commit hygiene.** One logical change per commit. Bug fixes and
   refactors should not be mixed with feature work in the same commit.
+
+For changes across modules, initialize a local workspace at the repository root:
+
+```sh
+go work init ./adt ./utils ./collections ./control ./reactivex ./concurrency
+```
+
+CI creates the same workspace for tests, lint, and coverage, so sibling imports use the checked-out source. `go.work` and `go.work.sum` stay untracked. `adt` depends only on the standard library; `utils/json` depends on `adt`.
+
+Published dependencies are still recorded in each module's `go.mod` and `go.sum`. Use `GOWORK=off` to check those versions independently. Keep checksum verification enabled. A `checksum mismatch` means the downloaded content differs from the recorded checksum; verify it against the release before updating `go.sum`, and publish changes under a new version instead of moving existing tags.
 
 The standard flow: fork the repository and create a topic branch off
 `main`; make your change; run `go test -race ./...` and

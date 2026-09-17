@@ -38,6 +38,8 @@ The three types share the same vocabulary (present / absent / success / failure 
 
 Co-locating them in one package makes those relationships visible at the call site without the import-by-import friction of separate sub-packages. A separate module (`typed/adt`, not `typed/utils/adt`) signals that they are value types, not utilities in the same sense as `objects.IsNil` or a JSON codec — consumers can depend on the value types without pulling in unrelated `utils/*` code.
 
+`adt` depends only on the Go standard library. `OfNullable` checks nil locally with `reflect`; it does not import `utils/objects`. The dependency points from `utils/json` to `adt`, never back to `utils`.
+
 ## `Option[T]`
 
 `Option[T]` is a container that may or may not hold a value of type `T`. An `Option` is either present (carrying a `T`) or absent (no value). The zero value of `Option` is absent and is equivalent to `Empty[T]()`.

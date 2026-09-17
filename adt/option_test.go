@@ -122,6 +122,21 @@ func TestOptionOfNullable(t *testing.T) {
 			t.Fatal("OfNullable(nil interface) should be absent")
 		}
 	})
+	t.Run("typed nil inside an interface is absent", func(t *testing.T) {
+		for _, value := range []any{(*user)(nil), []int(nil), map[string]int(nil), (chan int)(nil), (func())(nil)} {
+			if adt.OfNullable(value).IsPresent() {
+				t.Errorf("OfNullable(%T(nil)) should be absent", value)
+			}
+		}
+	})
+	t.Run("non-nil reference values are present", func(t *testing.T) {
+		for _, value := range []any{&user{}, []int{}, map[string]int{}, make(chan int), func() {}} {
+			o := adt.OfNullable(value)
+			if o.IsEmpty() {
+				t.Errorf("OfNullable(%T) should be present", value)
+			}
+		}
+	})
 	t.Run("value type never nil", func(t *testing.T) {
 		// Value types (int, string, struct, …) cannot be nil.
 		// OfNullable must return a present Option regardless

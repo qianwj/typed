@@ -31,38 +31,15 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.27'
-          # Module cache disabled: the freshly-tagged v0.0.3 series
-          # for the self-published typed modules is not yet in
-          # sumdb. Restoring a cached ~/go/pkg/mod that was filled
-          # against an earlier (different) tag set triggers
-          # 'checksum mismatch' / SECURITY ERROR. Until sumdb
-          # catches up, fetch fresh on every run.
+          # Start with a fresh cache after correcting the v0.0.3 checksums.
           cache: false
 
-      # Self-published modules (github.com/qianwj/typed/{adt,utils,
-      # ...}) are freshly tagged in this repo. The Go sumdb lags
-      # behind a fresh push by minutes-to-hours; running with
-      # GOSUMCHECK=off AND GOSUMDB=off lets CI build against the
-      # freshly-published tags immediately. The trade-off:
-      # temporary loss of checksum-database protection for
-      # newly-tagged versions until the sumdb catches up.
-      # Acceptable for a self-publisher that controls both ends
-      # of the wire; do not extend this to third-party
-      # dependencies.
+      - name: Use modules from this checkout
+        run: go work init ./adt ./utils ./collections ./control ./reactivex ./concurrency
+
       - name: Run tests with coverage
         working-directory: ${{ matrix.module }}
-        env:
-          GOSUMDB: off
         run: |
-          set -euo pipefail
-          # Force GOSUMDB off through 'go env -w' because actions/setup-go@v5
-          # writes the default 'sum.golang.org' into GOENV at setup time,
-          # which outranks an env-block value. GOSUMCHECK (the per-record
-          # go.sum h1 knob) was removed in Go 1.24; 'go env -w GOSUMCHECK=...'
-          # is now rejected as an unknown variable. GOSUMDB=off alone is
-          # what disables the cross-check against sum.golang.org.
-          go env -w GOSUMDB=off
-          go env GOSUMDB
           go test -race -count=1 \
             -coverprofile=coverage.out \
             -covermode=atomic \
@@ -103,13 +80,11 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.27'
-          # Module cache disabled: the freshly-tagged v0.0.3 series
-          # for the self-published typed modules is not yet in
-          # sumdb. Restoring a cached ~/go/pkg/mod that was filled
-          # against an earlier (different) tag set triggers
-          # 'checksum mismatch' / SECURITY ERROR. Until sumdb
-          # catches up, fetch fresh on every run.
+          # Start with a fresh cache after correcting the v0.0.3 checksums.
           cache: false
+
+      - name: Use modules from this checkout
+        run: go work init ./adt ./utils ./collections ./control ./reactivex ./concurrency
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
@@ -130,32 +105,16 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.27'
-          cache: true
-          # The aggregate job reads all five modules' go.sum files
-          # for module-graph resolution. cache-dependency-path only
-          # takes one path; rely on the default branch-wide cache.
-          cache-dependency-path: |
-            utils/go.sum
-            collections/go.sum
-            control/go.sum
-            reactivex/go.sum
-            concurrency/go.sum
-            adt/go.sum
+          # Start with a fresh cache after correcting the v0.0.3 checksums.
+          cache: false
 
-      # Self-published modules are freshly tagged; skip sumdb
-      # validation here too for the same reason as in the test job.
+      - name: Use modules from this checkout
+        run: go work init ./adt ./utils ./collections ./control ./reactivex ./concurrency
+
       - name: Collect coverage across all modules
-        env:
-          GOSUMDB: off
         run: |
           set -euo pipefail
-          # See the same note on the test job: 'go env -w GOSUMDB=off'
-          # is what actually overrides the GOENV that setup-go wrote.
-          # (GOSUMCHECK was removed in Go 1.24; setting it is now an
-          # error.)
-          go env -w GOSUMDB=off
           for module in utils collections control reactivex concurrency adt; do
-            echo "--- ${module} ---"
             (cd "${module}" && \
               go test -race -count=1 \
                 -coverprofile=coverage.out \

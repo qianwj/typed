@@ -2,8 +2,7 @@ package adt
 
 import (
 	"errors"
-
-	"github.com/qianwj/typed/utils/objects"
+	"reflect"
 )
 
 // Option[T] is a container that may or may not hold a value of type T.
@@ -57,8 +56,15 @@ func Of[T any](value T) Option[T] {
 // OfNullable is the right choice for pointer-like Ts. For value types
 // (int, string, struct, …) use Of directly: there is no nil to test.
 func OfNullable[T any](value T) Option[T] {
-	if objects.IsNil(value) {
+	rv := reflect.ValueOf(value)
+	if !rv.IsValid() {
 		return Option[T]{}
+	}
+	switch rv.Kind() {
+	case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
+		if rv.IsNil() {
+			return Option[T]{}
+		}
 	}
 	return Option[T]{value: value, present: true}
 }

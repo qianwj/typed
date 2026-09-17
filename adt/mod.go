@@ -21,9 +21,10 @@
 // import-by-import friction of separate sub-packages.
 //
 // Why a separate module? They are value types, not utilities in
-// the same sense as [objects.IsNil] or a JSON codec; the `adt`
+// the same sense as a nil-check helper or a JSON codec; the `adt`
 // module gives them a distinct import path so consumers can depend
 // on the value types without pulling in unrelated `utils/*` code.
+// This module depends only on the Go standard library.
 package adt
 
 import (

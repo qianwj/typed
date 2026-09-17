@@ -38,6 +38,8 @@ import "github.com/qianwj/typed/adt"
 
 放进同一个包让这些关系在调用点显而易见，省去多 import 的摩擦。独立的 module（`typed/adt` 而非 `typed/utils/adt`）表明这些是值类型，不是 `objects.IsNil` 或 JSON codec 那种意义上的工具——消费者可以只依赖值类型，不用连带拉入 `utils/*` 其他代码。
 
+`adt` 只依赖 Go 标准库。`OfNullable` 在包内通过 `reflect` 判断 nil，不引用 `utils/objects`；依赖方向是 `utils/json → adt`，不会从 `adt` 反向依赖 `utils`。
+
 ## `Option[T]`
 
 `Option[T]` 是一个容器，可能持有也可能不持有类型 `T` 的值。`Option` 要么 present（携带 `T`），要么 absent（无值）。`Option` 的零值就是 absent，等价于 `Empty[T]()`。

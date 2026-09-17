@@ -418,6 +418,16 @@ review 流程会顺畅得多。
 - **代码风格。** 跟随你正在编辑的文件。仓库不引入未经讨论的新依赖,
   请你也按这条走;拿不准时,先读两个相邻的文件再下笔。
 
+跨模块开发时，在仓库根目录初始化本地 workspace：
+
+```sh
+go work init ./adt ./utils ./collections ./control ./reactivex ./concurrency
+```
+
+CI 的测试、lint 和覆盖率任务都会创建同样的 workspace，让兄弟模块的 import 使用本次 checkout 的源码。`go.work` 和 `go.work.sum` 不提交。`adt` 只依赖标准库，`utils/json` 单向依赖 `adt`。
+
+每个模块仍通过 `go.mod` 和 `go.sum` 记录发布依赖，可用 `GOWORK=off` 单独检查这些版本。保留正常的校验机制；`checksum mismatch` 表示下载内容与记录不一致，需要核对发布内容后再更新 `go.sum`。后续改动应发布新版本，不移动已有标签。
+
 标准流程:
 
 1. 在 GitHub 上 fork 仓库,从 `main` 切出一个 topic 分支。

@@ -9,8 +9,8 @@
 *.test
 
 # Go workspace files: each developer keeps their own local module
-# selection. CI / release builds rely on the per-module go.mod files
-# alone, so go.work and go.work.sum are intentionally not committed.
+# selection. CI generates a workspace for the checked-out modules; release
+# consumers resolve versions from go.mod. Workspace files are not committed.
 go.work
 go.work.sum
 
