@@ -330,6 +330,12 @@ func TestFirstContextCancellation(t *testing.T) {
 	t.Parallel()
 	for _, preCanceled := range []bool{false, true} {
 		ctx, cancel := context.WithCancel(context.Background())
+		// Multiple paths below early-return via t.Fatal before they
+		// reach the bottom of the loop. context.CancelFunc is safe
+		// to call more than once, so a single defer covers them all
+		// without affecting the preCanceled == true branch, which
+		// still cancels at the top.
+		defer cancel()
 		subscribed := make(chan Subscription, 1)
 		flow := Flowable[int]{subscribe: func(_ context.Context, out Subscriber[int]) Subscription {
 			sub := newSubscription()

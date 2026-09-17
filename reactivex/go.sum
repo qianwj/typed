@@ -2,5 +2,3 @@ github.com/qianwj/typed/adt v0.0.3 h1:grWjhq4mOFigfO8joi5j3u7j3yssL7gkzhqr4CoB3Z
 github.com/qianwj/typed/adt v0.0.3/go.mod h1:hlPG6rkDHoyIU2IAi3VXWA7uoaai+gGsGXCp0uTNEKo=
 github.com/qianwj/typed/utils v0.0.3 h1:RjdzUUxfUHPjf2JV0BlV6vNOEOJNJ289+7eAUAg2aNU=
 github.com/qianwj/typed/utils v0.0.3/go.mod h1:fDQJmX87DPoGhFFZe5KSrpuUmvzACkMKbor7XtphAIA=
-golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba h1:Ck8QetSgk912qxWLMCKxd0in+aiyBQyDSMae6e/xmpU=
-golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba/go.mod h1:50RgIsmK7OwqzTTeqcSXQW8SswW0o8fRcDxmqGluJ8E=
