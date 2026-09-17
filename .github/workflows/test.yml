@@ -42,16 +42,18 @@ jobs:
       # Self-published modules (github.com/qianwj/typed/{adt,utils,
       # ...}) are freshly tagged in this repo. The Go sumdb lags
       # behind a fresh push by minutes-to-hours; running with
-      # GOSUMCHECK=off lets CI build against the freshly-published
-      # tags immediately. The trade-off: temporary loss of
-      # checksum-database protection for newly-tagged versions
-      # until the sumdb catches up. Acceptable for a self-publisher
-      # that controls both ends of the wire; do not extend this to
-      # third-party dependencies.
+      # GOSUMCHECK=off AND GOSUMDB=off lets CI build against the
+      # freshly-published tags immediately. The trade-off:
+      # temporary loss of checksum-database protection for
+      # newly-tagged versions until the sumdb catches up.
+      # Acceptable for a self-publisher that controls both ends
+      # of the wire; do not extend this to third-party
+      # dependencies.
       - name: Run tests with coverage
         working-directory: ${{ matrix.module }}
         env:
           GOSUMCHECK: off
+          GOSUMDB: off
         run: |
           set -euo pipefail
           go test -race -count=1 \
@@ -138,6 +140,7 @@ jobs:
       - name: Collect coverage across all modules
         env:
           GOSUMCHECK: off
+          GOSUMDB: off
         run: |
           set -euo pipefail
           for module in utils collections control reactivex concurrency adt; do
