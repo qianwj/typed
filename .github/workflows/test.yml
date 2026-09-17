@@ -52,16 +52,17 @@ jobs:
       - name: Run tests with coverage
         working-directory: ${{ matrix.module }}
         env:
-          GOSUMCHECK: off
           GOSUMDB: off
         run: |
           set -euo pipefail
-          # Force the two flags through go env because actions/setup-go@v5
-          # writes them into GOENV at setup time, which outranks the
-          # env-block above. 'go env -w' updates GOENV in place; 'go env'
-          # after that confirms the override stuck.
-          go env -w GOSUMCHECK=off GOSUMDB=off
-          go env GOSUMCHECK GOSUMDB
+          # Force GOSUMDB off through 'go env -w' because actions/setup-go@v5
+          # writes the default 'sum.golang.org' into GOENV at setup time,
+          # which outranks an env-block value. GOSUMCHECK (the per-record
+          # go.sum h1 knob) was removed in Go 1.24; 'go env -w GOSUMCHECK=...'
+          # is now rejected as an unknown variable. GOSUMDB=off alone is
+          # what disables the cross-check against sum.golang.org.
+          go env -w GOSUMDB=off
+          go env GOSUMDB
           go test -race -count=1 \
             -coverprofile=coverage.out \
             -covermode=atomic \
@@ -145,13 +146,14 @@ jobs:
       # validation here too for the same reason as in the test job.
       - name: Collect coverage across all modules
         env:
-          GOSUMCHECK: off
           GOSUMDB: off
         run: |
           set -euo pipefail
-          # See the same note on the test job: 'go env -w' is what
-          # actually overrides the GOENV that setup-go wrote.
-          go env -w GOSUMCHECK=off GOSUMDB=off
+          # See the same note on the test job: 'go env -w GOSUMDB=off'
+          # is what actually overrides the GOENV that setup-go wrote.
+          # (GOSUMCHECK was removed in Go 1.24; setting it is now an
+          # error.)
+          go env -w GOSUMDB=off
           for module in utils collections control reactivex concurrency adt; do
             echo "--- ${module} ---"
             (cd "${module}" && \
