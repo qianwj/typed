@@ -56,6 +56,12 @@ jobs:
           GOSUMDB: off
         run: |
           set -euo pipefail
+          # Force the two flags through go env because actions/setup-go@v5
+          # writes them into GOENV at setup time, which outranks the
+          # env-block above. 'go env -w' updates GOENV in place; 'go env'
+          # after that confirms the override stuck.
+          go env -w GOSUMCHECK=off GOSUMDB=off
+          go env GOSUMCHECK GOSUMDB
           go test -race -count=1 \
             -coverprofile=coverage.out \
             -covermode=atomic \
@@ -143,6 +149,9 @@ jobs:
           GOSUMDB: off
         run: |
           set -euo pipefail
+          # See the same note on the test job: 'go env -w' is what
+          # actually overrides the GOENV that setup-go wrote.
+          go env -w GOSUMCHECK=off GOSUMDB=off
           for module in utils collections control reactivex concurrency adt; do
             echo "--- ${module} ---"
             (cd "${module}" && \
