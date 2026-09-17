@@ -3,6 +3,7 @@ package reactivex
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 )
 
 // Map applies f to each upstream value and forwards its result as an R.
@@ -203,26 +204,42 @@ func (s *scanSubscriber[T, R]) OnComplete()                  { s.out.OnComplete(
 // Unlike Collect it does not retain every input. Unlike Scan it emits only the
 // final result, so a non-terminating input never yields a reduced value.
 //
-// Currently Reduce forwards downstream requests directly to upstream; it does
-// not translate a request for one result into demand for all inputs. Use
-// ForEach or ToSlice to request all inputs, or explicitly supply enough demand
-// when using Subscribe. A single request can otherwise leave reduction waiting.
+// The first positive downstream request requests all upstream inputs, since
+// producing one aggregate requires consuming the entire source. Zero demand
+// does not start input consumption; later requests add no further demand.
 func (o Flowable[T]) Reduce(f func(T, T) T) Flowable[T] {
 	return Flowable[T]{subscribe: func(ctx context.Context, out Subscriber[T]) Subscription {
-		return o.Subscribe(ctx, &reduceSubscriber[T]{out: out, f: f})
+		sub := &reduceSubscriber[T]{out: out, f: f}
+		o.Subscribe(ctx, sub)
+		return sub
 	}}
 }
 
 // reduceSubscriber distinguishes an empty input from a zero-valued accumulator
 // with hasValue, rather than treating the zero value of T as a sentinel.
 type reduceSubscriber[T any] struct {
-	out      Subscriber[T]
-	f        func(T, T) T
-	value    T
-	hasValue bool
+	out       Subscriber[T]
+	f         func(T, T) T
+	value     T
+	hasValue  bool
+	sub       Subscription
+	requested atomic.Bool
 }
 
-func (s *reduceSubscriber[T]) OnSubscribe(sub Subscription) { s.out.OnSubscribe(sub) }
+func (s *reduceSubscriber[T]) OnSubscribe(sub Subscription) {
+	s.sub = sub
+	s.out.OnSubscribe(s)
+}
+
+func (s *reduceSubscriber[T]) Request(n uint64) {
+	if n > 0 && s.requested.CompareAndSwap(false, true) {
+		s.sub.Request(^uint64(0))
+	}
+}
+
+func (s *reduceSubscriber[T]) Cancel() { s.sub.Cancel() }
+
+func (s *reduceSubscriber[T]) Done() <-chan struct{} { return s.sub.Done() }
 
 // OnNext keeps only the accumulator; it does not emit until completion.
 func (s *reduceSubscriber[T]) OnNext(v T) {

@@ -23,6 +23,7 @@
 - [`Subject[T]`](#subjectt)
 - [`Single[T]`](#singlet)
 - [`Maybe[T]`](#maybet)
+- [类型转换](#类型转换)
 - [例子](#例子)
 - [与其他包的关系](#与其他包的关系)
 
@@ -203,7 +204,7 @@ func (s *Subject[T]) OnComplete()
 
 ## `Single[T]`
 
-`Single` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewSingle` 创建。
+`Single` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewSingle` 或 Flowable 的转换方法创建。
 
 `Single` 以一个值或一个错误结束。生产者最多执行一次，多次等待共享同一个结果。
 
@@ -225,7 +226,7 @@ func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 
 ## `Maybe[T]`
 
-`Maybe` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewMaybe` 创建。
+`Maybe` 使用值接收器，构造函数和组合操作均返回值。复制后的句柄通过内部状态共享同一次执行和缓存结果，复制不会启动源。零值不可用，请通过 `NewMaybe` 或 Flowable 的转换方法创建。
 
 `Maybe` 在 Single 的基础上增加“正常完成但没有值”的状态。生产者返回 `Result[Option[T]]`，外层区分成功和失败，内层区分有值和空完成。
 
@@ -259,6 +260,33 @@ name := value.OrElse("匿名") // 空完成时使用默认值
 `Map`、`FlatMap`、`Zip`、`AndThen` 会传播空完成和错误，只有有值分支才执行对应转换或后续源。
 
 执行和订阅取消规则与 Single 相同。Maybe 同样通过完成回调组合计算，空完成不需要占用等待的 goroutine。`Zip` 左侧为空或失败时，会跳过右侧。
+
+## 类型转换
+
+| 方法 | 返回类型 | 语义 |
+| --- | --- | --- |
+| `single.ToFlowable()` | `Flowable[T]` | 发出 Single 的值后完成；失败时传播错误。 |
+| `maybe.ToFlowable()` | `Flowable[T]` | 发出已有值或正常空完成；失败时传播错误。 |
+| `flow.FirstElement(ctx)` | `Maybe[T]` | 取首元素，空流正常完成。 |
+| `flow.FirstOrError(ctx)` | `Single[T]` | 取首元素，空流返回 `ErrNoElements`。 |
+
+转换都是惰性的。`ToFlowable` 的多个订阅共享原始计算和缓存，但各自独立管理需求与取消。每个订阅最多保存一个待发送值，直到 `Request` 提供需求。空完成和错误不需要需求；已有的零值和 nil 值仍会作为元素发送。取消转换后的流订阅，不会停止原始 Single 或 Maybe 的计算。
+
+`FirstElement` 和 `FirstOrError` 在返回的容器首次被消费时订阅一次，并缓存结果。它们请求一个输出值，收到首元素后立即取消上游，不等待源完成，也不检查是否还有其他元素。首元素之前的错误原样传播。传入的 `ctx` 控制共享的上游订阅，取消时容器以 `Failure(ctx.Err())` 结束；单次 `AwaitWithContext` 的取消只停止该次等待。源 context 为 nil 时使用 `context.Background()`。
+
+```go
+first := reactivex.Just(3, 5).FirstElement(ctx) // Maybe[int]
+value, err := first.Await().Unwrap()          // Option[int], error
+
+required := reactivex.Just[int]().FirstOrError(ctx)
+missing := errors.Is(required.Await().Error(), reactivex.ErrNoElements)
+
+total := reactivex.Just(1, 2, 3).
+    Reduce(func(sum, value int) int { return sum + value }).
+    FirstOrError(ctx) // Single[int]，成功值为 6
+```
+
+`Reduce` 会把“请求一个聚合结果”转换为对上游全部输入的需求，因此可以衔接这两个首元素转换；它仍需要有限源才能完成。现有 `ToSlice(ctx)` 和包级 `Collect` 保留原来的阻塞返回类型。
 
 ## 例子
 

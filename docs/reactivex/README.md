@@ -25,6 +25,7 @@ Go 1.27+ is required because methods like `Flowable.Map[R]` / `Flowable.Scan[R]`
 - [`Subject[T]`](#subjectt)
 - [`Single[T]`](#singlet)
 - [`Maybe[T]`](#maybet)
+- [Type conversions](#type-conversions)
 - [Examples](#examples)
 - [See also](#see-also)
 
@@ -205,7 +206,7 @@ func (s *Subject[T]) OnComplete()
 
 ## `Single[T]`
 
-`Single` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewSingle`.
+`Single` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewSingle` or a Flowable conversion.
 
 `Single[T]` is a reactive container that emits **exactly one** value or **exactly one** error. It is the typed equivalent of a Future combined with a reactive subscription model.
 
@@ -272,7 +273,7 @@ Composition is lazy and connects completion callbacks: operators do not call `Aw
 
 ## `Maybe[T]`
 
-`Maybe` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewMaybe`.
+`Maybe` uses value receivers; constructors and composition operators return values. Copies share the same execution and cached result through internal state. Copying does not start the source. The zero value is unusable; construct a handle with `NewMaybe` or a Flowable conversion.
 
 `Maybe[T]` generalises `Single` by adding a third terminal state: the producer may legitimately complete **without a value**. It models "looked up the key, no entry" or "scanned the queue, no message pending" — cases where absence is a normal outcome rather than an error.
 
@@ -347,6 +348,33 @@ Execution and subscription cancellation follow Single's rules above. Maybe also 
 - **Cache lookup** — hit returns `Some(value)`, miss returns `None`.
 - **Pull from a queue** with timeout — got a message or got nothing.
 - **Database row fetch** by primary key — row exists or doesn't.
+
+## Type conversions
+
+| Method | Result | Semantics |
+| --- | --- | --- |
+| `single.ToFlowable()` | `Flowable[T]` | Emit the Single's value, then complete; propagate failure. |
+| `maybe.ToFlowable()` | `Flowable[T]` | Emit a present value or complete empty; propagate failure. |
+| `flow.FirstElement(ctx)` | `Maybe[T]` | Select the first value; an empty stream completes normally. |
+| `flow.FirstOrError(ctx)` | `Single[T]` | Select the first value; an empty stream fails with `ErrNoElements`. |
+
+All conversions are lazy. `ToFlowable` subscriptions share the original cached computation, but have independent demand and cancellation. Each subscription can hold one pending value until `Request` supplies demand. Empty completion and errors need no demand; present zero and nil values remain values. Canceling a converted stream subscription does not stop its Single or Maybe source.
+
+`FirstElement` and `FirstOrError` subscribe once when the returned container is consumed and cache its result. They request one output and cancel upstream on the first value, without waiting for stream completion or checking for further elements. Errors before that value propagate unchanged. The supplied `ctx` controls the shared upstream subscription; cancellation settles the container with `Failure(ctx.Err())`. Canceling an individual `AwaitWithContext` wait only stops that wait. A nil source context means `context.Background()`.
+
+```go
+first := reactivex.Just(3, 5).FirstElement(ctx) // Maybe[int]
+value, err := first.Await().Unwrap()          // Option[int], error
+
+required := reactivex.Just[int]().FirstOrError(ctx)
+missing := errors.Is(required.Await().Error(), reactivex.ErrNoElements)
+
+total := reactivex.Just(1, 2, 3).
+    Reduce(func(sum, value int) int { return sum + value }).
+    FirstOrError(ctx) // Single[int], successful value 6
+```
+
+`Reduce` translates a request for its one result into demand for all upstream inputs, so it can feed these first-element conversions. It still needs a finite source to complete. Existing `ToSlice(ctx)` and package-level `Collect` retain their blocking return types.
 
 ## Examples
 
