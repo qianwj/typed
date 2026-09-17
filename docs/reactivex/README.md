@@ -43,6 +43,8 @@ Blocking consumption of `Single` and `Maybe` returns types from `github.com/qian
 
 `Flowable[T]` is a concrete type, not an interface — that lets transform operators (`Map[R]`, `Scan[R]`, ...) declare their own result type `R`. Method-level type parameters like these do not fit on the `Publisher` interface under Go 1.27.
 
+`Flowable`, `Single`, and `Maybe` all use value receivers. A Flowable is an immutable pipeline description: copies share its source function and captured resources, while each subscription creates fresh operator state. Single/Maybe copies instead share one execution and its cached terminal result. Copying any of these handles does not start consumption.
+
 The zero value of `Flowable` has no source and cannot be subscribed to. Always construct via `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval`.
 
 ```go
@@ -91,11 +93,19 @@ type Subscription interface {
 
 | Method | Use |
 |---|---|
-| `Subscribe(ctx, sub) Subscription` | Synchronous setup; callbacks run on the producer goroutine. Returns that subscription's `Subscription`. |
-| `ForEach(ctx, onNext, onError, onComplete) Subscription` | One-shot callback; any callback may be `nil`; `ForEach` requests `^uint64` (effectively unbounded) demand, so it receives all available values; **does not wait for termination**. |
-| `ToSlice(ctx) ([]T, error)` | Collects into a `[]T`; `OnError` returns `([]T(nil), err)` immediately, otherwise returns the slice after `OnComplete`. |
+| `Subscribe(ctx, sub) Subscription` | Sets up the subscription and supplies its handle through `OnSubscribe`. Callback execution depends on the source; no demand is requested automatically. |
+| `ForEach(ctx, onNext, onError, onComplete) Subscription` | Registers callbacks and requests `^uint64(0)` demand. Any callback may be `nil`; **does not wait for termination**. |
+| `ToSlice(ctx) ([]T, error)` | Blocks until completion, error or context cancellation. Returns collected values together with the error, including partial values on failure or cancellation. |
 
-`ForEach` / `ToSlice` request "unbounded" demand; if you want backpressure, use `Subscribe` and control `Request` yourself.
+`ForEach` / `ToSlice` request maximum demand; use `Subscribe` to control how many values may be delivered. `ToSlice` needs a finite source and returns a non-nil empty slice on normal empty completion.
+
+Package-level `Collect` retains its blocking signature:
+
+```go
+func Collect[T, R any](ctx context.Context, source Flowable[T], initial R, f func(R, T) R) (R, error)
+```
+
+It first calls `ToSlice`, then folds the collected values into `initial`. On failure it returns `initial` and the error without calling `f`; it does not fold partial values. For an incremental aggregate that can become a Single, use `Reduce(...).FirstOrError(ctx)` (see [Type conversions](#type-conversions)).
 
 ## Sources
 
@@ -125,12 +135,12 @@ func Interval(ctx context.Context, period time.Duration) Flowable[uint64]
 
 | Operator | Signature | Semantics |
 |---|---|---|
-| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | Calls `f` on each `OnNext`. If `f` returns an error, the chain emits `OnError(err)` and completes. `f` receives the `context`, which differs from the slicing-style `collections` API. |
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | Calls `f` on each `OnNext`. If `f` returns an error, the chain terminates with `OnError(err)` and cancels upstream. `f` receives the `context`, which differs from the slicing-style `collections` API. |
 | `Filter` | `Filter(predicate func(T) bool) Flowable[T]` | Drops values for which the predicate returns `false`. |
 | `Take` | `Take(n uint64) Flowable[T]` | Take the first `n` values. |
 | `Skip` | `Skip(n uint64) Flowable[T]` | Skip the first `n` values. |
 | `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Flowable[R]` | Emits the accumulator at each step; the initial value is **not** emitted before the first input. |
-| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | Folds to a single value; an empty stream finishes with `OnComplete` and does not emit a substitute. |
+| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | Folds a finite source to one value. The first positive request requests all upstream inputs. Empty input completes without a value. |
 
 `Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` are all **wrapping** operators: they layer over the downstream `Subscriber` and do **not** start their own goroutine or maintain their own queue.
 
@@ -214,7 +224,7 @@ Compared to `Flowable[T]`:
 
 - **Cardinality is fixed at 1.** A `Single` terminates with `OnSuccess(T)` or `OnError(error)`; there is no "no value arrived" state, so callers never have to distinguish "the result is still pending" from "no result will ever arrive".
 - **No demand tracking.** At most one value is delivered, so the subscriber does not call `Request`.
-- **Shared execution.** `fn` runs once and the result is cached; subscribers arriving after completion also receive that outcome. Use `Flowable` if you want a fresh execution per subscriber.
+- **Shared execution.** `fn` runs once and the result is cached; subscribers arriving after completion also receive that outcome. Use a cold Flowable source such as `Just` or `FromSlice` for a fresh iteration per subscriber; channel sources share input and `ToFlowable` preserves its Single/Maybe cache.
 
 ```go
 type Single[T any] struct { /* ... */ }
@@ -262,8 +272,8 @@ Composition is lazy and connects completion callbacks: operators do not call `Aw
 | Cardinality | 0..N | exactly 1 |
 | Terminal states | `OnNext*` then `OnComplete` or `OnError` | `OnSuccess(T)` or `OnError(error)` |
 | Demand tracking | yes (`Request`) | no |
-| Per-subscription replay | yes (source iterates again) | no (cached result) |
-| Blocking consumption | `ToSlice`, `ForEach` | `Await` |
+| Repeated subscription | Source-dependent: fresh slice iteration, competing channel reads, or shared converted result | Same cached result |
+| Blocking consumption | `ToSlice`, package-level `Collect` | `Await`, `AwaitWithContext` |
 
 ### Use cases
 
@@ -345,11 +355,18 @@ Execution and subscription cancellation follow Single's rules above. Maybe also 
 
 ### Use cases
 
-- **Cache lookup** — hit returns `Some(value)`, miss returns `None`.
+- **Cache lookup** — hit returns `Success(Of(value))`, miss returns `Success(Empty[T]())`, failure returns `Failure[Option[T]](err)`.
 - **Pull from a queue** with timeout — got a message or got nothing.
 - **Database row fetch** by primary key — row exists or doesn't.
 
 ## Type conversions
+
+```go
+func (s Single[T]) ToFlowable() Flowable[T]
+func (m Maybe[T]) ToFlowable() Flowable[T]
+func (o Flowable[T]) FirstElement(ctx context.Context) Maybe[T]
+func (o Flowable[T]) FirstOrError(ctx context.Context) Single[T]
+```
 
 | Method | Result | Semantics |
 | --- | --- | --- |
@@ -392,29 +409,28 @@ src := reactivex.FromChannelWithOptions(ch,
     reactivex.WithBuffer(64),
     reactivex.WithOverflow(reactivex.OverflowDropOldest),
 )
-src.Subscribe(ctx, reactivex.Subscriber[int]{
-    OnSubscribe: func(s reactivex.Subscription) { s.Request(^uint64(0)) },
-    OnNext:      func(v int) { consume(v) },
-    OnError:     func(err error) { log.Println(err) },
-    OnComplete:  func() {},
-})
+sub := src.ForEach(ctx,
+    func(v int) { consume(v) },
+    func(err error) { log.Println(err) },
+    nil,
+)
+<-sub.Done()
 ```
 
 ```go
 // Hot multicast
 subj := reactivex.NewSubject[string]()
+sub := subj.ForEach(ctx, onMsg, onErr, onDone)
 go func() {
     defer subj.OnComplete()
     for _, v := range source {
         subj.OnNext(v)
     }
 }()
-subj.ForEach(ctx, onMsg, onErr, onDone) // start one subscription
+<-sub.Done() // The subscriber was attached before publication started.
 ```
 
 ## See also
 
 - For synchronous, single-consumer iteration use the `Stream` in [`collections`](../collections/README.md).
-- For one-shot success / failure use [`adt`](../adt/README.md); subscription-level errors are reported through `OnError`.
-- For "single value that may be absent" use [`adt`](../adt/README.md).
-- For the typed tagged-union result container (Left = failure, Right = success) use [`adt`](../adt/README.md).
+- [`adt`](../adt/README.md) provides `Result[T]` and `Option[T]`. Single producers and Await return `Result[T]`; Maybe uses `Result[Option[T]]` to keep empty completion distinct from failure.

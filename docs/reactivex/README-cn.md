@@ -39,7 +39,9 @@ import "github.com/qianwj/typed/reactivex"
 
 ### `Flowable[T]`
 
-`Flowable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数在 Go 1.27 之前无法放在 `Publisher` 接口上。
+`Flowable[T]` 是具体类型而不是接口 —— 这样转换算子（`Map[R]`、`Scan[R]` 等）可以在自己的方法上声明结果类型 `R`，这些方法级类型参数不能声明在 `Publisher` 接口的方法上。
+
+`Flowable`、`Single`、`Maybe` 均使用值接收器。Flowable 是不可变的管道描述：复制后共享源函数及其捕获的资源，每次订阅独立创建算子状态。Single/Maybe 的副本则共享同一次执行和缓存终态。复制这些句柄都不会启动消费。
 
 `Flowable` 的零值没有源、不能订阅。构造必须用 `Just` / `FromSlice` / `FromChannel` / `FromSeq` / `Create` / `Interval` 等。
 
@@ -89,11 +91,19 @@ type Subscription interface {
 
 | 方法 | 用途 |
 |---|---|
-| `Subscribe(ctx, sub) Subscription` | 同步设置；回调在生产者 goroutine 上发生。返回该订阅的 `Subscription`。 |
-| `ForEach(ctx, onNext, onError, onComplete) Subscription` | 一次性回调；任意回调可为 `nil`；`ForEach` 内部申请 `^uint64` 满需求，所以会拿到所有可用值；**不等终止**。 |
-| `ToSlice(ctx) ([]T, error)` | 收集到 `[]T`；`OnError` 立即返回 `([]T(nil), err)`，否则在 `OnComplete` 后返回整片。 |
+| `Subscribe(ctx, sub) Subscription` | 设置订阅，通过 `OnSubscribe` 提供句柄并返回该句柄。回调的执行位置由源决定，不自动申请需求。 |
+| `ForEach(ctx, onNext, onError, onComplete) Subscription` | 注册回调并申请 `^uint64(0)` 需求；任意回调可为 `nil`；**不等待终止**。 |
+| `ToSlice(ctx) ([]T, error)` | 等待完成、错误或 context 取消。返回已收集的值及错误；失败或取消时保留此前收到的部分值。 |
 
-`ForEach` / `ToSlice` / `ToSlice` 会申请"无限"需求；想限流请用 `Subscribe` 自己控制 `Request`。
+`ForEach` / `ToSlice` 会申请最大需求；需要控制发送数量时，用 `Subscribe` 自己调用 `Request`。`ToSlice` 需要有限源，正常空完成时返回非 nil 的空切片。
+
+包级 `Collect` 保持阻塞签名：
+
+```go
+func Collect[T, R any](ctx context.Context, source Flowable[T], initial R, f func(R, T) R) (R, error)
+```
+
+它先调用 `ToSlice`，再将收集到的值折叠到 `initial`。失败时返回 `initial` 和错误，不调用 `f`，也不折叠部分结果。需要边消费边聚合并得到 Single 时，可用 `Reduce(...).FirstOrError(ctx)`，见[类型转换](#类型转换)。
 
 ## 源
 
@@ -111,8 +121,8 @@ func Interval(ctx context.Context, period time.Duration) Flowable[uint64]
 |---|---|
 | `Just(vs...)` | 委托给 `FromSlice(vs...)`；每次订阅从第一个值开始。 |
 | `FromSlice(vs)` | 每次订阅一个生产者 goroutine；**共享 `vs` 的底层数组**（不复制），并发修改需调用方保证。慢回调会拖慢源。 |
-| `FromChannel(ch)` | 等价 `FromChannelWithOptions(ch)`：默认阻塞、无限缓冲 = 1。多个订阅**竞争**消费同一条 `ch`（要广播请用 `Subject`）。不负责关闭 `ch`。 |
-| `FromChannelWithOptions(ch, opts...)` | 每个订阅独立队列；同一 `ch` 仍然被多个订阅竞争。关闭 `ch` 会让该订阅在排空后正常完成。 |
+| `FromChannel(ch)` | 等价 `FromChannelWithOptions(ch)`：默认阻塞、不设缓冲队列。多个订阅**竞争**消费同一条 `ch`（要广播请用 `Subject`）。不负责关闭 `ch`。 |
+| `FromChannelWithOptions(ch, opts...)` | 每个订阅独立队列；同一 `ch` 仍然被多个订阅竞争。关闭 `ch` 会让该订阅在排空后正常完成，排空仍需要需求。 |
 | `FromSeq(seq)` | 每次订阅调一次 `seq`；`seq` 的可重入性由调用方负责。`emit` 返回 `false` 停止迭代。 |
 | `Create(run)` | 通用源；`emit` 等待 demand，`complete` 至多一次。 |
 | `Interval(ctx, period)` | 每订阅一个 ticker，从 0 开始发计数器；**第一个值在第一个 tick 之后**；`period <= 0` 时 `time.NewTicker` panic。`ctx` 参数当前未使用，订阅时的 `ctx` 才控制循环。 |
@@ -123,12 +133,12 @@ func Interval(ctx context.Context, period time.Duration) Flowable[uint64]
 
 | 算子 | 签名 | 语义 |
 |---|---|---|
-| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error → 整条链发 `OnError(err)` 并完成。`f` 必须能感知 `context`，与切片风格的 `collections` 不同。 |
+| `Map[R]` | `Map[R any](f func(context.Context, T) (R, error)) Flowable[R]` | 每次 `OnNext` 调 `f`；`f` 返回 error 时以 `OnError(err)` 终止并取消上游。`f` 接收订阅的 `context`，与切片风格的 `collections` 不同。 |
 | `Filter` | `Filter(predicate func(T) bool) Flowable[T]` | 谓词为 `false` 时跳过。 |
 | `Take` | `Take(n uint64) Flowable[T]` | 取前 `n` 个。 |
 | `Skip` | `Skip(n uint64) Flowable[T]` | 跳过头 `n` 个。 |
 | `Scan[R]` | `Scan[R any](initial R, f func(R, T) R) Flowable[R]` | 每一步发累加器；初始值在收到第一个值之前**不**发。 |
-| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | 折成单个值；空流 `OnComplete` 而不补发。 |
+| `Reduce` | `Reduce(f func(T, T) T) Flowable[T]` | 将有限源折叠为一个值；首次正需求会申请全部上游输入。空流直接完成，不补发值。 |
 
 `Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 都是**包装型**算子 —— 它们用下游 `Subscriber` 包一层，**不**自己开 goroutine、**不**自带队列。
 
@@ -210,6 +220,12 @@ func (s *Subject[T]) OnComplete()
 
 ```go
 func NewSingle[T any](fn func() adt.Result[T]) Single[T]
+func (s Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
+func (s Single[T]) Done() bool
+func (s Single[T]) Map[R any](f func(T) R) Single[R]
+func (s Single[T]) FlatMap[R any](f func(T) Single[R]) Single[R]
+func (s Single[T]) Zip[U, R any](other Single[U], combine func(T, U) R) Single[R]
+func (s Single[T]) AndThen[R any](next Single[R]) Single[R]
 func (s Single[T]) Await() adt.Result[T]
 func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 ```
@@ -232,6 +248,12 @@ func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T]
 
 ```go
 func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) Maybe[T]
+func (m Maybe[T]) Subscribe(onSuccess func(T), onComplete func(), onError func(error)) Subscription
+func (m Maybe[T]) Done() bool
+func (m Maybe[T]) Map[R any](f func(T) R) Maybe[R]
+func (m Maybe[T]) FlatMap[R any](f func(T) Maybe[R]) Maybe[R]
+func (m Maybe[T]) Zip[U, R any](other Maybe[U], combine func(T, U) R) Maybe[R]
+func (m Maybe[T]) AndThen[R any](next Maybe[R]) Maybe[R]
 func (m Maybe[T]) Await() adt.Result[adt.Option[T]]
 func (m Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]]
 ```
@@ -262,6 +284,13 @@ name := value.OrElse("匿名") // 空完成时使用默认值
 执行和订阅取消规则与 Single 相同。Maybe 同样通过完成回调组合计算，空完成不需要占用等待的 goroutine。`Zip` 左侧为空或失败时，会跳过右侧。
 
 ## 类型转换
+
+```go
+func (s Single[T]) ToFlowable() Flowable[T]
+func (m Maybe[T]) ToFlowable() Flowable[T]
+func (o Flowable[T]) FirstElement(ctx context.Context) Maybe[T]
+func (o Flowable[T]) FirstOrError(ctx context.Context) Single[T]
+```
 
 | 方法 | 返回类型 | 语义 |
 | --- | --- | --- |
@@ -304,28 +333,28 @@ src := reactivex.FromChannelWithOptions(ch,
     reactivex.WithBuffer(64),
     reactivex.WithOverflow(reactivex.OverflowDropOldest),
 )
-src.Subscribe(ctx, reactivex.Subscriber[int]{
-    OnSubscribe: func(s reactivex.Subscription) { s.Request(^uint64(0)) },
-    OnNext:      func(v int) { consume(v) },
-    OnError:     func(err error) { log.Println(err) },
-    OnComplete:  func() {},
-})
+sub := src.ForEach(ctx,
+    func(v int) { consume(v) },
+    func(err error) { log.Println(err) },
+    nil,
+)
+<-sub.Done()
 ```
 
 ```go
 // 热多播
 subj := reactivex.NewSubject[string]()
+sub := subj.ForEach(ctx, onMsg, onErr, onDone)
 go func() {
     defer subj.OnComplete()
     for _, v := range source {
         subj.OnNext(v)
     }
 }()
-subj.ForEach(ctx, onMsg, onErr, onDone) // 启动一个订阅
+<-sub.Done() // 先订阅再发布，避免订阅前的值被丢弃。
 ```
 
 ## 与其他包的关系
 
 - 同步、单次消费请用 [`collections`](../collections/README-cn.md) 的 `Stream`。
-- 一次性的成功 / 失败用 [`adt`](../adt/README-cn.md)；订阅级错误通过 `OnError` 报出。
-- 单值"可能缺席"用 [`adt`](../adt/README-cn.md)。
+- [`adt`](../adt/README-cn.md) 提供 `Result[T]` 和 `Option[T]`。Single 的生产者和 Await 返回 `Result[T]`；Maybe 使用 `Result[Option[T]]` 区分空完成与失败。

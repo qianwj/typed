@@ -11,7 +11,11 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 ### Collections and synchronous streams
 
 - 📚 [`collections`](./collections/README.md) — `Stack` / `Queue` / `Deque` / `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stream`, plus `collections.Range`.
-- 📡 [`reactivex`](./reactivex/README.md) — asynchronous event streams: `Flowable` / `Publisher` / `Subscriber` / `Subject`, backpressure, sources and operators.
+
+### Reactive streams and asynchronous results
+
+- 📡 [`reactivex`](./reactivex/README.md) — `Flowable`, `Single`, `Maybe`, and `Subject`; demand, backpressure, shared cached results and callback composition.
+- [Type conversions](./reactivex/README.md#type-conversions) — `ToFlowable`, `FirstElement`, `FirstOrError`, and finite-stream reduction.
 
 ### Control flow
 
@@ -31,6 +35,6 @@ Each file follows a five-section shape — **Import → Why → API → Example 
 ## Reading paths
 
 - 🆕 **New to Typed** — start with [`collections`](./collections/README.md) to see the immutable-transform style of `ArrayList` / `LinkedList` / `Stream`, then read [`adt`](./adt/README.md) and [`adt`](./adt/README.md) for the absent / failure story.
-- ⚡ **Asynchronous or multi-subscriber behavior** — jump to [`reactivex`](./reactivex/README.md).
+- ⚡ **Asynchronous results or streams** — use [`Single`](./reactivex/README.md#singlet) for one value or an error, [`Maybe`](./reactivex/README.md#maybet) for an optional value, [`Flowable`](./reactivex/README.md#flowablet) for multiple values with demand, and [`Subject`](./reactivex/README.md#subjectt) for multicast.
 - 🧭 **Value- or type-based dispatch** — jump to [`control`](./control/README.md).
 - 🚦 **Bounded producer / consumer queue with backpressure** — jump to [`concurrency`](./concurrency/README.md).

@@ -292,4 +292,4 @@ adt.Cast[*int]((*int)(nil)).IsSuccess() // true：类型匹配的 typed nil
 
 - [`collections`](../collections/README-cn.md) 里所有「可能缺席」的访问器都返回 `adtOption[T]`：`ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`，`Stack` / `Queue` / `Deque` 的 `Pop` / `Peek` / `Front` / `Back`，`Stream.First` / `Last` / `Find`。
 - [`utils/json`](../utils/json/README-cn.md) 用 `adtResult[T]` 作为编解码返回值。
-- [`reactivex.Single[T]`](../reactivex/README-cn.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README-cn.md#maybet) —— 终止事件是 `Either` 形态的 reactive 容器。
+- [`reactivex.Single[T]`](../reactivex/README-cn.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README-cn.md#maybet) —— 惰性异步值句柄，生产者与 Await 分别返回 `Result[T]` / `Result[Option[T]]`。复制后共享执行和缓存结果；Maybe 的空完成是 `Success(Empty[T]())`。

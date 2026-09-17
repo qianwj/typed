@@ -161,7 +161,7 @@ Excluded from this package:
   Belongs in its own package — a future `typed/ratelimit` is the
   natural home.
 - **Pipeline composition.** Overlaps with
-  [`reactivex`](../../reactivex/README.md). The
+  [`reactivex`](../reactivex/README.md). The
   [`Stream`](../collections/README.md#streamt--pipelines) type
   already covers the common "compose stages of work" use case.
 - **Mutex with timeout.** Complex, error-prone, rarely needed.

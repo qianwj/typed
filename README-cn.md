@@ -187,11 +187,27 @@ use(v)
 | --- | --- | --- |
 | `reactivex.Flowable[T]`、`Publisher[T]`、`Subscriber[T]` | `reactivex` | 强类型异步流,显式需求(`Subscription.Request(n)`)与 `OnError` / `OnComplete` 终止信号。 |
 | `reactivex.Subject[T]` | `reactivex` | 热多播发布者 + 订阅者;通过 `WithBuffer` / `WithOverflow` 配置。 |
-| `reactivex.Single[T]` | `reactivex` | reactive 容器，恰好发一个值或一个 error。`Await` / `AwaitWithContext` 返回 `adt.Result[T]`，`Subscribe` 用于回调消费。 |
-| `reactivex.Maybe[T]` | `reactivex` | reactive 容器，包含有值、空完成、错误三种终态。`Await` / `AwaitWithContext` 返回 `adt.Result[adt.Option[T]]`，空完成是成功结果。 |
+| `reactivex.Single[T]` | `reactivex` | 惰性计算，缓存一个值或错误。生产者和 `Await` / `AwaitWithContext` 均返回 `adt.Result[T]`。 |
+| `reactivex.Maybe[T]` | `reactivex` | 惰性计算，缓存有值、空完成或错误。生产者和 `Await` / `AwaitWithContext` 均返回 `adt.Result[adt.Option[T]]`。 |
+| `ToFlowable` / `FirstElement` / `FirstOrError` | `reactivex` | 将 Single/Maybe 转为流，或将流的首元素转为 Maybe/Single。 |
 | `reactivex.OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`。 |
 | 源:`Just` / `FromSlice` / `FromChannel` / `FromChannelWithOptions` / `FromSeq` / `Create` / `Interval` | `reactivex` | 冷、热源构造器。 |
 | 算子:`Map[R]`、`Filter`、`Take`、`Skip`、`Scan[R]`、`Reduce` | `reactivex` | 全部为包装型,自身不启 goroutine、不带队列。 |
+
+`Flowable`、`Single`、`Maybe` 均使用值接收器，构造函数和算子返回值句柄。复制 Single/Maybe 仍共享同一次执行和缓存结果；复制 Flowable 共享源函数，每次订阅独立创建算子状态。三者的零值都不可用，请通过提供的 API 创建。
+
+```go
+values, err := reactivex.NewSingle(func() adt.Result[int] {
+    return adt.Success(3)
+}).FlatMap(func(n int) reactivex.Single[int] {
+    return reactivex.NewSingle(func() adt.Result[int] { return adt.Success(n * 2) })
+}).ToFlowable().ToSlice(ctx) // []int{6}, nil
+
+empty := reactivex.Just[int]().FirstElement(ctx).Await() // Success(Empty[int]())
+missing := reactivex.Just[int]().FirstOrError(ctx).Await() // Failure(ErrNoElements)
+```
+
+Single/Maybe 通过完成回调组合，不为每层算子保留等待的 goroutine。取消某次等待或订阅不会停止共享计算。`FirstElement` / `FirstOrError` 收到首元素后取消上游，传入的 context 控制共享的上游订阅。`Reduce(...).FirstOrError(ctx)` 可将有限流的聚合结果转为 Single。`ToSlice(ctx)` 和包级 `Collect` 保持原来的阻塞返回类型。详见 [reactivex 文档](./docs/reactivex/README-cn.md)和[类型转换语义](./docs/reactivex/README-cn.md#类型转换)。
 
 ### 并发原语
 
@@ -209,7 +225,7 @@ use(v)
 - [docs/README-cn.md](./docs/README-cn.md) —— 索引
 - [collections](./docs/collections/README-cn.md) —— `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stack` / `Queue` / `Deque` / `Stream` / `Range`
 - [control](./docs/control/README-cn.md) —— `If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match`
-- [reactivex](./docs/reactivex/README-cn.md) —— `Flowable` / `Subject` / 背压 / 算子
+- [reactivex](./docs/reactivex/README-cn.md) —— `Flowable` / `Single` / `Maybe` / `Subject`、背压、组合与类型转换
 - [concurrency](./docs/concurrency/README-cn.md) —— 阻塞队列、`Group`、`Semaphore` 与 `Pool[T]`
 - [adt](./docs/adt/README-cn.md) —— `Option[T]`
 - [adt](./docs/adt/README-cn.md) —— `Result[T]`
@@ -360,6 +376,7 @@ Go 1.23 引入了 `iter.Seq`、`iter.Seq2` 以及对函数迭代器的 `for rang
 - [x] `Option[T]` / `Result[T]` / `Equaler` / `IsNil[T]` / `Equals[T]` 工具集。
 - [x] `control.If` / `IfGet`、`Repeat` / `RepeatE` 与 `control/match` 模式匹配。
 - [x] `reactivex` 包:`Flowable[T]` / `Publisher[T]` / `Subscriber[T]`、`Subject[T]`、`WithBuffer` / `WithOverflow` 背压、`Map` / `Filter` / `Take` / `Skip` / `Scan` / `Reduce` 算子。
+- [x] Single/Maybe 值句柄，共享缓存终态并通过回调组合；`ToFlowable` / `FirstElement` / `FirstOrError` 类型转换及 `Reduce` 的需求传递。
 - [x] `concurrency` 包:`BoundedBlockingQueue[T]`(数组环形缓冲,阻塞 + 非阻塞双 API,通过 race 测试)。
 - [x] 基于 `encoding/json/v2` 的 `utils/json` `Result` 风格编解码。
 - [x] `concurrency.Pool[T]`：基于 `sync.Pool` 的泛型临时对象复用。

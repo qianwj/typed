@@ -407,6 +407,6 @@ func formatMessage(message string) string {
 
 ## 与其他包的关系
 
-- [`reactivex`](../../reactivex/README-cn.md) —— 带显式 demand 和可配背压的强类型异步事件流。如果要排队的其实是“派发给多个订阅者的事件”,`Flowable` 通常比队列更合适。
+- [`reactivex`](../reactivex/README-cn.md) —— 带显式 demand 和可配背压的强类型异步事件流。如果要排队的其实是“派发给多个订阅者的事件”,可用 `Subject` 做多播；从 channel 创建的 `Flowable` 会让多个订阅者竞争消费。
 - [`queues.Queue`](../collections/README.md#queuesqueuet--queuesdequet) —— 同步、内存中的 `Queue[T]`。在没有并发、又想要 `Option[T]` 风格取值时使用;它不加锁、没有 `TryPush`、也没有背压。
 - 标准库的 [`chan T`](https://go.dev/ref/spec#Channel_types) —— 本类型就是它的一个薄包装。

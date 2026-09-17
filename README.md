@@ -193,8 +193,24 @@ for top3.Size() > 0 {
 |---|---|---|
 | `Flowable[T]`, `Publisher[T]`, `Subscriber[T]` | `reactivex` | Typed async stream with explicit demand (`Request(n)`) and `OnError` / `OnComplete` terminals. |
 | `Subject[T]` | `reactivex` | Hot multicast publisher; `WithBuffer` / `WithOverflow` for backpressure. |
-| `Single[T]`, `Maybe[T]` | `reactivex` | Reactive containers for "exactly one" and "zero or one" emissions. Await returns `Result[T]` / `Result[Option[T]]`, respectively. |
+| `Single[T]`, `Maybe[T]` | `reactivex` | Lazy computations that cache one value or an optional value. Producers and Await return `Result[T]` / `Result[Option[T]]`, respectively. |
+| `ToFlowable`, `FirstElement`, `FirstOrError` | `reactivex` | Convert Single/Maybe to streams, or select a stream's first value as Maybe/Single. |
 | `OverflowStrategy` | `reactivex` | `OverflowBlock` / `OverflowDropLatest` / `OverflowDropOldest` / `OverflowKeepLatest` / `OverflowError`. |
+
+`Flowable`, `Single`, and `Maybe` use value receivers and return value handles from constructors and operators. Copying a Single or Maybe shares its execution and cached result; copying a Flowable shares its source function, with fresh operator state per subscription. Construct them through the provided APIs; their zero values are not usable.
+
+```go
+values, err := reactivex.NewSingle(func() adt.Result[int] {
+    return adt.Success(3)
+}).FlatMap(func(n int) reactivex.Single[int] {
+    return reactivex.NewSingle(func() adt.Result[int] { return adt.Success(n * 2) })
+}).ToFlowable().ToSlice(ctx) // []int{6}, nil
+
+empty := reactivex.Just[int]().FirstElement(ctx).Await() // Success(Empty[int]())
+missing := reactivex.Just[int]().FirstOrError(ctx).Await() // Failure(ErrNoElements)
+```
+
+Single/Maybe composition connects completion callbacks without a waiting goroutine per operator. Canceling an individual wait or subscription leaves the shared computation running. `FirstElement` / `FirstOrError` cancel upstream after the first value; their supplied context controls that shared upstream subscription. `Reduce(...).FirstOrError(ctx)` yields a Single containing the aggregate of a finite stream. `ToSlice(ctx)` and package-level `Collect` keep their blocking return types. See the [reactivex reference](./docs/reactivex/README.md) and [conversion contracts](./docs/reactivex/README.md#type-conversions).
 
 ### Control flow
 
@@ -322,7 +338,7 @@ Per-package API reference and examples, in English and Chinese:
 - [docs/README.md](./docs/README.md) — index, with per-module roadmaps
 - [collections](./docs/collections/README.md) — `ArrayList`, `LinkedList`, `HashMap`, `HashSet`, `Stack`, `Queue`, `Deque`, `PriorityQueue`, `Stream`, `Range`
 - [adt](./docs/adt/README.md) — `Option[T]`, `Result[T]`, `Either[L, R]`
-- [reactivex](./docs/reactivex/README.md) — `Flowable`, `Subject`, backpressure, operators
+- [reactivex](./docs/reactivex/README.md) — `Flowable`, `Single`, `Maybe`, `Subject`, backpressure, composition and conversions
 - [concurrency](./docs/concurrency/README.md) — blocking queues, `Group`, `Semaphore`, `Pool[T]`
 - [control](./docs/control/README.md) — `If`/`IfGet`, `Repeat`/`RepeatE`, pattern matching
 - [utils/objects](./docs/utils/objects/README.md) — `IsNil`, `Equals`
@@ -420,7 +436,9 @@ such as `Stream[T].Map[R]`, `Option[T].Map[R]`, and
 - `control.If` / `IfGet`, `Repeat` / `RepeatE`, and `control/match`
   pattern matching.
 - `reactivex.Flowable[T]` / `Publisher[T]` / `Subscriber[T]`,
-  `Subject[T]`, `Single[T]`, `Maybe[T]`, backpressure, operators.
+  `Subject[T]`, backpressure, operators.
+- Single/Maybe value handles with shared cached completion and callback composition;
+  `ToFlowable`, `FirstElement`, `FirstOrError`, and demand-aware `Reduce`.
 - `concurrency.BoundedBlockingQueue[T]`,
   `UnboundedBlockingQueue[T]`, `Group`, `Semaphore`, `Pool[T]`.
 - `utils/json` Result-style codec on top of `encoding/json/v2`.

@@ -292,4 +292,4 @@ In practice:
 
 - Every "may be absent" accessor in [`collections`](../collections/README.md) returns `adt.Option[T]`: `ArrayList.Get` / `First` / `Last` / `Find` / `MinBy` / `MaxBy`, the `Stack` / `Queue` / `Deque` `Pop` / `Peek` / `Front` / `Back`, and `Stream.First` / `Last` / `Find`.
 - [`utils/json`](../utils/json/README.md) uses `adt.Result[T]` for codec return values.
-- [`reactivex.Single[T]`](../reactivex/README.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README.md#maybet) — reactive containers whose terminal events are `Either`-like.
+- [`reactivex.Single[T]`](../reactivex/README.md#singlet) / [`reactivex.Maybe[T]`](../reactivex/README.md#maybet) — lazy asynchronous value handles whose producers and Await methods return `Result[T]` / `Result[Option[T]]`. Copies share execution and cached results; empty Maybe completion is `Success(Empty[T]())`.

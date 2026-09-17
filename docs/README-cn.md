@@ -11,7 +11,11 @@
 ### 集合与同步流
 
 - 📚 [`collections`](./collections/README-cn.md) —— `Stack` / `Queue` / `Deque` / `ArrayList` / `LinkedList` / `HashMap` / `HashSet` / `Stream`,以及 `collections.Range`。
-- 📡 [`reactivex`](./reactivex/README-cn.md) —— 异步事件流:`Flowable` / `Publisher` / `Subscriber` / `Subject`、背压、源与算子。
+
+### 响应式流与异步结果
+
+- 📡 [`reactivex`](./reactivex/README-cn.md) —— `Flowable`、`Single`、`Maybe` 与 `Subject`；需求、背压、共享缓存结果与回调组合。
+- [类型转换](./reactivex/README-cn.md#类型转换) —— `ToFlowable`、`FirstElement`、`FirstOrError` 与有限流聚合。
 
 ### 控制流
 
@@ -31,6 +35,6 @@
 ## 阅读路径
 
 - 🆕 **第一次接触 Typed** —— 从 [`collections`](./collections/README-cn.md) 看 `ArrayList` / `LinkedList` / `Stream` 的不可变 transform 风格,再到 [`adt`](./adt/README-cn.md) / [`adt`](./adt/README-cn.md) 看缺席 / 失败的表达。
-- ⚡ **需要异步或多订阅** —— 跳到 [`reactivex`](./reactivex/README-cn.md)。
+- ⚡ **需要异步结果或事件流** —— 一个值或错误用 [`Single`](./reactivex/README-cn.md#singlet)，可选值用 [`Maybe`](./reactivex/README-cn.md#maybet)，按需求发送多个值用 [`Flowable`](./reactivex/README-cn.md#flowablet)，多播用 [`Subject`](./reactivex/README-cn.md#subjectt)。
 - 🧭 **需要按值或类型做 dispatch** —— 跳到 [`control`](./control/README-cn.md)。
 - 🚦 **需要带背压的有界生产/消费队列** —— 跳到 [`concurrency`](./concurrency/README-cn.md)。

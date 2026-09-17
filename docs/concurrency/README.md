@@ -492,6 +492,6 @@ The second `Get` unwraps the Option. For a zero-value pool or a creator that may
 
 ## See also
 
-- [`reactivex`](../../reactivex/README.md) — typed async event streams with explicit demand and configurable backpressure. If the work being queued is "events to deliver to many subscribers", a `Flowable` is usually a better fit than a queue.
+- [`reactivex`](../reactivex/README.md) — typed async event streams with explicit demand and configurable backpressure. If the work being queued is "events to deliver to many subscribers", use a `Subject` for multicast; a `Flowable` adapted from a channel makes subscribers compete for values.
 - [`queues.Queue`](../collections/README.md#queuesqueuet--queuesdequet) — the synchronous, in-memory `Queue[T]`. Use it when there is no concurrency and you want `Option[T]`-based access; it has no locking, no `TryPush`, and no backpressure.
 - [`chan T`](https://go.dev/ref/spec#Channel_types) in the standard library — `BoundedBlockingQueue` wraps it directly.
