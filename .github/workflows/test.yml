@@ -22,6 +22,7 @@ jobs:
           - control
           - reactivex
           - concurrency
+          - adt
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -68,6 +69,7 @@ jobs:
           - control
           - reactivex
           - concurrency
+          - adt
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -108,8 +110,9 @@ jobs:
             control/go.sum
             reactivex/go.sum
             concurrency/go.sum
+            adt/go.sum
 
-      # Regenerate coverage profiles for all five modules in this
+      # Regenerate coverage profiles for all six modules in this
       # job's workspace so the codecov upload has the actual .out
       # files to send. The `test / {module}` jobs above already
       # uploaded the same files under their per-module flag; this
@@ -118,7 +121,7 @@ jobs:
       - name: Collect coverage across all modules
         run: |
           set -euo pipefail
-          for module in utils collections control reactivex concurrency; do
+          for module in utils collections control reactivex concurrency adt; do
             echo "--- ${module} ---"
             (cd "${module}" && \
               go test -race -count=1 \
@@ -137,6 +140,7 @@ jobs:
             control/coverage.out
             reactivex/coverage.out
             concurrency/coverage.out
+            adt/coverage.out
           flags: root
           fail_ci_if_error: false
           verbose: false

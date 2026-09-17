@@ -11,6 +11,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.27%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=root)](https://codecov.io/gh/qianwj/typed)
+[![codecov](https://codecov.io/gh/qianwj/typed/graph/badge.svg?flag=adt)](https://codecov.io/gh/qianwj/typed)
 [![Module](https://img.shields.io/badge/module-github.com%2Fqianwj%2Ftyped-6f42c1)](#安装)
 [![Made with Go](https://img.shields.io/badge/made%20with-Go-00ADD8?logo=go&logoColor=white)](https://go.dev)
 
