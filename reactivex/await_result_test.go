@@ -26,9 +26,15 @@ func TestMaybeAwaitResultStates(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls atomic.Int32
-			m := NewMaybe(func() (any, bool, error) {
+			m := NewMaybe(func() adt.Result[adt.Option[any]] {
 				calls.Add(1)
-				return tc.value, tc.present, tc.err
+				if tc.err != nil {
+					return adt.Failure[adt.Option[any]](tc.err)
+				}
+				if !tc.present {
+					return adt.Success(adt.Empty[any]())
+				}
+				return adt.Success(adt.Of[any](tc.value))
 			})
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
@@ -64,7 +70,7 @@ func TestSingleAwaitResultStates(t *testing.T) {
 		{"failure", new(int), errSentinelSingle},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			s := NewSingle(func() (*int, error) { return tc.value, tc.err })
+			s := NewSingle(func() adt.Result[*int] { return adt.Wrap(tc.value, tc.err) })
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			for _, got := range []adt.Result[*int]{s.Await(), s.AwaitWithContext(ctx)} {
@@ -85,10 +91,10 @@ func TestMaybeAwaitCanceledWaitRetainsOutcome(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	release := make(chan struct{})
-	m := NewMaybe(func() (int, bool, error) {
+	m := NewMaybe(func() adt.Result[adt.Option[int]] {
 		cancel()
 		<-release
-		return 42, true, nil
+		return adt.Success(adt.Of[int](42))
 	})
 	got := m.AwaitWithContext(ctx)
 	close(release)
@@ -104,10 +110,10 @@ func TestSingleAwaitCanceledWaitRetainsOutcome(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	release := make(chan struct{})
-	s := NewSingle(func() (int, error) {
+	s := NewSingle(func() adt.Result[int] {
 		cancel()
 		<-release
-		return 42, nil
+		return adt.Success[int](42)
 	})
 	got := s.AwaitWithContext(ctx)
 	close(release)
@@ -122,13 +128,13 @@ func TestSingleAwaitCanceledWaitRetainsOutcome(t *testing.T) {
 func TestAwaitExpiredDeadlineReturnsFailure(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancel()
-	s := NewSingle(func() (int, error) {
+	s := NewSingle(func() adt.Result[int] {
 		t.Error("expired deadline started Single")
-		return 0, nil
+		return adt.Success[int](0)
 	})
-	m := NewMaybe(func() (int, bool, error) {
+	m := NewMaybe(func() adt.Result[adt.Option[int]] {
 		t.Error("expired deadline started Maybe")
-		return 0, false, nil
+		return adt.Success(adt.Empty[int]())
 	})
 	if got := s.AwaitWithContext(ctx); !got.IsFailure() || !errors.Is(got.Error(), context.DeadlineExceeded) {
 		t.Fatalf("Single: got %v, want deadline failure", got)

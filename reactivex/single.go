@@ -9,8 +9,8 @@ import (
 )
 
 // Single[T] is a reactive container that emits exactly one value or
-// one error. It is the typed equivalent of Go's `func() (T, error)`
-// combined with a Future-like subscription model.
+// one error. It combines a Result-producing source with a Future-like
+// subscription model.
 //
 // Compared to Observable[T]:
 //
@@ -39,13 +39,13 @@ import (
 //
 // Single values must not be copied after construction.
 type Single[T any] struct {
-	fn func() (T, error)
+	fn func() adt.Result[T]
 
 	// subs holds callbacks for every active subscriber. Protected
 	// by subsMu. On terminal event each callback is invoked once
 	// and the list is dropped.
 	subsMu sync.Mutex
-	subs   []func(T, error)
+	subs   []func(adt.Result[T])
 
 	// startedOnce ensures fn is invoked at most once. The producer
 	// goroutine is started lazily on the first Subscribe / Await.
@@ -56,18 +56,18 @@ type Single[T any] struct {
 	doneCh chan struct{}
 
 	// Cached terminal result.
-	done atomic.Bool
-	val  T
-	err  error
+	done   atomic.Bool
+	result adt.Result[T]
 }
 
 // NewSingle returns a Single that will execute fn when its first
-// Await / Subscribe call observes an un-completed terminal event.
+// Await / Subscribe call starts the source. fn returns Success(value)
+// or Failure[T](err); the same Result is cached and returned by Await.
 //
 // fn is invoked at most once, no matter how many subscribers attach.
 // fn is not retried on error; callers must compose with another
 // source if retry is desired.
-func NewSingle[T any](fn func() (T, error)) *Single[T] {
+func NewSingle[T any](fn func() adt.Result[T]) *Single[T] {
 	return &Single[T]{fn: fn, doneCh: make(chan struct{})}
 }
 
@@ -82,15 +82,15 @@ func NewSingle[T any](fn func() (T, error)) *Single[T] {
 // Callbacks run on the goroutine that produced the result; do not
 // rely on them being on a specific thread.
 func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription {
-	cb := func(v T, err error) {
-		if err != nil {
+	cb := func(result adt.Result[T]) {
+		if result.IsFailure() {
 			if onError != nil {
-				onError(err)
+				onError(result.Error())
 			}
 			return
 		}
 		if onSuccess != nil {
-			onSuccess(v)
+			onSuccess(result.Value())
 		}
 	}
 	s.subsMu.Lock()
@@ -108,7 +108,7 @@ func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscripti
 // Await cannot be cancelled. Use [AwaitWithContext] when the caller
 // needs cancellation or a deadline.
 func (s *Single[T]) Await() adt.Result[T] {
-	return adt.Wrap(s.await(context.Background()))
+	return s.await(context.Background())
 }
 
 // AwaitWithContext blocks until the Single has terminated or ctx is
@@ -117,7 +117,7 @@ func (s *Single[T]) Await() adt.Result[T] {
 // Otherwise, an already canceled ctx prevents the source from starting.
 // Canceling a wait does not cancel an already running source.
 func (s *Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T] {
-	return adt.Wrap(s.await(ctx))
+	return s.await(ctx)
 }
 
 // Done reports whether the Single has terminated (either with a value
@@ -134,13 +134,8 @@ func (s *Single[T]) Done() bool {
 // f must not return an error — Map is for value-only transforms. Use
 // FlatMap when the transformation can itself fail.
 func (s *Single[T]) Map[R any](f func(T) R) *Single[R] {
-	return NewSingle(func() (R, error) {
-		v, err := s.await(context.Background())
-		if err != nil {
-			var zero R
-			return zero, err
-		}
-		return f(v), nil
+	return NewSingle(func() adt.Result[R] {
+		return s.Await().Map(f)
 	})
 }
 
@@ -152,13 +147,10 @@ func (s *Single[T]) Map[R any](f func(T) R) *Single[R] {
 // transformation itself produce an async value (e.g. another Single
 // from a cache lookup).
 func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R] {
-	return NewSingle(func() (R, error) {
-		v, err := s.await(context.Background())
-		if err != nil {
-			var zero R
-			return zero, err
-		}
-		return f(v).await(context.Background())
+	return NewSingle(func() adt.Result[R] {
+		return s.Await().FlatMap(func(value T) adt.Result[R] {
+			return f(value).Await()
+		})
 	})
 }
 
@@ -171,18 +163,10 @@ func (s *Single[T]) FlatMap[R any](f func(T) *Single[R]) *Single[R] {
 // It must not return an error — wrap the result in FlatMap if the
 // combination can fail.
 func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Single[R] {
-	return NewSingle(func() (R, error) {
-		l, lErr := s.await(context.Background())
-		if lErr != nil {
-			var zero R
-			return zero, lErr
-		}
-		r, rErr := other.await(context.Background())
-		if rErr != nil {
-			var zero R
-			return zero, rErr
-		}
-		return combine(l, r), nil
+	return s.FlatMap(func(left T) *Single[R] {
+		return other.Map(func(right U) R {
+			return combine(left, right)
+		})
 	})
 }
 
@@ -194,12 +178,8 @@ func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Singl
 // R can differ from T; the return type is the next Single's element
 // type.
 func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R] {
-	return NewSingle(func() (R, error) {
-		if _, err := s.await(context.Background()); err != nil {
-			var zero R
-			return zero, err
-		}
-		return next.await(context.Background())
+	return s.FlatMap(func(T) *Single[R] {
+		return next
 	})
 }
 
@@ -214,9 +194,7 @@ func (s *Single[T]) startProducer() {
 // once, caches the result, then invokes every subscriber callback
 // and closes doneCh.
 func (s *Single[T]) runProducer() {
-	v, err := s.fn()
-	s.val = v
-	s.err = err
+	s.result = s.fn()
 	s.done.Store(true)
 
 	s.subsMu.Lock()
@@ -225,26 +203,24 @@ func (s *Single[T]) runProducer() {
 	s.subsMu.Unlock()
 
 	for _, cb := range subs {
-		cb(v, err)
+		cb(s.result)
 	}
 	close(s.doneCh)
 }
 
-func (s *Single[T]) await(ctx context.Context) (T, error) {
+func (s *Single[T]) await(ctx context.Context) adt.Result[T] {
 	if s.Done() {
-		return s.val, s.err
+		return s.result
 	}
 	if err := ctx.Err(); err != nil {
-		var zero T
-		return zero, err
+		return adt.Failure[T](err)
 	}
 	s.startProducer()
 	select {
 	case <-s.doneCh:
-		return s.val, s.err
+		return s.result
 	case <-ctx.Done():
-		var zero T
-		return zero, ctx.Err()
+		return adt.Failure[T](ctx.Err())
 	}
 }
 
@@ -254,7 +230,7 @@ func (s *Single[T]) await(ctx context.Context) (T, error) {
 // signals the caller that it is no longer interested.
 type singleSubscription[T any] struct {
 	done <-chan struct{}
-	cb   func(T, error)
+	cb   func(adt.Result[T])
 	once sync.Once
 }
 

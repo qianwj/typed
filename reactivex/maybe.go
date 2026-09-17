@@ -6,20 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/qianwj/typed/adt"
-	"github.com/qianwj/typed/control"
-)
-
-// maybeKind distinguishes the three terminal states a Maybe can
-// reach. We store it explicitly rather than overload the zero value
-// of T (or the nil-ness of err) so callers don't have to peek at
-// runtime state to know which state was reached.
-type maybeKind uint8
-
-const (
-	maybeSettled maybeKind = iota // zero value: producer hasn't fired yet
-	maybeSuccess
-	maybeComplete
-	maybeError
 )
 
 // Maybe[T] is a reactive container that emits zero or one value, or
@@ -53,27 +39,25 @@ const (
 // Like [Single], fn runs at most once and the result is shared
 // across every subscriber.
 type Maybe[T any] struct {
-	fn func() (T, bool, error)
+	fn func() adt.Result[adt.Option[T]]
 
 	subsMu      sync.Mutex
-	subs        []func(T, bool, error)
+	subs        []func(adt.Result[adt.Option[T]])
 	startedOnce sync.Once
 	doneCh      chan struct{}
 
-	done atomic.Bool
-	kind maybeKind
-	val  T
-	err  error
+	done   atomic.Bool
+	result adt.Result[adt.Option[T]]
 }
 
-// NewMaybe returns a Maybe whose source function produces a
-// (value, present, error) triple. present=true means the value is
-// meaningful; present=false means "no value, complete normally" and
-// triggers the OnComplete branch.
+// NewMaybe returns a lazy Maybe whose source produces a Result[Option[T]].
+// Success(Of(value)) emits a value, Success(Empty[T]()) completes without
+// a value, and Failure[Option[T]](err) emits an error. Of preserves zero
+// and nil values as present.
 //
-// If err != nil, the present flag is ignored and OnError fires.
-// fn is invoked at most once, no matter how many subscribers attach.
-func NewMaybe[T any](fn func() (T, bool, error)) *Maybe[T] {
+// fn is invoked at most once, on the first Await or Subscribe, and its
+// result is cached for subsequent waits.
+func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) *Maybe[T] {
 	return &Maybe[T]{fn: fn, doneCh: make(chan struct{})}
 }
 
@@ -90,19 +74,19 @@ func (m *Maybe[T]) Subscribe(
 	onComplete func(),
 	onError func(error),
 ) Subscription {
-	cb := func(v T, present bool, err error) {
+	cb := func(result adt.Result[adt.Option[T]]) {
 		switch {
-		case err != nil:
+		case result.IsFailure():
 			if onError != nil {
-				onError(err)
+				onError(result.Error())
 			}
-		case !present:
+		case result.Value().IsEmpty():
 			if onComplete != nil {
 				onComplete()
 			}
 		default:
 			if onSuccess != nil {
-				onSuccess(v)
+				onSuccess(result.Value().Get())
 			}
 		}
 	}
@@ -115,8 +99,8 @@ func (m *Maybe[T]) Subscribe(
 
 // Await blocks until the Maybe terminates. A value produces Success(Of(value)),
 // empty completion produces Success(Empty[T]()), and a source error produces
-// Failure[Option[T]](err). The source's presence flag determines whether a
-// value exists, so an emitted zero or nil value remains present.
+// Failure[Option[T]](err). Presence is determined by the inner Option,
+// so an emitted zero or nil value can remain present.
 // Repeated calls return the cached outcome without re-running the source.
 //
 // Await cannot be cancelled; use [AwaitWithContext] for cancellation
@@ -146,12 +130,10 @@ func (m *Maybe[T]) Done() bool {
 // errors, f is not invoked and that outcome is propagated
 // unchanged.
 func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R] {
-	return NewMaybe(func() (R, bool, error) {
-		value, err := m.Await().Map(func(value adt.Option[T]) adt.Option[R] {
+	return NewMaybe(func() adt.Result[adt.Option[R]] {
+		return m.Await().Map(func(value adt.Option[T]) adt.Option[R] {
 			return value.Map(f)
-		}).Unwrap()
-		var zero R
-		return value.OrElse(zero), value.IsPresent(), err
+		})
 	})
 }
 
@@ -160,15 +142,13 @@ func (m *Maybe[T]) Map[R any](f func(T) R) *Maybe[R] {
 // completion-without-value or error, f is not invoked and that
 // outcome is propagated.
 func (m *Maybe[T]) FlatMap[R any](f func(T) *Maybe[R]) *Maybe[R] {
-	return NewMaybe(func() (R, bool, error) {
-		value, err := m.Await().FlatMap(func(value adt.Option[T]) adt.Result[adt.Option[R]] {
+	return NewMaybe(func() adt.Result[adt.Option[R]] {
+		return m.Await().FlatMap(func(value adt.Option[T]) adt.Result[adt.Option[R]] {
 			if value.IsEmpty() {
 				return adt.Success(adt.Empty[R]())
 			}
 			return f(value.Get()).Await()
-		}).Unwrap()
-		var zero R
-		return value.OrElse(zero), value.IsPresent(), err
+		})
 	})
 }
 
@@ -203,17 +183,7 @@ func (m *Maybe[T]) startProducer() {
 }
 
 func (m *Maybe[T]) runProducer() {
-	v, present, err := m.fn()
-	m.val = v
-	m.err = err
-	switch {
-	case err != nil:
-		m.kind = maybeError
-	case !present:
-		m.kind = maybeComplete
-	default:
-		m.kind = maybeSuccess
-	}
+	m.result = m.fn()
 	m.done.Store(true)
 
 	m.subsMu.Lock()
@@ -222,17 +192,14 @@ func (m *Maybe[T]) runProducer() {
 	m.subsMu.Unlock()
 
 	for _, cb := range subs {
-		cb(v, m.kind == maybeSuccess, err)
+		cb(m.result)
 	}
 	close(m.doneCh)
 }
 
 func (m *Maybe[T]) await(ctx context.Context) adt.Result[adt.Option[T]] {
 	if m.Done() {
-		return adt.Wrap(
-			control.If(m.kind == maybeSuccess, adt.Of(m.val), adt.Empty[T]()),
-			m.err,
-		)
+		return m.result
 	}
 	if err := ctx.Err(); err != nil {
 		return adt.Failure[adt.Option[T]](err)
@@ -240,12 +207,9 @@ func (m *Maybe[T]) await(ctx context.Context) adt.Result[adt.Option[T]] {
 	m.startProducer()
 	select {
 	case <-m.doneCh:
-		return adt.Wrap(
-			control.If(m.kind == maybeSuccess, adt.Of(m.val), adt.Empty[T]()),
-			m.err,
-		)
+		return m.result
 	case <-ctx.Done():
-		return adt.Wrap(adt.Empty[T](), ctx.Err())
+		return adt.Failure[adt.Option[T]](ctx.Err())
 	}
 }
 
@@ -254,7 +218,7 @@ func (m *Maybe[T]) await(ctx context.Context) adt.Result[adt.Option[T]] {
 // it only signals that the caller is no longer interested.
 type maybeSubscription[T any] struct {
 	done <-chan struct{}
-	cb   func(T, bool, error)
+	cb   func(adt.Result[adt.Option[T]])
 	once sync.Once
 }
 

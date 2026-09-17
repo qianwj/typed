@@ -3,6 +3,7 @@ package reactivex_test
 import (
 	"errors"
 	"fmt"
+	"github.com/qianwj/typed/adt"
 
 	"github.com/qianwj/typed/reactivex"
 )
@@ -10,8 +11,8 @@ import (
 func ExampleSingle_Await() {
 	// Single[T] is a typed Future: fn runs once, every subscriber
 	// sees the same cached result.
-	v, err := reactivex.NewSingle(func() (int, error) {
-		return 42, nil
+	v, err := reactivex.NewSingle(func() adt.Result[int] {
+		return adt.Success[int](42)
 	}).Await().Unwrap()
 
 	fmt.Println(v, err)
@@ -19,7 +20,7 @@ func ExampleSingle_Await() {
 }
 
 func ExampleSingle_Map() {
-	out, err := reactivex.NewSingle(func() (int, error) { return 3, nil }).
+	out, err := reactivex.NewSingle(func() adt.Result[int] { return adt.Success[int](3) }).
 		Map(func(n int) string { return fmt.Sprintf("v=%d", n) }).
 		Await().Unwrap()
 
@@ -28,8 +29,8 @@ func ExampleSingle_Map() {
 }
 
 func ExampleSingle_Zip() {
-	a := reactivex.NewSingle(func() (int, error) { return 3, nil })
-	b := reactivex.NewSingle(func() (int, error) { return 4, nil })
+	a := reactivex.NewSingle(func() adt.Result[int] { return adt.Success[int](3) })
+	b := reactivex.NewSingle(func() adt.Result[int] { return adt.Success[int](4) })
 	v, err := a.Zip(b, func(x, y int) int { return x*x + y*y }).Await().Unwrap()
 
 	fmt.Println(v, err)
@@ -37,8 +38,8 @@ func ExampleSingle_Zip() {
 }
 
 func ExampleSingle_errorPropagation() {
-	s := reactivex.NewSingle(func() (int, error) {
-		return 0, errors.New("boom")
+	s := reactivex.NewSingle(func() adt.Result[int] {
+		return adt.Failure[int](errors.New("boom"))
 	})
 	mapped := s.Map(func(n int) int { return n * 2 }) // Map's f does not run
 

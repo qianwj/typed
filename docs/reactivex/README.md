@@ -216,7 +216,7 @@ Compared to `Observable[T]`:
 ```go
 type Single[T any] struct { /* ... */ }
 
-func NewSingle[T any](fn func() (T, error)) *Single[T]
+func NewSingle[T any](fn func() adt.Result[T]) *Single[T]
 
 // Reactive subscription
 func (s *Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription
@@ -235,7 +235,7 @@ func (s *Single[T]) Zip[U, R any](other *Single[U], combine func(T, U) R) *Singl
 func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
 ```
 
-`Await` returns `Success(value)` or `Failure(err)`. To use Go's `(T, error)` form, call `single.Await().Unwrap()`; otherwise compose directly with Result methods such as `Map` and `OrElse`.
+The source and `Await` both return `Result[T]`: `Success(value)` or `Failure[T](err)`. For an existing `(T, error)` function, return `adt.Wrap(loadConfig())` from the source closure. To use Go's `(T, error)` form, call `single.Await().Unwrap()`; otherwise compose directly with Result methods such as `Map` and `OrElse`.
 
 `AwaitWithContext` returns `Failure(ctx.Err())` when the wait is canceled. An already completed result takes precedence over cancellation; otherwise an already canceled context prevents starting the source. Canceling a wait does not cancel a running source or overwrite its eventual result.
 
@@ -260,7 +260,7 @@ func (s *Single[T]) AndThen[R any](next *Single[R]) *Single[R]
 
 ### Use cases
 
-- **Cache warm-up**: `var cfg = reactivex.NewSingle(loadConfig)` — multiple callers `Await` the same `Single`, the underlying fn runs once.
+- **Cache warm-up**: `var cfg = reactivex.NewSingle(func() adt.Result[Config] { return adt.Wrap(loadConfig()) })` — multiple callers `Await` the same `Single`, the underlying fn runs once.
 - **One-shot async computation** with a typed return (HTTP fetch on demand, expensive calculation).
 - **Bridge from a callback-based API** to a typed value.
 
@@ -277,9 +277,9 @@ Terminal states:
 ```go
 type Maybe[T any] struct { /* ... */ }
 
-func NewMaybe[T any](fn func() (T, bool, error)) *Maybe[T]
-// present == true → OnSuccess; present == false → OnComplete.
-// err != nil → OnError (present is ignored).
+func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) *Maybe[T]
+// Success(Of(value)) → OnSuccess; Success(Empty[T]()) → OnComplete.
+// Failure[Option[T]](err) → OnError.
 
 func (m *Maybe[T]) Subscribe(
     onSuccess func(T),
@@ -307,11 +307,11 @@ The outer Result describes success or failure; the inner Option describes whethe
 | `OnError(err)` | `Failure[Option[T]](err)` |
 | Wait canceled or deadline exceeded | `Failure[Option[T]](ctx.Err())` |
 
-Presence follows the source's explicit flag: emitting `0` or nil with `present=true` remains a present Option. Source errors take precedence over the flag. Context handling and cached-result precedence follow Single's rules above.
+Presence follows the inner Option: `Success(Of(value))` preserves `0` and nil as present values. Context handling and cached-result precedence follow Single's rules above.
 
 ```go
-value, err := reactivex.NewMaybe(func() (string, bool, error) {
-    return "", false, nil
+value, err := reactivex.NewMaybe(func() adt.Result[adt.Option[string]] {
+    return adt.Success(adt.Empty[string]())
 }).Await().Unwrap()
 if err != nil {
     return err

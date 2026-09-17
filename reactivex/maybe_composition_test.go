@@ -2,6 +2,7 @@ package reactivex
 
 import (
 	"errors"
+	"github.com/qianwj/typed/adt"
 	"sync/atomic"
 	"testing"
 )
@@ -30,13 +31,25 @@ func TestMaybeCompositionStatesAndLaziness(t *testing.T) {
 						right.err = rightErr
 					}
 					var leftCalls, rightCalls, transformCalls atomic.Int32
-					source := NewMaybe(func() (*int, bool, error) {
+					source := NewMaybe(func() adt.Result[adt.Option[*int]] {
 						leftCalls.Add(1)
-						return left.value, left.present, left.err
+						if left.err != nil {
+							return adt.Failure[adt.Option[*int]](left.err)
+						}
+						if !left.present {
+							return adt.Success(adt.Empty[*int]())
+						}
+						return adt.Success(adt.Of[*int](left.value))
 					})
-					next := NewMaybe(func() (*int, bool, error) {
+					next := NewMaybe(func() adt.Result[adt.Option[*int]] {
 						rightCalls.Add(1)
-						return right.value, right.present, right.err
+						if right.err != nil {
+							return adt.Failure[adt.Option[*int]](right.err)
+						}
+						if !right.present {
+							return adt.Success(adt.Empty[*int]())
+						}
+						return adt.Success(adt.Of[*int](right.value))
 					})
 					var composed *Maybe[*int]
 					switch operator {

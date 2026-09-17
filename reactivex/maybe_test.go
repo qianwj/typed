@@ -3,6 +3,7 @@ package reactivex
 import (
 	"context"
 	"errors"
+	"github.com/qianwj/typed/adt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -14,7 +15,7 @@ var errSentinelMaybe = errors.New("sentinel-maybe")
 func TestMaybe_Subscribe_Success(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 7, true, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](7)) })
 
 	var successCalled, completeCalled, errorCalled atomic.Bool
 	var got int
@@ -37,7 +38,7 @@ func TestMaybe_Subscribe_Success(t *testing.T) {
 func TestMaybe_Subscribe_Complete(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 0, false, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) })
 
 	var successCalled, completeCalled, errorCalled atomic.Bool
 	sub := m.Subscribe(
@@ -56,7 +57,7 @@ func TestMaybe_Subscribe_Complete(t *testing.T) {
 func TestMaybe_Subscribe_Error(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe })
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) })
 
 	var successCalled, completeCalled atomic.Bool
 	var gotErr error
@@ -75,11 +76,12 @@ func TestMaybe_Subscribe_Error(t *testing.T) {
 	}
 }
 
-func TestMaybe_Subscribe_IgnoresPresentFlagOnError(t *testing.T) {
+func TestMaybe_Subscribe_IgnoresValueOnFailure(t *testing.T) {
 	t.Parallel()
-	// When err is non-nil, present=true should be ignored: OnError
-	// must fire, not OnSuccess.
-	m := NewMaybe(func() (int, bool, error) { return 42, true, errSentinelMaybe })
+	// Wrap can retain a value internally on failure; only OnError may fire.
+	m := NewMaybe(func() adt.Result[adt.Option[int]] {
+		return adt.Wrap(adt.Of(42), errSentinelMaybe)
+	})
 
 	var successCalled atomic.Bool
 	var gotErr error
@@ -100,15 +102,15 @@ func TestMaybe_Subscribe_IgnoresPresentFlagOnError(t *testing.T) {
 
 func TestMaybe_Subscribe_NilCallbacks(t *testing.T) {
 	t.Parallel()
-	m := NewMaybe(func() (int, bool, error) { return 7, true, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](7)) })
 	sub := m.Subscribe(nil, nil, nil)
 	<-sub.Done()
 
-	m2 := NewMaybe(func() (int, bool, error) { return 0, false, nil })
+	m2 := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) })
 	sub2 := m2.Subscribe(nil, nil, nil)
 	<-sub2.Done()
 
-	m3 := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe })
+	m3 := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) })
 	sub3 := m3.Subscribe(nil, nil, nil)
 	<-sub3.Done()
 }
@@ -116,7 +118,7 @@ func TestMaybe_Subscribe_NilCallbacks(t *testing.T) {
 func TestMaybe_Await_Success(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (string, bool, error) { return "x", true, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Success(adt.Of[string]("x")) })
 
 	v, err := m.Await().Unwrap()
 	if err != nil || v.IsEmpty() || v.Get() != "x" {
@@ -130,7 +132,7 @@ func TestMaybe_Await_Success(t *testing.T) {
 func TestMaybe_Await_Complete(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (string, bool, error) { return "", false, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Success(adt.Empty[string]()) })
 
 	v, err := m.Await().Unwrap()
 	if err != nil || v.IsPresent() {
@@ -141,7 +143,7 @@ func TestMaybe_Await_Complete(t *testing.T) {
 func TestMaybe_Await_Error(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (string, bool, error) { return "", false, errSentinelMaybe })
+	m := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Failure[adt.Option[string]](errSentinelMaybe) })
 
 	v, err := m.Await().Unwrap()
 	if !errors.Is(err, errSentinelMaybe) {
@@ -156,9 +158,9 @@ func TestMaybe_AwaitWithContext_CancelBeforeStart(t *testing.T) {
 	t.Parallel()
 	// ctx already done — fn should not be invoked.
 	started := make(chan struct{})
-	m := NewMaybe(func() (int, bool, error) {
+	m := NewMaybe(func() adt.Result[adt.Option[int]] {
 		close(started)
-		return 0, false, nil
+		return adt.Success(adt.Empty[int]())
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -178,7 +180,7 @@ func TestMaybe_AwaitWithContext_CancelBeforeStart(t *testing.T) {
 func TestMaybe_AwaitWithContext_Done(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 99, true, nil })
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](99)) })
 	v, err := m.AwaitWithContext(context.Background()).Unwrap()
 	if err != nil || v.IsEmpty() || v.Get() != 99 {
 		t.Errorf("AwaitWithContext = (%v, %v), want (99, true, nil)", v, err)
@@ -189,9 +191,9 @@ func TestMaybe_MultipleSubscribers_ShareResult(t *testing.T) {
 	t.Parallel()
 
 	var calls atomic.Int32
-	m := NewMaybe(func() (string, bool, error) {
+	m := NewMaybe(func() adt.Result[adt.Option[string]] {
 		calls.Add(1)
-		return "shared", true, nil
+		return adt.Success(adt.Of[string]("shared"))
 	})
 
 	var wg sync.WaitGroup
@@ -213,7 +215,7 @@ func TestMaybe_MultipleSubscribers_ShareResult(t *testing.T) {
 func TestMaybe_Map_Success(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 5, true, nil }).
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](5)) }).
 		Map(func(n int) string { return "x" + string(rune('0'+n)) })
 
 	v, err := m.Await().Unwrap()
@@ -225,7 +227,7 @@ func TestMaybe_Map_Success(t *testing.T) {
 func TestMaybe_Map_CompletePassesThrough(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 0, false, nil }).
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) }).
 		Map(func(int) string { t.Error("f should not run on complete"); return "" })
 
 	v, err := m.Await().Unwrap()
@@ -237,7 +239,7 @@ func TestMaybe_Map_CompletePassesThrough(t *testing.T) {
 func TestMaybe_Map_ErrorPassesThrough(t *testing.T) {
 	t.Parallel()
 
-	m := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe }).
+	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) }).
 		Map(func(int) string { t.Error("f should not run on error"); return "" })
 
 	v, err := m.Await().Unwrap()
@@ -252,8 +254,8 @@ func TestMaybe_Map_ErrorPassesThrough(t *testing.T) {
 func TestMaybe_FlatMap_Success(t *testing.T) {
 	t.Parallel()
 
-	inner := NewMaybe(func() (string, bool, error) { return "inner", true, nil })
-	outer := NewMaybe(func() (int, bool, error) { return 1, true, nil }).
+	inner := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Success(adt.Of[string]("inner")) })
+	outer := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](1)) }).
 		FlatMap(func(int) *Maybe[string] { return inner })
 
 	v, err := outer.Await().Unwrap()
@@ -265,7 +267,7 @@ func TestMaybe_FlatMap_Success(t *testing.T) {
 func TestMaybe_FlatMap_OuterComplete(t *testing.T) {
 	t.Parallel()
 
-	outer := NewMaybe(func() (int, bool, error) { return 0, false, nil }).
+	outer := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) }).
 		FlatMap(func(int) *Maybe[string] {
 			t.Error("FlatMap f should not run on outer complete")
 			return nil
@@ -280,8 +282,8 @@ func TestMaybe_FlatMap_OuterComplete(t *testing.T) {
 func TestMaybe_Zip_BothPresent(t *testing.T) {
 	t.Parallel()
 
-	a := NewMaybe(func() (int, bool, error) { return 3, true, nil })
-	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
+	a := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](3)) })
+	b := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](4)) })
 	zipped := a.Zip(b, func(x, y int) int { return x*x + y*y })
 
 	v, err := zipped.Await().Unwrap()
@@ -293,8 +295,8 @@ func TestMaybe_Zip_BothPresent(t *testing.T) {
 func TestMaybe_Zip_LeftComplete(t *testing.T) {
 	t.Parallel()
 
-	a := NewMaybe(func() (int, bool, error) { return 0, false, nil })
-	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
+	a := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) })
+	b := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](4)) })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
 	v, err := zipped.Await().Unwrap()
@@ -306,8 +308,8 @@ func TestMaybe_Zip_LeftComplete(t *testing.T) {
 func TestMaybe_Zip_LeftError(t *testing.T) {
 	t.Parallel()
 
-	a := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe })
-	b := NewMaybe(func() (int, bool, error) { return 4, true, nil })
+	a := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) })
+	b := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](4)) })
 	zipped := a.Zip(b, func(x, y int) int { return x + y })
 
 	_, err := zipped.Await().Unwrap()
@@ -319,8 +321,8 @@ func TestMaybe_Zip_LeftError(t *testing.T) {
 func TestMaybe_AndThen_RunsNextOnSuccess(t *testing.T) {
 	t.Parallel()
 
-	first := NewMaybe(func() (int, bool, error) { return 1, true, nil })
-	second := NewMaybe(func() (string, bool, error) { return "next", true, nil })
+	first := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of[int](1)) })
+	second := NewMaybe(func() adt.Result[adt.Option[string]] { return adt.Success(adt.Of[string]("next")) })
 	seq := first.AndThen(second)
 
 	v, err := seq.Await().Unwrap()
@@ -332,10 +334,10 @@ func TestMaybe_AndThen_RunsNextOnSuccess(t *testing.T) {
 func TestMaybe_AndThen_SkipsNextOnComplete(t *testing.T) {
 	t.Parallel()
 
-	first := NewMaybe(func() (int, bool, error) { return 0, false, nil })
-	second := NewMaybe(func() (string, bool, error) {
+	first := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) })
+	second := NewMaybe(func() adt.Result[adt.Option[string]] {
 		t.Error("second should not run when first completes empty")
-		return "", false, nil
+		return adt.Success(adt.Empty[string]())
 	})
 	seq := first.AndThen(second)
 
@@ -348,10 +350,10 @@ func TestMaybe_AndThen_SkipsNextOnComplete(t *testing.T) {
 func TestMaybe_AndThen_SkipsNextOnError(t *testing.T) {
 	t.Parallel()
 
-	first := NewMaybe(func() (int, bool, error) { return 0, false, errSentinelMaybe })
-	second := NewMaybe(func() (string, bool, error) {
+	first := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) })
+	second := NewMaybe(func() adt.Result[adt.Option[string]] {
 		t.Error("second should not run when first errors")
-		return "", false, nil
+		return adt.Success(adt.Empty[string]())
 	})
 	seq := first.AndThen(second)
 
