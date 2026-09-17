@@ -34,8 +34,19 @@ jobs:
           cache: true
           cache-dependency-path: ${{ matrix.module }}/go.sum
 
+      # Self-published modules (github.com/qianwj/typed/{adt,utils,
+      # ...}) are freshly tagged in this repo. The Go sumdb lags
+      # behind a fresh push by minutes-to-hours; running with
+      # GOSUMDB=off lets CI build against the freshly-published
+      # tags immediately. The trade-off: temporary loss of
+      # checksum-database protection for newly-tagged versions
+      # until the sumdb catches up. Acceptable for a self-publisher
+      # that controls both ends of the wire; do not extend this to
+      # third-party dependencies.
       - name: Run tests with coverage
         working-directory: ${{ matrix.module }}
+        env:
+          GOSUMDB: off
         run: |
           set -euo pipefail
           go test -race -count=1 \
@@ -112,13 +123,11 @@ jobs:
             concurrency/go.sum
             adt/go.sum
 
-      # Regenerate coverage profiles for all six modules in this
-      # job's workspace so the codecov upload has the actual .out
-      # files to send. The `test / {module}` jobs above already
-      # uploaded the same files under their per-module flag; this
-      # upload uses a separate `root` flag so the existing badge
-      # in the top-level README renders the aggregate.
+      # Self-published modules are freshly tagged; skip sumdb
+      # validation here too for the same reason as in the test job.
       - name: Collect coverage across all modules
+        env:
+          GOSUMDB: off
         run: |
           set -euo pipefail
           for module in utils collections control reactivex concurrency adt; do
