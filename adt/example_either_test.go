@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/either"
 )
 
 func ExampleEither_typedErrorResult() {
@@ -27,23 +27,23 @@ func ExampleEither_typedErrorResult() {
 	// err: division by zero
 }
 
-func divide(a, b int) adt.Either[error, int] {
+func divide(a, b int) either.Either[error, int] {
 	if b == 0 {
-		return adt.Left[error, int](errors.New("division by zero"))
+		return either.Left[error, int](errors.New("division by zero"))
 	}
-	return adt.Right[error, int](a / b)
+	return either.Right[error, int](a / b)
 }
 
 func ExampleEither_FlatMapRight() {
-	parse := func(s string) adt.Either[string, int] {
+	parse := func(s string) either.Either[string, int] {
 		n, err := strconv.Atoi(s)
 		if err != nil {
-			return adt.Left[string, int]("invalid number")
+			return either.Left[string, int]("invalid number")
 		}
-		return adt.Right[string, int](n)
+		return either.Right[string, int](n)
 	}
 	for _, input := range []string{"21", "oops"} {
-		message := adt.Right[string, string](input).
+		message := either.Right[string, string](input).
 			FlatMapRight(parse).
 			MapRight(func(n int) int { return n * 2 }).
 			Fold(
@@ -58,15 +58,15 @@ func ExampleEither_FlatMapRight() {
 }
 
 func ExampleEither_FlatMapLeft() {
-	result := adt.Left[string, int]("missing").
-		FlatMapLeft(func(problem string) adt.Either[error, int] {
+	result := either.Left[string, int]("missing").
+		FlatMapLeft(func(problem string) either.Either[error, int] {
 			if problem == "missing" {
-				return adt.Right[error, int](21)
+				return either.Right[error, int](21)
 			}
-			return adt.Left[error, int](errors.New(problem))
+			return either.Left[error, int](errors.New(problem))
 		}).
-		FlatMapRight(func(n int) adt.Either[error, string] {
-			return adt.Right[error, string](fmt.Sprintf("value: %d", n*2))
+		FlatMapRight(func(n int) either.Either[error, string] {
+			return either.Right[error, string](fmt.Sprintf("value: %d", n*2))
 		})
 	fmt.Println(result.Right().Get())
 	// Output: value: 42

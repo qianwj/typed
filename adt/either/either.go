@@ -1,4 +1,4 @@
-package adt
+package either
 
 import (
 	"github.com/qianwj/typed/adt/option"
@@ -26,14 +26,14 @@ import (
 //
 //	val, err := compute()
 //	if err != nil {
-//	    return adt.Left[error, int](err)
+//	    return either.Left[error, int](err)
 //	}
-//	return adt.Right[error, int](val)
+//	return either.Right[error, int](val)
 //
 // Or, building it directly:
 //
-//	result := adt.Right[error, int](42)
-//	val := result.Right().Get() // val == 42
+//	r := either.Right[error, int](42)
+//	val := r.Right().Get() // val == 42
 //
 // # Why a tagged union instead of (T, error)?
 //
@@ -44,9 +44,9 @@ import (
 // repeated. Either keeps both sides first-class so a function
 // that may fail in two distinct ways can return:
 //
-//	adt.Either[error, T]   // generic "value or error"
-//	adt.Either[errA, errB] // two error categories
-//	adt.Either[T, U]       // "either a T or a U"
+//	either.Either[error, T]   // generic "value or error"
+//	either.Either[errA, errB] // two error categories
+//	either.Either[T, U]       // "either a T or a U"
 //
 // and the call site picks the right branch with IsLeft / IsRight
 // or the Fold combinator.
@@ -64,17 +64,17 @@ import (
 //
 // # Comparison with Result[T]
 //
-// [Result[T]] is the error-channel specialisation of Either: every
-// Result is morally an `Either[error, T]`. Use whichever fits
-// the call site:
+// Result[T] (from the [result] subpackage) is the error-channel
+// specialisation of Either: every Result is morally an
+// `Either[error, T]`. Use whichever fits the call site:
 //
-//   - **`Result[T]`** when the Left side is always a standard
-//     `error`. You get the (T, error) bridge ([Wrap] /
-//     [Result.Unwrap]) for free, plus error-aware combinators
-//     ([Result.Recover], [Result.MapError]) that have no
-//     counterpart here.
+//   - **Result[T]** when the Left side is always a standard
+//     `error`. You get the (T, error) bridge
+//     ([result.Wrap] / [result.Result.Unwrap]) for free, plus
+//     error-aware combinators ([result.Result.Recover],
+//     [result.Result.MapError]) that have no counterpart here.
 //
-//   - **`Either[L, R]`** when you need a general tagged union.
+//   - **Either[L, R]** when you need a general tagged union.
 //     Common shapes include `Either[error, T]` to compose with
 //     another Either, `Either[A, B]` for two non-error
 //     alternatives (e.g., "parsed or raw", "configured or
