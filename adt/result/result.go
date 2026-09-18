@@ -1,4 +1,4 @@
-package adt
+package result
 
 import (
 	"github.com/qianwj/typed/adt/option"
@@ -91,7 +91,7 @@ func Success[T any](value T) Result[T] {
 // err is nil; a Result with a nil error must be built via Success.
 func Failure[T any](err error) Result[T] {
 	if err == nil {
-		panic("adt.Failure: nil error")
+		panic("result.Failure: nil error")
 	}
 	return Result[T]{err: err}
 }
@@ -104,13 +104,13 @@ func Failure[T any](err error) Result[T] {
 //	// Before:
 //	profile, err := loadProfile(id)
 //	if err != nil {
-//	    return adt.Failure[Profile](err)
+//	    return result.Failure[Profile](err)
 //	}
-//	return adt.Success(profile)
+//	return result.Success(profile)
 //
 //	// After:
 //	profile, err := loadProfile(id)
-//	return adt.Wrap(profile, err)
+//	return result.Wrap(profile, err)
 //
 // The contract is:
 //
@@ -130,12 +130,12 @@ func Failure[T any](err error) Result[T] {
 // value of err at the call site:
 //
 //	// Both produce the same success Result:
-//	adt.Success(42)
-//	adt.Wrap(42, nil)
+//	result.Success(42)
+//	result.Wrap(42, nil)
 //
 //	// Both produce the same failure Result:
-//	adt.Failure[int](errors.New("x"))
-//	adt.Wrap(0, errors.New("x"))
+//	result.Failure[int](errors.New("x"))
+//	result.Wrap(0, errors.New("x"))
 //
 // Wrap is the right shape for two specific call sites:
 //
@@ -292,7 +292,7 @@ func (r Result[T]) FlatMap[R any](f func(T) Result[R]) Result[R] {
 // MapError is useful for wrapping low-level errors with a higher-level
 // description before handing the Result up the call stack:
 //
-//	adt.Failure[int](errors.New("disk full")).
+//	result.Failure[int](errors.New("disk full")).
 //	    MapError(func(e error) error { return fmt.Errorf("save profile: %w", e) })
 func (r Result[T]) MapError(f func(error) error) Result[T] {
 	if r.err == nil {

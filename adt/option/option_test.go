@@ -368,6 +368,197 @@ func TestOptionChained(t *testing.T) {
 	}
 }
 
+// ---------- Wrap ----------
+
+// TestOptionWrapPresentTrue confirms that Wrap(value, true)
+// produces a present Option carrying value. The presence flag
+// is the sole determinant of the result; value is stored verbatim.
+func TestOptionWrapPresentTrue(t *testing.T) {
+	o := Wrap(42, true)
+	if !o.IsPresent() {
+		t.Fatal("Wrap(42, true): IsPresent = false, want true")
+	}
+	if o.IsEmpty() {
+		t.Fatal("Wrap(42, true): IsEmpty = true, want false")
+	}
+	if got := o.Get(); got != 42 {
+		t.Fatalf("Wrap(42, true).Get: got %d, want 42", got)
+	}
+}
+
+// TestOptionWrapPresentFalse confirms that Wrap(value, false)
+// produces an absent Option. The value parameter is stored in
+// the underlying struct but is not reachable through any Option
+// method — Get must panic, IsPresent / IsEmpty must report absent.
+func TestOptionWrapPresentFalse(t *testing.T) {
+	o := Wrap(99, false)
+	if o.IsPresent() {
+		t.Fatal("Wrap(99, false): IsPresent = true, want false")
+	}
+	if !o.IsEmpty() {
+		t.Fatal("Wrap(99, false): IsEmpty = false, want true")
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Wrap(99, false).Get: should panic")
+		}
+	}()
+	_ = o.Get()
+}
+
+// TestOptionWrapZeroValueStillPresent confirms that Wrap(0, true)
+// produces a present Option carrying the zero value, not an absent
+// one. This is the case where Wrap differs from "absent iff value
+// is the zero value" — the present flag is the only signal that
+// matters.
+func TestOptionWrapZeroValueStillPresent(t *testing.T) {
+	o := Wrap(0, true)
+	if !o.IsPresent() {
+		t.Fatal("Wrap(0, true): IsPresent = false, want true (zero value with present=true is present)")
+	}
+	if got := o.Get(); got != 0 {
+		t.Fatalf("Wrap(0, true).Get: got %d, want 0", got)
+	}
+
+	emptyString := Wrap("", true)
+	if !emptyString.IsPresent() {
+		t.Fatal(`Wrap("", true): IsPresent = false, want true`)
+	}
+	if got := emptyString.Get(); got != "" {
+		t.Fatalf(`Wrap("", true).Get: got %q, want ""`, got)
+	}
+}
+
+// TestOptionWrapObservationalIgnoresValueOnAbsent confirms that
+// the value parameter is unreachable through the Option API when
+// present is false. This is the property that lets callers write
+// `return Wrap(val, ok)` after a (T, bool) lookup without first
+// checking which branch they are in.
+//
+// Wrap(42, false) and Wrap(0, false) must agree on every public
+// observation: same IsPresent/IsEmpty, same panic on Get, same
+// fallback from OrElse/OrElseGet, same absent from Filter/Map.
+func TestOptionWrapObservationalIgnoresValueOnAbsent(t *testing.T) {
+	withValue := Wrap(42, false)
+	withZero := Wrap(0, false)
+
+	if withValue.IsPresent() || withZero.IsPresent() {
+		t.Fatal("absent Wrap: IsPresent should be false regardless of value")
+	}
+	if !withValue.IsEmpty() || !withZero.IsEmpty() {
+		t.Fatal("absent Wrap: IsEmpty should be true regardless of value")
+	}
+	if withValue.OrElse(7) != withZero.OrElse(7) {
+		t.Fatal("OrElse of absent Wrap must agree, regardless of value")
+	}
+	if withValue.OrElseGet(func() int { return 7 }) != withZero.OrElseGet(func() int { return 7 }) {
+		t.Fatal("OrElseGet of absent Wrap must agree, regardless of value")
+	}
+	if withValue.Filter(func(int) bool { return true }).IsPresent() {
+		t.Fatal("Filter on absent Wrap: should remain absent")
+	}
+	if withValue.Map(func(n int) int { return n + 1 }).IsPresent() {
+		t.Fatal("Map on absent Wrap: should remain absent")
+	}
+}
+
+// TestOptionWrapMatchesEmpty confirms that Wrap(zero, false) is
+// exactly equivalent to Empty[T]() through the public methods.
+// This also serves as a regression test for the internal storage
+// invariant: the value field of an absent Wrap is not zeroed by
+// the constructor, so the public API must not leak it.
+func TestOptionWrapMatchesEmpty(t *testing.T) {
+	cases := []struct {
+		name    string
+		wrapped Option[int]
+		plain   Option[int]
+	}{
+		{"zero value, false", Wrap(0, false), Empty[int]()},
+		{"non-zero value, false", Wrap(99, false), Empty[int]()},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if c.wrapped.IsPresent() != c.plain.IsPresent() {
+				t.Fatalf("IsPresent differs: %v vs %v", c.wrapped.IsPresent(), c.plain.IsPresent())
+			}
+			if c.wrapped.IsEmpty() != c.plain.IsEmpty() {
+				t.Fatalf("IsEmpty differs")
+			}
+			if c.wrapped.OrElse(7) != c.plain.OrElse(7) {
+				t.Fatalf("OrElse differs")
+			}
+		})
+	}
+}
+
+// TestOptionWrapComposesWithMap confirms that a Wrap-built
+// Option participates in the standard Map chain. Map on a
+// present Wrap transforms the value; Map on an absent Wrap
+// propagates the absence without calling f.
+func TestOptionWrapComposesWithMap(t *testing.T) {
+	transformed := Wrap(21, true).Map(func(n int) int { return n * 2 })
+	if !transformed.IsPresent() || transformed.Get() != 42 {
+		t.Fatalf("Map on present Wrap: got %v, want present 42", transformed)
+	}
+
+	called := false
+	absent := Wrap(999, false).Map(func(n int) int {
+		called = true
+		return n * 2
+	})
+	if absent.IsPresent() {
+		t.Fatal("Map on absent Wrap: should remain absent")
+	}
+	if called {
+		t.Fatal("Map on absent Wrap: f should not run")
+	}
+}
+
+// TestOptionWrapComposesWithOrElse confirms that Wrap-built
+// Options participate in OrElse and OrElseGet. The present
+// path returns the wrapped value; the absent path returns the
+// fallback without touching the wrapped value.
+func TestOptionWrapComposesWithOrElse(t *testing.T) {
+	if v := Wrap(42, true).OrElse(0); v != 42 {
+		t.Fatalf("OrElse on present Wrap: got %d, want 42", v)
+	}
+	if v := Wrap(0, false).OrElse(99); v != 99 {
+		t.Fatalf("OrElse on absent Wrap: got %d, want 99 (fallback)", v)
+	}
+	if v := Wrap(0, false).OrElseGet(func() int { return 100 }); v != 100 {
+		t.Fatalf("OrElseGet on absent Wrap: got %d, want 100", v)
+	}
+}
+
+// TestOptionWrapPracticalAdapter documents the realistic shape
+// that Wrap is for: a function that returns (T, bool) and is
+// being plugged into an Option chain. The test confirms Wrap
+// does what the doc comment claims — replaces the if-ok ladder
+// with a single return.
+func TestOptionWrapPracticalAdapter(t *testing.T) {
+	// Source function: returns (int, bool), the standard
+	// (T, bool) shape. We will call it twice and route each
+	// result through an Option chain via Wrap.
+	double := func(n int) (int, bool) {
+		if n < 0 {
+			return 0, false
+		}
+		return n * 2, true
+	}
+
+	// Wrap the hit into a chain.
+	hit := Wrap(double(21)) // (42, true)
+	if v := hit.Map(func(n int) int { return n + 1 }).Get(); v != 43 {
+		t.Fatalf("Wrap(hit).Map: got %d, want 43", v)
+	}
+
+	// Wrap the miss into a chain that falls back.
+	miss := Wrap(double(-1)) // (0, false)
+	if v := miss.OrElse(99); v != 99 {
+		t.Fatalf("Wrap(miss).OrElse: got %d, want 99 (fallback)", v)
+	}
+}
+
 // ---------- helpers ----------
 
 type user struct {
