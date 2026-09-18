@@ -1,4 +1,4 @@
-package adt
+package option
 
 import (
 	"errors"
@@ -69,6 +69,44 @@ func OfNullable[T any](value T) Option[T] {
 	return Option[T]{value: value, present: true}
 }
 
+// Wrap builds an Option from a (value, present) pair, the shape most
+// "lookup" APIs already return. Wrap is the standard adapter for
+// turning a `(T, bool)` return into an Option[T] without a manual
+// branch:
+//
+//	// Before:
+//	val, ok := cache.Get(key)
+//	if ok {
+//	    return option.Of(val)
+//	}
+//	return option.Empty[V]()
+//
+//	// After:
+//	val, ok := cache.Get(key)
+//	return option.Wrap(val, ok)
+//
+// The contract is:
+//
+//   - present == true: Wrap returns a present Option holding value.
+//     The presence flag determines the result; value is stored verbatim.
+//   - present == false: Wrap returns an absent Option. The value
+//     parameter is stored in the underlying struct but is not reachable
+//     through any Option method (Get panics; IsPresent / IsEmpty report
+//     absent; OrElse and friends return their fallback). This means
+//     Wrap(zero, false) is observationally identical to Empty[T]().
+//
+// Wrap is the right shape at two specific call sites:
+//
+//   - The end of a (T, bool) API boundary, where the caller wants
+//     to keep going inside an Option-based pipeline (Map, FlatMap,
+//     OrElse, ...) instead of branching manually.
+//   - The bridge from any function that already produces a presence
+//     flag (map lookups, channel receives, atomic loads, type
+//     assertions) into Option.
+func Wrap[T any](value T, present bool) Option[T] {
+	return Option[T]{value: value, present: present}
+}
+
 // IsPresent reports whether the Option holds a value.
 func (o Option[T]) IsPresent() bool {
 	return o.present
@@ -78,6 +116,10 @@ func (o Option[T]) IsPresent() bool {
 // IsEmpty is the logical negation of IsPresent.
 func (o Option[T]) IsEmpty() bool {
 	return !o.present
+}
+
+func (o Option[T]) Unwrap() (T, bool) {
+	return o.value, o.present
 }
 
 // Get returns the underlying value.
@@ -185,3 +227,4 @@ func (o Option[T]) FlatMap[R any](f func(T) Option[R]) Option[R] {
 	}
 	return f(o.value)
 }
+

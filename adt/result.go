@@ -1,5 +1,9 @@
 package adt
 
+import (
+	"github.com/qianwj/typed/adt/option"
+)
+
 // Result[T] is the outcome of an operation that may fail.
 //
 // A Result is either a success carrying a value of type T, or a
@@ -13,7 +17,7 @@ package adt
 //
 // # Bridge to Option
 //
-// Result.Option returns an [Option][T]: a success becomes a
+// Result.Option returns an [option.Option][T]: a success becomes a
 // present Option, a failure becomes an absent one (and the error
 // is dropped). This is the one-way bridge from Result to Option;
 // Option is a more general zero-or-one container.
@@ -204,11 +208,11 @@ func (r Result[T]) Unwrap() (T, error) {
 // a failed Result into an absent Option. The error is dropped, so
 // Option is only appropriate when the caller has already decided
 // that the error channel can be discarded.
-func (r Result[T]) Option() Option[T] {
+func (r Result[T]) Option() option.Option[T] {
 	if r.err != nil {
-		return Empty[T]()
+		return option.Empty[T]()
 	}
-	return Of(r.value)
+	return option.Of(r.value)
 }
 
 // OrElse returns the success value if the Result is a success,

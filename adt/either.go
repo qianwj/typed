@@ -1,5 +1,9 @@
 package adt
 
+import (
+	"github.com/qianwj/typed/adt/option"
+)
+
 // Either[L, R] is a tagged-union value type that holds exactly one
 // of two values: a Left of type L or a Right of type R.
 //
@@ -116,23 +120,23 @@ func (e Either[L, R]) IsRight() bool {
 	return e.isRight
 }
 
-// Left returns the Left value as an [Option]. The result is
+// Left returns the Left value as an [option.Option]. The result is
 // present when IsLeft() is true and absent when IsRight() is true.
 // Use Fold or the OrZero variant when a zero value is acceptable.
-func (e Either[L, R]) Left() Option[L] {
+func (e Either[L, R]) Left() option.Option[L] {
 	if e.isRight {
-		return Empty[L]()
+		return option.Empty[L]()
 	}
-	return Of(e.left)
+	return option.Of(e.left)
 }
 
-// Right returns the Right value as an [Option]. The result is
+// Right returns the Right value as an [option.Option]. The result is
 // present when IsRight() is true and absent when IsLeft() is true.
-func (e Either[L, R]) Right() Option[R] {
+func (e Either[L, R]) Right() option.Option[R] {
 	if e.isRight {
-		return Of(e.right)
+		return option.Of(e.right)
 	}
-	return Empty[R]()
+	return option.Empty[R]()
 }
 
 // LeftOrZero returns the Left value, or the zero value of L when

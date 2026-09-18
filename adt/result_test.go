@@ -656,3 +656,48 @@ func TestResultWrapPracticalAdapter(t *testing.T) {
 		t.Fatalf("Wrap(failure).OrElse: got %d, want 99 (fallback)", v)
 	}
 }
+
+// ---------- helpers ----------
+
+// itoa and atoi are tiny stand-ins for strconv to keep the test
+// file's import surface small and to make the assertions obvious.
+// They mirror the helpers used in option_test.go: a deliberate
+// duplication rather than a shared test package, because the
+// two test files live in different packages now (option_test vs
+// adt_test) and the helpers are small enough that copying is
+// cheaper than introducing a third package.
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	var buf [20]byte
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	if neg {
+		i--
+		buf[i] = '-'
+	}
+	return string(buf[i:])
+}
+
+func atoi(s string) (int, error) {
+	if s == "" {
+		return 0, errors.New("empty")
+	}
+	n := 0
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return 0, errors.New("not a number")
+		}
+		n = n*10 + int(r-'0')
+	}
+	return n, nil
+}
