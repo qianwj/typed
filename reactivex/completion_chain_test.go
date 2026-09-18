@@ -5,7 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 )
 
 func TestCompositionDoesNotParkGoroutinePerOperator(t *testing.T) {
@@ -19,19 +20,19 @@ func TestCompositionDoesNotParkGoroutinePerOperator(t *testing.T) {
 			var value func() int
 			switch kind {
 			case "Single":
-				chain := NewSingle(func() adt.Result[int] { return adt.Success(produce()) })
+				chain := NewSingle(func() result.Result[int] { return result.Success(produce()) })
 				for range pairs {
 					chain = chain.Map(func(v int) int { return v + 1 }).FlatMap(func(v int) Single[int] {
-						return NewSingle(func() adt.Result[int] { return adt.Success(v + 1) })
+						return NewSingle(func() result.Result[int] { return result.Success(v + 1) })
 					})
 				}
 				subscribe = func() Subscription { return chain.Subscribe(nil, nil) }
 				value = func() int { return chain.Await().Value() }
 			case "Maybe":
-				chain := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of(produce())) })
+				chain := NewMaybe(func() result.Result[option.Option[int]] { return result.Success(option.Of(produce())) })
 				for range pairs {
 					chain = chain.Map(func(v int) int { return v + 1 }).FlatMap(func(v int) Maybe[int] {
-						return NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of(v + 1)) })
+						return NewMaybe(func() result.Result[option.Option[int]] { return result.Success(option.Of(v + 1)) })
 					})
 				}
 				subscribe = func() Subscription { return chain.Subscribe(nil, nil, nil) }
@@ -58,10 +59,10 @@ func TestCompositionDoesNotParkGoroutinePerOperator(t *testing.T) {
 func TestFlatMapCachedInner(t *testing.T) {
 	t.Parallel()
 	t.Run("Single", func(t *testing.T) {
-		for _, want := range []adt.Result[int]{adt.Success(42), adt.Failure[int](errSentinelSingle)} {
-			inner := NewSingle(func() adt.Result[int] { return want })
+		for _, want := range []result.Result[int]{result.Success(42), result.Failure[int](errSentinelSingle)} {
+			inner := NewSingle(func() result.Result[int] { return want })
 			inner.Await()
-			outer := NewSingle(func() adt.Result[int] { return adt.Success(1) })
+			outer := NewSingle(func() result.Result[int] { return result.Success(1) })
 			outer.Await()
 			chain := outer.FlatMap(func(int) Single[int] { return inner })
 			waitCompletion(t, chain.Subscribe(nil, nil).Done())
@@ -73,12 +74,12 @@ func TestFlatMapCachedInner(t *testing.T) {
 		}
 	})
 	t.Run("Maybe", func(t *testing.T) {
-		for _, want := range []adt.Result[adt.Option[int]]{
-			adt.Success(adt.Of(42)), adt.Success(adt.Empty[int]()), adt.Failure[adt.Option[int]](errSentinelMaybe),
+		for _, want := range []result.Result[option.Option[int]]{
+			result.Success(option.Of(42)), result.Success(option.Empty[int]()), result.Failure[option.Option[int]](errSentinelMaybe),
 		} {
-			inner := NewMaybe(func() adt.Result[adt.Option[int]] { return want })
+			inner := NewMaybe(func() result.Result[option.Option[int]] { return want })
 			inner.Await()
-			outer := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of(1)) })
+			outer := NewMaybe(func() result.Result[option.Option[int]] { return result.Success(option.Of(1)) })
 			outer.Await()
 			chain := outer.FlatMap(func(int) Maybe[int] { return inner })
 			waitCompletion(t, chain.Subscribe(nil, nil, nil).Done())
@@ -96,15 +97,15 @@ func TestFlatMapInnerSourceDoesNotBlockUpstreamSubscribers(t *testing.T) {
 	started, release := make(chan struct{}), make(chan struct{})
 	innerStarted, innerRelease := make(chan struct{}), make(chan struct{})
 	defer close(innerRelease)
-	source := NewSingle(func() adt.Result[int] {
+	source := NewSingle(func() result.Result[int] {
 		close(started)
 		<-release
-		return adt.Success(1)
+		return result.Success(1)
 	})
-	inner := NewSingle(func() adt.Result[int] {
+	inner := NewSingle(func() result.Result[int] {
 		close(innerStarted)
 		<-innerRelease
-		return adt.Success(2)
+		return result.Success(2)
 	})
 	chain := source.FlatMap(func(int) Single[int] { return inner })
 	chain.Subscribe(nil, nil)

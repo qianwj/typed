@@ -2,7 +2,8 @@ package reactivex
 
 import (
 	"errors"
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 	"sync/atomic"
 	"testing"
 )
@@ -31,25 +32,25 @@ func TestMaybeCompositionStatesAndLaziness(t *testing.T) {
 						right.err = rightErr
 					}
 					var leftCalls, rightCalls, transformCalls atomic.Int32
-					source := NewMaybe(func() adt.Result[adt.Option[*int]] {
+					source := NewMaybe(func() result.Result[option.Option[*int]] {
 						leftCalls.Add(1)
 						if left.err != nil {
-							return adt.Failure[adt.Option[*int]](left.err)
+							return result.Failure[option.Option[*int]](left.err)
 						}
 						if !left.present {
-							return adt.Success(adt.Empty[*int]())
+							return result.Success(option.Empty[*int]())
 						}
-						return adt.Success(adt.Of[*int](left.value))
+						return result.Success(option.Of[*int](left.value))
 					})
-					next := NewMaybe(func() adt.Result[adt.Option[*int]] {
+					next := NewMaybe(func() result.Result[option.Option[*int]] {
 						rightCalls.Add(1)
 						if right.err != nil {
-							return adt.Failure[adt.Option[*int]](right.err)
+							return result.Failure[option.Option[*int]](right.err)
 						}
 						if !right.present {
-							return adt.Success(adt.Empty[*int]())
+							return result.Success(option.Empty[*int]())
 						}
-						return adt.Success(adt.Of[*int](right.value))
+						return result.Success(option.Of[*int](right.value))
 					})
 					var composed Maybe[*int]
 					switch operator {

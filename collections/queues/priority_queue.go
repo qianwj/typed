@@ -11,7 +11,7 @@ package queues
 import (
 	"fmt"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 )
 
 // PriorityQueue[T] is a binary-heap-backed priority queue. The
@@ -200,9 +200,9 @@ func (q *PriorityQueue[T]) Push(data T) bool {
 // absent [Option] if the queue is empty.
 //
 // Pop is O(log n), dominated by the sift-down.
-func (q *PriorityQueue[T]) Pop() adt.Option[T] {
+func (q *PriorityQueue[T]) Pop() option.Option[T] {
 	if len(q.heap) == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	top := q.heap[0]
 	n := len(q.heap) - 1
@@ -216,16 +216,16 @@ func (q *PriorityQueue[T]) Pop() adt.Option[T] {
 	if n > 0 {
 		heapifyDown(q.heap, 0, n, q.less)
 	}
-	return adt.Of(top)
+	return option.Of(top)
 }
 
 // Peek returns the highest-priority element without removing it,
 // or an absent [Option] if the queue is empty. Peek is O(1).
-func (q *PriorityQueue[T]) Peek() adt.Option[T] {
+func (q *PriorityQueue[T]) Peek() option.Option[T] {
 	if len(q.heap) == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(q.heap[0])
+	return option.Of(q.heap[0])
 }
 
 // Size returns the current number of elements in the queue.

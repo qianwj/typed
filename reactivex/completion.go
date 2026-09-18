@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/qianwj/typed/adt"
+	r "github.com/qianwj/typed/adt/result"
 )
 
 // completion shares one lazy computation and its terminal result. Public
@@ -13,17 +13,17 @@ import (
 type completion[T any] struct {
 	mu        sync.Mutex
 	start     func()
-	result    adt.Result[T]
+	result    r.Result[T]
 	settled   bool
 	done      chan struct{}
 	callbacks []*completionCallback[T]
 }
 
 type completionCallback[T any] struct {
-	fn func(adt.Result[T])
+	fn func(r.Result[T])
 }
 
-func newCompletion[T any](start func(func(adt.Result[T]))) *completion[T] {
+func newCompletion[T any](start func(func(r.Result[T]))) *completion[T] {
 	c := &completion[T]{done: make(chan struct{})}
 	c.start = func() { start(c.complete) }
 	return c
@@ -45,7 +45,7 @@ func (c *completion[T]) startAsync() {
 	}
 }
 
-func (c *completion[T]) complete(result adt.Result[T]) {
+func (c *completion[T]) complete(result r.Result[T]) {
 	c.mu.Lock()
 	if c.settled {
 		c.mu.Unlock()
@@ -65,19 +65,19 @@ func (c *completion[T]) complete(result adt.Result[T]) {
 
 // register atomically chooses between observing future completion and reading
 // the cached result. No completion can fall between the check and registration.
-func (c *completion[T]) register(callback *completionCallback[T]) (adt.Result[T], bool) {
+func (c *completion[T]) register(callback *completionCallback[T]) (r.Result[T], bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.settled {
 		return c.result, true
 	}
 	c.callbacks = append(c.callbacks, callback)
-	return adt.Result[T]{}, false
+	return r.Result[T]{}, false
 }
 
 // onComplete is for internal composition, where running a cached continuation
 // synchronously is intentional. Public subscriptions use subscribe instead.
-func (c *completion[T]) onComplete(fn func(adt.Result[T])) {
+func (c *completion[T]) onComplete(fn func(r.Result[T])) {
 	if result, ready := c.register(&completionCallback[T]{fn: fn}); ready {
 		fn(result)
 		return
@@ -96,23 +96,23 @@ func (c *completion[T]) isDone() bool {
 	}
 }
 
-func (c *completion[T]) await(ctx context.Context) adt.Result[T] {
+func (c *completion[T]) await(ctx context.Context) r.Result[T] {
 	if c.isDone() {
 		return c.result
 	}
 	if err := ctx.Err(); err != nil {
-		return adt.Failure[T](err)
+		return r.Failure[T](err)
 	}
 	c.startAsync()
 	select {
 	case <-c.done:
 		return c.result
 	case <-ctx.Done():
-		return adt.Failure[T](ctx.Err())
+		return r.Failure[T](ctx.Err())
 	}
 }
 
-func (c *completion[T]) subscribe(fn func(adt.Result[T])) Subscription {
+func (c *completion[T]) subscribe(fn func(r.Result[T])) Subscription {
 	sub := &completionSubscription[T]{fn: fn, done: make(chan struct{})}
 	callback := &completionCallback[T]{fn: sub.deliver}
 	sub.remove = func() {
@@ -141,13 +141,13 @@ func (c *completion[T]) subscribe(fn func(adt.Result[T])) Subscription {
 // the shared computation continue independently.
 type completionSubscription[T any] struct {
 	mu     sync.Mutex
-	fn     func(adt.Result[T])
+	fn     func(r.Result[T])
 	remove func()
 	done   chan struct{}
 	once   sync.Once
 }
 
-func (sub *completionSubscription[T]) deliver(result adt.Result[T]) {
+func (sub *completionSubscription[T]) deliver(result r.Result[T]) {
 	sub.mu.Lock()
 	fn := sub.fn
 	sub.fn = nil

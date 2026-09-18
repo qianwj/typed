@@ -3,7 +3,8 @@ package concurrency
 import (
 	"context"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 )
 
 // BoundedBlockingQueue is a fixed-capacity FIFO blocking queue.
@@ -12,7 +13,7 @@ import (
 // three things on top of the channel primitives:
 //
 //   - A [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] pair
-//     that returns an [adt.Option] (matching the toolkit convention
+//     that returns an [option.Option] (matching the toolkit convention
 //     from `Stack.Pop` / `Queue.Pop` / `Deque.PopFront`).
 //   - Context-aware [BoundedBlockingQueue.PushWithContext] /
 //     [BoundedBlockingQueue.PollWithContext] for cancellation, deadlines,
@@ -47,7 +48,7 @@ import (
 //     cancellation, deadlines, and shutdown signals propagate cleanly.
 //   - [BoundedBlockingQueue.TryPush] / [BoundedBlockingQueue.TryPoll] —
 //     the non-blocking variants. They never wait and return a `bool`
-//     (for Push) or an [adt.Option] (for Poll) so the caller can
+//     (for Push) or an [option.Option] (for Poll) so the caller can
 //     branch on backpressure or absence.
 //
 // Blocking semantics:
@@ -138,26 +139,26 @@ func (q *BoundedBlockingQueue[T]) Poll() T {
 
 // PollWithContext is the context-aware variant of [BoundedBlockingQueue.Poll].
 // It blocks until an element is available, or until ctx is canceled —
-// whichever happens first. It returns adt.Success(value) on success and
-// adt.Failure[T](ctx.Err()) on cancellation.
-func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) adt.Result[T] {
+// whichever happens first. It returns result.Success(value) on success and
+// result.Failure[T](ctx.Err()) on cancellation.
+func (q *BoundedBlockingQueue[T]) PollWithContext(ctx context.Context) result.Result[T] {
 	select {
 	case v := <-q.ch:
-		return adt.Success(v)
+		return result.Success(v)
 	case <-ctx.Done():
-		return adt.Failure[T](ctx.Err())
+		return result.Failure[T](ctx.Err())
 	}
 }
 
 // TryPoll attempts to dequeue without blocking.
-// It returns the dequeued value as an [adt.Option]; the result is empty
+// It returns the dequeued value as an [option.Option]; the result is empty
 // when the queue is empty.
-func (q *BoundedBlockingQueue[T]) TryPoll() adt.Option[T] {
+func (q *BoundedBlockingQueue[T]) TryPoll() option.Option[T] {
 	select {
 	case v := <-q.ch:
-		return adt.Of(v)
+		return option.Of(v)
 	default:
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 }
 

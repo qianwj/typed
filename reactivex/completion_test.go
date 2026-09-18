@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	r "github.com/qianwj/typed/adt/result"
 )
 
 func waitCompletion(t *testing.T, done <-chan struct{}) {
@@ -22,9 +23,9 @@ func waitCompletion(t *testing.T, done <-chan struct{}) {
 
 func TestSingleLateSubscription(t *testing.T) {
 	t.Parallel()
-	for _, want := range []adt.Result[*int]{adt.Success[*int](nil), adt.Failure[*int](errSentinelSingle)} {
+	for _, want := range []r.Result[*int]{r.Success[*int](nil), r.Failure[*int](errSentinelSingle)} {
 		var calls atomic.Int32
-		s := NewSingle(func() adt.Result[*int] { calls.Add(1); return want })
+		s := NewSingle(func() r.Result[*int] { calls.Add(1); return want })
 		s.Await()
 		for range 3 {
 			var received int
@@ -52,13 +53,13 @@ func TestSingleLateSubscription(t *testing.T) {
 
 func TestMaybeLateSubscription(t *testing.T) {
 	t.Parallel()
-	for _, want := range []adt.Result[adt.Option[*int]]{
-		adt.Success(adt.Of[*int](nil)),
-		adt.Success(adt.Empty[*int]()),
-		adt.Failure[adt.Option[*int]](errSentinelMaybe),
+	for _, want := range []r.Result[option.Option[*int]]{
+		r.Success(option.Of[*int](nil)),
+		r.Success(option.Empty[*int]()),
+		r.Failure[option.Option[*int]](errSentinelMaybe),
 	} {
 		var calls atomic.Int32
-		m := NewMaybe(func() adt.Result[adt.Option[*int]] { calls.Add(1); return want })
+		m := NewMaybe(func() r.Result[option.Option[*int]] { calls.Add(1); return want })
 		m.Await()
 		for range 3 {
 			var received int
@@ -93,17 +94,17 @@ func TestCompletionConcurrentRegistration(t *testing.T) {
 	t.Parallel()
 	gate := make(chan struct{})
 	var sources atomic.Int32
-	c := newCompletion(func(complete func(adt.Result[int])) {
+	c := newCompletion(func(complete func(r.Result[int])) {
 		sources.Add(1)
 		<-gate
-		complete(adt.Success(42))
+		complete(r.Success(42))
 	})
 	const consumers = 128
 	counts := make([]atomic.Int32, consumers)
 	var workers sync.WaitGroup
 	for i := range consumers {
 		workers.Go(func() {
-			sub := c.subscribe(func(result adt.Result[int]) {
+			sub := c.subscribe(func(result r.Result[int]) {
 				counts[i].Add(1)
 				if result.IsFailure() || result.Value() != 42 {
 					t.Errorf("unexpected result: %v", result)
@@ -129,13 +130,13 @@ func TestCompletionConcurrentRegistration(t *testing.T) {
 func TestCompletionSettlesOnce(t *testing.T) {
 	t.Parallel()
 	returned := make(chan struct{})
-	c := newCompletion(func(complete func(adt.Result[int])) {
-		complete(adt.Success(42))
-		complete(adt.Failure[int](errSentinelSingle))
+	c := newCompletion(func(complete func(r.Result[int])) {
+		complete(r.Success(42))
+		complete(r.Failure[int](errSentinelSingle))
 		close(returned)
 	})
 	var calls atomic.Int32
-	sub := c.subscribe(func(adt.Result[int]) { calls.Add(1) })
+	sub := c.subscribe(func(r.Result[int]) { calls.Add(1) })
 	waitCompletion(t, returned)
 	waitCompletion(t, sub.Done())
 	if result := c.await(context.Background()); result.IsFailure() || result.Value() != 42 || calls.Load() != 1 {
@@ -146,15 +147,15 @@ func TestCompletionSettlesOnce(t *testing.T) {
 func TestCompletionCancelRacesDelivery(t *testing.T) {
 	t.Parallel()
 	gate, finished := make(chan struct{}), make(chan struct{})
-	c := newCompletion(func(complete func(adt.Result[int])) {
+	c := newCompletion(func(complete func(r.Result[int])) {
 		<-gate
-		complete(adt.Success(42))
+		complete(r.Success(42))
 		close(finished)
 	})
 	var workers sync.WaitGroup
 	counts := make([]atomic.Int32, 64)
 	for i := range counts {
-		sub := c.subscribe(func(adt.Result[int]) { counts[i].Add(1) })
+		sub := c.subscribe(func(r.Result[int]) { counts[i].Add(1) })
 		workers.Go(func() {
 			<-gate
 			sub.Cancel()
@@ -177,7 +178,7 @@ func TestCompletionCancelRacesDelivery(t *testing.T) {
 func TestCompletionCancelSubscription(t *testing.T) {
 	t.Parallel()
 	gate := make(chan struct{})
-	s := NewSingle(func() adt.Result[int] { <-gate; return adt.Success(42) })
+	s := NewSingle(func() r.Result[int] { <-gate; return r.Success(42) })
 	var calls atomic.Int32
 	canceled := s.Subscribe(func(int) { calls.Add(1) }, nil)
 	canceled.Cancel()
@@ -194,7 +195,7 @@ func TestCompletionCancelSubscription(t *testing.T) {
 
 func TestCompletionCachedCallbackDoesNotBlockSubscribe(t *testing.T) {
 	t.Parallel()
-	s := NewSingle(func() adt.Result[int] { return adt.Success(42) })
+	s := NewSingle(func() r.Result[int] { return r.Success(42) })
 	s.Await()
 	release := make(chan struct{})
 	defer close(release)
@@ -216,7 +217,7 @@ func TestCompletionCachedCallbackDoesNotBlockSubscribe(t *testing.T) {
 func TestCompletionCallbackCanReenter(t *testing.T) {
 	t.Parallel()
 	gate := make(chan struct{})
-	s := NewSingle(func() adt.Result[int] { <-gate; return adt.Success(42) })
+	s := NewSingle(func() r.Result[int] { <-gate; return r.Success(42) })
 	var sub Subscription
 	sub = s.Subscribe(func(value int) {
 		if s.Await().Value() != value {
@@ -232,13 +233,13 @@ func TestCompletionCallbackCanReenter(t *testing.T) {
 
 func TestSingleCachedMapCanCancelWait(t *testing.T) {
 	t.Parallel()
-	s := NewSingle(func() adt.Result[int] { return adt.Success(42) })
+	s := NewSingle(func() r.Result[int] { return r.Success(42) })
 	s.Await()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	release := make(chan struct{})
 	mapped := s.Map(func(v int) int { cancel(); <-release; return v + 1 })
-	returned := make(chan adt.Result[int], 1)
+	returned := make(chan r.Result[int], 1)
 	go func() { returned <- mapped.AwaitWithContext(ctx) }()
 	select {
 	case result := <-returned:
@@ -257,13 +258,13 @@ func TestSingleCachedMapCanCancelWait(t *testing.T) {
 
 func TestMaybeCachedMapCanCancelWait(t *testing.T) {
 	t.Parallel()
-	m := NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Of(42)) })
+	m := NewMaybe(func() r.Result[option.Option[int]] { return r.Success(option.Of(42)) })
 	m.Await()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	release := make(chan struct{})
 	mapped := m.Map(func(v int) int { cancel(); <-release; return v + 1 })
-	returned := make(chan adt.Result[adt.Option[int]], 1)
+	returned := make(chan r.Result[option.Option[int]], 1)
 	go func() { returned <- mapped.AwaitWithContext(ctx) }()
 	select {
 	case result := <-returned:

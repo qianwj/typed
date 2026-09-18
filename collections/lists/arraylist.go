@@ -26,7 +26,7 @@ package lists
 import (
 	"slices"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
 )
@@ -355,44 +355,44 @@ func (a *ArrayList[T]) RemoveAt(index int) T {
 }
 
 // RemoveFirst removes and returns the first element wrapped in a present
-// adt.Option[T], or an absent Option if the list is empty.
+// option.Option[T], or an absent Option if the list is empty.
 //
 // RemoveFirst is O(1) under the head-offset layout: it advances
 // head, zeroes the freed slot to release any reference it held,
 // and triggers a periodic compaction when the discarded prefix
 // grows past a threshold.
 //
-// RemoveFirst returns adt.Option[T] rather than (T, bool) so
+// RemoveFirst returns option.Option[T] rather than (T, bool) so
 // the result is symmetric with First / Last / Find, with
 // LinkedList.RemoveFirst, and with Stack.Pop and Queue.Pop.
-func (a *ArrayList[T]) RemoveFirst() adt.Option[T] {
+func (a *ArrayList[T]) RemoveFirst() option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	v := a.items[a.head]
 	var zero T
 	a.items[a.head] = zero
 	a.head++
 	a.compactIfNeeded()
-	return adt.Of(v)
+	return option.Of(v)
 }
 
 // RemoveLast removes and returns the last element wrapped in a
-// present adt.Option[T], or an absent Option if the list
+// present option.Option[T], or an absent Option if the list
 // is empty.
 //
 // RemoveLast is O(1): it shrinks the slice by one and zeroes
 // the vacated slot. See RemoveFirst for the Option rationale.
-func (a *ArrayList[T]) RemoveLast() adt.Option[T] {
+func (a *ArrayList[T]) RemoveLast() option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	last := a.head + a.size() - 1
 	v := a.items[last]
 	var zero T
 	a.items[last] = zero
 	a.items = a.items[:last]
-	return adt.Of(v)
+	return option.Of(v)
 }
 
 // Clear removes all elements from the list. Clear resets the head
@@ -487,11 +487,11 @@ func (a *ArrayList[T]) IsEmpty() bool {
 
 // Get returns the value at index i, or the zero value and false if i is
 // out of range. Get is O(1) on ArrayList since the data is contiguous.
-func (a *ArrayList[T]) Get(i int) adt.Option[T] {
+func (a *ArrayList[T]) Get(i int) option.Option[T] {
 	if i < 0 || i >= a.size() {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(a.items[a.head+i])
+	return option.Of(a.items[a.head+i])
 }
 
 // ForEach invokes visit on every element in the live range.
@@ -504,14 +504,14 @@ func (a *ArrayList[T]) ForEach(visit func(T)) {
 // First returns the first element wrapped in a present Option,
 // or an absent Option if the ArrayList is empty.
 //
-// First returns adt.Option[T] rather than the (T, bool) shape
+// First returns option.Option[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the adt.
-func (a *ArrayList[T]) First() adt.Option[T] {
+func (a *ArrayList[T]) First() option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(a.items[a.head])
+	return option.Of(a.items[a.head])
 }
 
 // Last returns the last element wrapped in a present Option,
@@ -519,11 +519,11 @@ func (a *ArrayList[T]) First() adt.Option[T] {
 //
 // See First for the rationale behind returning Option[T] rather
 // than (T, bool).
-func (a *ArrayList[T]) Last() adt.Option[T] {
+func (a *ArrayList[T]) Last() option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(a.items[a.head+a.size()-1])
+	return option.Of(a.items[a.head+a.size()-1])
 }
 
 // Any reports whether at least one element satisfies p.
@@ -557,13 +557,13 @@ func (a *ArrayList[T]) None(p func(T) bool) bool {
 // See First for the rationale behind returning Option[T] rather
 // than (T, bool). Find is a short-circuiting terminal-style
 // operation: it stops at the first match.
-func (a *ArrayList[T]) Find(p func(T) bool) adt.Option[T] {
+func (a *ArrayList[T]) Find(p func(T) bool) option.Option[T] {
 	for _, v := range a.items[a.head:] {
 		if p(v) {
-			return adt.Of(v)
+			return option.Of(v)
 		}
 	}
-	return adt.Empty[T]()
+	return option.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.
@@ -588,14 +588,14 @@ func (a *ArrayList[T]) SortBy(less func(x, y T) int) *ArrayList[T] {
 }
 
 // MinBy returns the smallest element under less wrapped in a present
-// adt.Option[T], or an absent Option when the ArrayList is empty.
+// option.Option[T], or an absent Option when the ArrayList is empty.
 //
-// MinBy uses adt.Option[T] rather than (T, bool) so the
+// MinBy uses option.Option[T] rather than (T, bool) so the
 // "find and get" path is symmetric with First / Last / Find and
 // chains naturally with adt.Map / adt.FlatMap.
-func (a *ArrayList[T]) MinBy(less func(x, y T) int) adt.Option[T] {
+func (a *ArrayList[T]) MinBy(less func(x, y T) int) option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -603,16 +603,16 @@ func (a *ArrayList[T]) MinBy(less func(x, y T) int) adt.Option[T] {
 			best = v
 		}
 	}
-	return adt.Of(best)
+	return option.Of(best)
 }
 
 // MaxBy returns the largest element under less wrapped in a present
-// adt.Option[T], or an absent Option when the ArrayList is empty.
+// option.Option[T], or an absent Option when the ArrayList is empty.
 //
 // See MinBy for the rationale.
-func (a *ArrayList[T]) MaxBy(less func(x, y T) int) adt.Option[T] {
+func (a *ArrayList[T]) MaxBy(less func(x, y T) int) option.Option[T] {
 	if a.size() == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	best := a.items[a.head]
 	for _, v := range a.items[a.head+1 : a.head+a.size()] {
@@ -620,5 +620,5 @@ func (a *ArrayList[T]) MaxBy(less func(x, y T) int) adt.Option[T] {
 			best = v
 		}
 	}
-	return adt.Of(best)
+	return option.Of(best)
 }

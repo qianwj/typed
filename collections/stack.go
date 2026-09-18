@@ -1,7 +1,7 @@
 package collections
 
 import (
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 	"github.com/qianwj/typed/utils/json"
 )
 
@@ -39,7 +39,7 @@ func (s *Stack[T]) Push(value T) {
 }
 
 // Pop removes and returns the top element wrapped in a present
-// adt.Option[T], or an absent Option if the Stack is
+// option.Option[T], or an absent Option if the Stack is
 // empty.
 //
 // Pop explicitly zeroes the popped slot before shortening the
@@ -56,27 +56,27 @@ func (s *Stack[T]) Push(value T) {
 // that all finalizers run. With the previous (non-zeroing) Pop
 // the finalizers would never fire, because the backing array
 // kept the popped pointers alive through out-of-range slots.
-func (s *Stack[T]) Pop() adt.Option[T] {
+func (s *Stack[T]) Pop() option.Option[T] {
 	n := len(s.items) - 1
 	if n < 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	item := s.items[n]
 	var zero T
 	s.items[n] = zero
 	s.items = s.items[:n]
-	return adt.Of(item)
+	return option.Of(item)
 }
 
 // Peek returns the top element wrapped in a present
-// adt.Option[T], or an absent Option if the Stack is
+// option.Option[T], or an absent Option if the Stack is
 // empty. Peek does not modify the Stack: the same call
 // repeated yields the same value, and Size is unchanged.
-func (s *Stack[T]) Peek() adt.Option[T] {
+func (s *Stack[T]) Peek() option.Option[T] {
 	if len(s.items) == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(s.items[len(s.items)-1])
+	return option.Of(s.items[len(s.items)-1])
 }
 
 // Size returns the number of elements currently in the Stack.

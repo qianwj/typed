@@ -37,7 +37,7 @@ import (
 	"iter"
 	"slices"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 )
 
 // Stream is a lazy, fluent pipeline of values of type T.
@@ -247,17 +247,17 @@ func (s Stream[T]) Count() int {
 // First returns the first element wrapped in a present Option,
 // or an absent Option if the Stream is empty.
 //
-// First returns adt.Option[T] rather than the (T, bool) shape
+// First returns option.Option[T] rather than the (T, bool) shape
 // so callers can chain the standard optional combinators
 // (OrElse, Map, FlatMap, …) without first unpacking the adt.
 //
 // First is a terminal operation: it consumes the underlying
 // sequence and stops as soon as one element has been produced.
-func (s Stream[T]) First() adt.Option[T] {
+func (s Stream[T]) First() option.Option[T] {
 	for v := range s.seq {
-		return adt.Of(v)
+		return option.Of(v)
 	}
-	return adt.Empty[T]()
+	return option.Empty[T]()
 }
 
 // Last returns the last element wrapped in a present Option,
@@ -266,7 +266,7 @@ func (s Stream[T]) First() adt.Option[T] {
 // Last is a terminal operation: unlike First it has to walk the
 // entire sequence to know which value is last, so it cannot
 // short-circuit on an infinite source.
-func (s Stream[T]) Last() adt.Option[T] {
+func (s Stream[T]) Last() option.Option[T] {
 	var (
 		last  T
 		found bool
@@ -276,9 +276,9 @@ func (s Stream[T]) Last() adt.Option[T] {
 		found = true
 	}
 	if !found {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(last)
+	return option.Of(last)
 }
 
 // Any reports whether at least one element satisfies p.
@@ -314,13 +314,13 @@ func (s Stream[T]) None(p func(T) bool) bool {
 // See First for the rationale behind returning Option[T] rather
 // than (T, bool). Find is a short-circuiting terminal operation: it
 // stops the underlying sequence as soon as p returns true.
-func (s Stream[T]) Find(p func(T) bool) adt.Option[T] {
+func (s Stream[T]) Find(p func(T) bool) option.Option[T] {
 	for v := range s.seq {
 		if p(v) {
-			return adt.Of(v)
+			return option.Of(v)
 		}
 	}
-	return adt.Empty[T]()
+	return option.Empty[T]()
 }
 
 // Reduce folds the elements left-to-right using f, starting from init.
@@ -360,12 +360,12 @@ func (s Stream[T]) SortBy(less func(x, y T) int) Stream[T] {
 }
 
 // MinBy returns the smallest element under less wrapped in a present
-// adt.Option[T], or an absent Option when the Stream is empty.
+// option.Option[T], or an absent Option when the Stream is empty.
 //
-// MinBy uses adt.Option[T] rather than (T, bool) so the
+// MinBy uses option.Option[T] rather than (T, bool) so the
 // "find and get" path is symmetric with First / Last / Find and
 // chains naturally with adt.Map / adt.FlatMap.
-func (s Stream[T]) MinBy(less func(x, y T) int) adt.Option[T] {
+func (s Stream[T]) MinBy(less func(x, y T) int) option.Option[T] {
 	var (
 		best  T
 		found bool
@@ -381,16 +381,16 @@ func (s Stream[T]) MinBy(less func(x, y T) int) adt.Option[T] {
 		}
 	}
 	if !found {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(best)
+	return option.Of(best)
 }
 
 // MaxBy returns the largest element under less wrapped in a present
-// adt.Option[T], or an absent Option when the Stream is empty.
+// option.Option[T], or an absent Option when the Stream is empty.
 //
 // See MinBy for the rationale.
-func (s Stream[T]) MaxBy(less func(x, y T) int) adt.Option[T] {
+func (s Stream[T]) MaxBy(less func(x, y T) int) option.Option[T] {
 	var (
 		best  T
 		found bool
@@ -406,7 +406,7 @@ func (s Stream[T]) MaxBy(less func(x, y T) int) adt.Option[T] {
 		}
 	}
 	if !found {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
-	return adt.Of(best)
+	return option.Of(best)
 }

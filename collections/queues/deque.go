@@ -1,7 +1,7 @@
 package queues
 
 import (
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/utils/json"
 )
@@ -49,7 +49,7 @@ import (
 // way to ask "push to the front" or "pop from the back".
 //
 // All accessors (Front, Back, PopFront, PopBack) return
-// adt.Option[T] rather than (T, bool), matching the
+// option.Option[T] rather than (T, bool), matching the
 // convention established by Stack, Queue, and the lists
 // package: a present Option on a hit, an absent one on a
 // miss. Callers can chain OrElse / OrElseGet / Map on the
@@ -100,38 +100,38 @@ func (d *Deque[T]) PushBack(value T) {
 }
 
 // PopFront removes and returns the front element wrapped in a
-// present adt.Option[T], or an absent Option if the
+// present option.Option[T], or an absent Option if the
 // Deque is empty.
 //
 // PopFront is O(1): it unlinks the head node, releases the
 // reference the node held, and returns the value. The node is
 // then unreachable and eligible for GC.
-func (d *Deque[T]) PopFront() adt.Option[T] {
+func (d *Deque[T]) PopFront() option.Option[T] {
 	return d.items.RemoveFirst()
 }
 
 // PopBack removes and returns the back element wrapped in a
-// present adt.Option[T], or an absent Option if the
+// present option.Option[T], or an absent Option if the
 // Deque is empty.
 //
 // PopBack is O(1): it unlinks the tail node, releases the
 // reference the node held, and returns the value.
-func (d *Deque[T]) PopBack() adt.Option[T] {
+func (d *Deque[T]) PopBack() option.Option[T] {
 	return d.items.RemoveLast()
 }
 
 // Front returns the front element wrapped in a present
-// adt.Option[T], or an absent Option if the Deque is
+// option.Option[T], or an absent Option if the Deque is
 // empty. Front is O(1) and does not modify the Deque: the same
 // call repeated yields the same value, and Size is unchanged.
-func (d *Deque[T]) Front() adt.Option[T] {
+func (d *Deque[T]) Front() option.Option[T] {
 	return d.items.First()
 }
 
 // Back returns the back element wrapped in a present
-// adt.Option[T], or an absent Option if the Deque is
+// option.Option[T], or an absent Option if the Deque is
 // empty. Back is O(1) and does not modify the Deque.
-func (d *Deque[T]) Back() adt.Option[T] {
+func (d *Deque[T]) Back() option.Option[T] {
 	return d.items.Last()
 }
 

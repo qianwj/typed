@@ -8,17 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 	"github.com/qianwj/typed/reactivex"
 )
 
 func TestSingleCopiesShareComputation(t *testing.T) {
 	t.Parallel()
 	wantErr := errors.New("single source failed")
-	for _, want := range []adt.Result[int]{adt.Success(42), adt.Failure[int](wantErr)} {
+	for _, want := range []result.Result[int]{result.Success(42), result.Failure[int](wantErr)} {
 		wantValue, wantError := want.Unwrap()
 		var calls atomic.Int32
-		source := reactivex.NewSingle(func() adt.Result[int] {
+		source := reactivex.NewSingle(func() result.Result[int] {
 			calls.Add(1)
 			return want
 		})
@@ -56,14 +57,14 @@ func TestSingleCopiesShareComputation(t *testing.T) {
 func TestMaybeCopiesShareComputation(t *testing.T) {
 	t.Parallel()
 	wantErr := errors.New("maybe source failed")
-	for _, want := range []adt.Result[adt.Option[int]]{
-		adt.Success(adt.Of(42)),
-		adt.Success(adt.Empty[int]()),
-		adt.Failure[adt.Option[int]](wantErr),
+	for _, want := range []result.Result[option.Option[int]]{
+		result.Success(option.Of(42)),
+		result.Success(option.Empty[int]()),
+		result.Failure[option.Option[int]](wantErr),
 	} {
 		wantValue, wantError := want.Unwrap()
 		var calls atomic.Int32
-		source := reactivex.NewMaybe(func() adt.Result[adt.Option[int]] {
+		source := reactivex.NewMaybe(func() result.Result[option.Option[int]] {
 			calls.Add(1)
 			return want
 		})

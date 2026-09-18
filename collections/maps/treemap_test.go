@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 )
 
 func checkTree(t *testing.T, m *TreeMap[int, int], want map[int]int) {
@@ -149,7 +149,7 @@ func TestTreeMapComparatorEquality(t *testing.T) {
 func TestTreeMapNeighbors(t *testing.T) {
 	for _, compare := range []func(int, int) int{cmp.Compare[int], func(a, b int) int { return cmp.Compare(b, a) }} {
 		m := NewTreeMap[int, int](compare)
-		for _, query := range []func(int) adt.Option[Entry[int, int]]{m.Floor, m.Ceiling, m.Lower, m.Higher} {
+		for _, query := range []func(int) option.Option[Entry[int, int]]{m.Floor, m.Ceiling, m.Lower, m.Higher} {
 			if !query(0).IsEmpty() {
 				t.Fatal("neighbor on empty tree must be absent")
 			}
@@ -167,7 +167,7 @@ func TestTreeMapNeighbors(t *testing.T) {
 		for key := -1; key <= 9; key++ {
 			for _, tc := range []struct {
 				name              string
-				query             func(int) adt.Option[Entry[int, int]]
+				query             func(int) option.Option[Entry[int, int]]
 				before, inclusive bool
 			}{{"Floor", m.Floor, true, true}, {"Lower", m.Lower, true, false}, {"Ceiling", m.Ceiling, false, true}, {"Higher", m.Higher, false, false}} {
 				var candidates []int

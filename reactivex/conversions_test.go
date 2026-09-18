@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 )
 
 func TestToFlowableSharesCachedResult(t *testing.T) {
@@ -35,18 +36,18 @@ func TestToFlowableSharesCachedResult(t *testing.T) {
 				var calls atomic.Int32
 				var flow Flowable[any]
 				if kind == "Single" {
-					flow = NewSingle(func() adt.Result[any] {
+					flow = NewSingle(func() result.Result[any] {
 						calls.Add(1)
-						return adt.Wrap(tc.value, tc.err)
+						return result.Wrap(tc.value, tc.err)
 					}).ToFlowable()
 				} else {
-					flow = NewMaybe(func() adt.Result[adt.Option[any]] {
+					flow = NewMaybe(func() result.Result[option.Option[any]] {
 						calls.Add(1)
-						value := adt.Empty[any]()
+						value := option.Empty[any]()
 						if tc.present {
-							value = adt.Of(tc.value)
+							value = option.Of(tc.value)
 						}
-						return adt.Wrap(value, tc.err)
+						return result.Wrap(value, tc.err)
 					}).ToFlowable()
 				}
 				if calls.Load() != 0 {
@@ -74,7 +75,7 @@ func TestToFlowableSharesCachedResult(t *testing.T) {
 
 func TestToFlowableDemandIsPerSubscription(t *testing.T) {
 	t.Parallel()
-	flow := NewSingle(func() adt.Result[int] { return adt.Success(42) }).ToFlowable()
+	flow := NewSingle(func() result.Result[int] { return result.Success(42) }).ToFlowable()
 	values := make(chan int, 2)
 	var terminals atomic.Int32
 	slow := flow.Subscribe(nil, subscriberFuncs[int]{
@@ -109,9 +110,9 @@ func TestToFlowableTerminalsDoNotRequireDemand(t *testing.T) {
 		flow Flowable[int]
 		err  error
 	}{
-		{NewSingle(func() adt.Result[int] { return adt.Failure[int](errSentinelSingle) }).ToFlowable(), errSentinelSingle},
-		{NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Success(adt.Empty[int]()) }).ToFlowable(), nil},
-		{NewMaybe(func() adt.Result[adt.Option[int]] { return adt.Failure[adt.Option[int]](errSentinelMaybe) }).ToFlowable(), errSentinelMaybe},
+		{NewSingle(func() result.Result[int] { return result.Failure[int](errSentinelSingle) }).ToFlowable(), errSentinelSingle},
+		{NewMaybe(func() result.Result[option.Option[int]] { return result.Success(option.Empty[int]()) }).ToFlowable(), nil},
+		{NewMaybe(func() result.Result[option.Option[int]] { return result.Failure[option.Option[int]](errSentinelMaybe) }).ToFlowable(), errSentinelMaybe},
 	} {
 		var received int
 		var got error
@@ -131,7 +132,7 @@ func TestToFlowableCancelDuringSetup(t *testing.T) {
 	t.Parallel()
 	for _, preCanceled := range []bool{false, true} {
 		var calls atomic.Int32
-		source := NewSingle(func() adt.Result[int] { calls.Add(1); return adt.Success(42) })
+		source := NewSingle(func() result.Result[int] { calls.Add(1); return result.Success(42) })
 		ctx, cancel := context.WithCancel(context.Background())
 		if preCanceled {
 			cancel()
@@ -159,10 +160,10 @@ func TestToFlowableCancelDuringSetup(t *testing.T) {
 func TestToFlowableContextCancelDoesNotCancelSharedSource(t *testing.T) {
 	t.Parallel()
 	started, release := make(chan struct{}), make(chan struct{})
-	source := NewMaybe(func() adt.Result[adt.Option[int]] {
+	source := NewMaybe(func() result.Result[option.Option[int]] {
 		close(started)
 		<-release
-		return adt.Success(adt.Of(42))
+		return result.Success(option.Of(42))
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -271,7 +272,7 @@ func TestFirstRequestsOneAndCancelsBeforePublishing(t *testing.T) {
 
 func TestFirstPropagatesUpstreamError(t *testing.T) {
 	t.Parallel()
-	flow := NewSingle(func() adt.Result[int] { return adt.Failure[int](errSentinelSingle) }).ToFlowable()
+	flow := NewSingle(func() result.Result[int] { return result.Failure[int](errSentinelSingle) }).ToFlowable()
 	if got := flow.FirstElement(nil).Await(); !errors.Is(got.Error(), errSentinelSingle) {
 		t.Fatalf("Maybe error = %v", got.Error())
 	}
@@ -347,7 +348,7 @@ func TestFirstContextCancellation(t *testing.T) {
 			cancel()
 		}
 		first := flow.FirstElement(ctx)
-		result := make(chan adt.Result[adt.Option[int]], 1)
+		result := make(chan result.Result[option.Option[int]], 1)
 		go func() { result <- first.Await() }()
 		if !preCanceled {
 			var upstream Subscription
@@ -389,7 +390,7 @@ func TestFirstCancelWaitKeepsUpstreamAlive(t *testing.T) {
 	first := flow.FirstElement(nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	result := make(chan adt.Result[adt.Option[int]], 1)
+	result := make(chan result.Result[option.Option[int]], 1)
 	go func() { result <- first.AwaitWithContext(ctx) }()
 	var out Subscriber[int]
 	select {

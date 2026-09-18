@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 )
 
 // tryTakeOr is a small helper for tests that want the (value, present) shape.
@@ -357,8 +358,8 @@ func TestTryPollReturnsOption(t *testing.T) {
 	}
 
 	// Sanity: the empty factory also looks the same.
-	if e := adt.Empty[int](); !e.IsEmpty() {
-		t.Fatal("adt.Empty[int]() should be empty")
+	if e := option.Empty[int](); !e.IsEmpty() {
+		t.Fatal("option.Empty[int]() should be empty")
 	}
 }
 
@@ -431,7 +432,7 @@ func TestPollWithContext_BlocksUntilPush(t *testing.T) {
 	t.Parallel()
 	q := NewBoundedBlockingQueue[int](2)
 
-	takeDone := make(chan adt.Result[int], 1)
+	takeDone := make(chan result.Result[int], 1)
 	go func() {
 		takeDone <- q.PollWithContext(context.Background())
 	}()
@@ -499,7 +500,7 @@ func TestPollWithContext_CanceledReturnsFailure(t *testing.T) {
 	q := NewBoundedBlockingQueue[int](2)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	takeDone := make(chan adt.Result[int], 1)
+	takeDone := make(chan result.Result[int], 1)
 	go func() {
 		takeDone <- q.PollWithContext(ctx)
 	}()

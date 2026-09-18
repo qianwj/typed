@@ -3,11 +3,11 @@ package reactivex
 import (
 	"context"
 
-	"github.com/qianwj/typed/adt"
+	r "github.com/qianwj/typed/adt/result"
 )
 
 // Single[T] is a lazy asynchronous computation that produces one value or
-// one error. Its terminal result is an adt.Result[T]: Success(value) or
+// one error. Its terminal result is an r.Result[T]: Success(value) or
 // Failure[T](err). A successful zero or nil value is still a value.
 // Use [Maybe] for an optional result and [Flowable] for multiple values.
 //
@@ -56,15 +56,15 @@ type Single[T any] struct {
 // fn is invoked at most once, no matter how many subscribers attach.
 // fn is not retried on error; callers must compose with another
 // source if retry is desired.
-func NewSingle[T any](fn func() adt.Result[T]) Single[T] {
-	return newSingle(func(complete func(adt.Result[T])) {
+func NewSingle[T any](fn func() r.Result[T]) Single[T] {
+	return newSingle(func(complete func(r.Result[T])) {
 		go func() { complete(fn()) }()
 	})
 }
 
 // newSingle builds a lazy node whose starter connects continuations or
 // executes a source. It does not add a goroutine to an internal chain.
-func newSingle[T any](start func(func(adt.Result[T]))) Single[T] {
+func newSingle[T any](start func(func(r.Result[T]))) Single[T] {
 	return Single[T]{state: newCompletion(start)}
 }
 
@@ -81,7 +81,7 @@ func newSingle[T any](start func(func(adt.Result[T]))) Single[T] {
 // Callbacks run outside internal locks, on the completing goroutine or an
 // asynchronous cached-result delivery; do not depend on a specific goroutine.
 func (s Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscription {
-	cb := func(result adt.Result[T]) {
+	cb := func(result r.Result[T]) {
 		if result.IsFailure() {
 			if onError != nil {
 				onError(result.Error())
@@ -96,13 +96,13 @@ func (s Single[T]) Subscribe(onSuccess func(T), onError func(error)) Subscriptio
 }
 
 // Await blocks until the Single has terminated and returns its result
-// as adt.Result[T]. Source errors produce Failure; successful values,
+// as r.Result[T]. Source errors produce Failure; successful values,
 // including nil, produce Success. Repeated calls return the same cached result
 // without re-running fn. Await does not wait for subscription callbacks.
 //
 // Await cannot be cancelled. Use [AwaitWithContext] when the caller
 // needs cancellation or a deadline.
-func (s Single[T]) Await() adt.Result[T] {
+func (s Single[T]) Await() r.Result[T] {
 	return s.state.await(context.Background())
 }
 
@@ -111,7 +111,7 @@ func (s Single[T]) Await() adt.Result[T] {
 // on cancellation. An already completed Single takes precedence over ctx.
 // Otherwise, an already canceled ctx prevents the source from starting.
 // Canceling a wait does not cancel an already running source.
-func (s Single[T]) AwaitWithContext(ctx context.Context) adt.Result[T] {
+func (s Single[T]) AwaitWithContext(ctx context.Context) r.Result[T] {
 	return s.state.await(ctx)
 }
 
@@ -129,8 +129,8 @@ func (s Single[T]) Done() bool {
 // f must not return an error — Map is for value-only transforms. Use
 // FlatMap when the transformation can itself fail.
 func (s Single[T]) Map[R any](f func(T) R) Single[R] {
-	return newSingle(func(complete func(adt.Result[R])) {
-		s.state.onComplete(func(result adt.Result[T]) {
+	return newSingle(func(complete func(r.Result[R])) {
+		s.state.onComplete(func(result r.Result[T]) {
 			complete(result.Map(f))
 		})
 	})
@@ -144,10 +144,10 @@ func (s Single[T]) Map[R any](f func(T) R) Single[R] {
 // transformation itself produce an async value (e.g. another Single
 // from a cache lookup).
 func (s Single[T]) FlatMap[R any](f func(T) Single[R]) Single[R] {
-	return newSingle(func(complete func(adt.Result[R])) {
-		s.state.onComplete(func(result adt.Result[T]) {
+	return newSingle(func(complete func(r.Result[R])) {
+		s.state.onComplete(func(result r.Result[T]) {
 			if result.IsFailure() {
-				complete(adt.Failure[R](result.Error()))
+				complete(r.Failure[R](result.Error()))
 				return
 			}
 			f(result.Value()).state.onComplete(complete)

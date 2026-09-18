@@ -4,7 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 )
 
 // UnboundedBlockingQueue is an unbounded FIFO blocking queue.
@@ -44,7 +45,7 @@ import (
 //     [UnboundedBlockingQueue.PollWithContext] — the context-aware variants.
 //   - [UnboundedBlockingQueue.TryPush] / [UnboundedBlockingQueue.TryPoll] —
 //     the non-blocking variants. `TryPush` always succeeds because the
-//     queue is unbounded; `TryPoll` returns an [adt.Option].
+//     queue is unbounded; `TryPoll` returns an [option.Option].
 //
 // The zero value is not usable; construct one with
 // [NewUnboundedBlockingQueue].
@@ -146,27 +147,27 @@ func (q *UnboundedBlockingQueue[T]) Poll() T {
 }
 
 // TryPoll is the non-blocking variant of [UnboundedBlockingQueue.Poll].
-// It returns the dequeued value as an [adt.Option]; the result is
+// It returns the dequeued value as an [option.Option]; the result is
 // empty when the queue is empty.
-func (q *UnboundedBlockingQueue[T]) TryPoll() adt.Option[T] {
+func (q *UnboundedBlockingQueue[T]) TryPoll() option.Option[T] {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if q.count == 0 {
-		return adt.Empty[T]()
+		return option.Empty[T]()
 	}
 	v := q.items[q.head]
 	var zero T
 	q.items[q.head] = zero
 	q.head = (q.head + 1) & q.mask
 	q.count--
-	return adt.Of(v)
+	return option.Of(v)
 }
 
 // PollWithContext is the context-aware variant of [UnboundedBlockingQueue.Poll].
 // It blocks until an element is available, or until ctx is canceled —
-// whichever happens first. It returns adt.Success(value) on success and
-// adt.Failure[T](ctx.Err()) on cancellation.
-func (q *UnboundedBlockingQueue[T]) PollWithContext(ctx context.Context) adt.Result[T] {
+// whichever happens first. It returns result.Success(value) on success and
+// result.Failure[T](ctx.Err()) on cancellation.
+func (q *UnboundedBlockingQueue[T]) PollWithContext(ctx context.Context) result.Result[T] {
 	// Watch ctx in a one-shot goroutine. When ctx is canceled, broadcast
 	// the cond so any blocked taker wakes up and checks ctx.Err(). The
 	// `done` channel makes sure the goroutine exits when PollWithContext
@@ -187,7 +188,7 @@ func (q *UnboundedBlockingQueue[T]) PollWithContext(ctx context.Context) adt.Res
 	defer q.mu.Unlock()
 	for q.count == 0 {
 		if err := ctx.Err(); err != nil {
-			return adt.Failure[T](err)
+			return result.Failure[T](err)
 		}
 		q.cond.Wait()
 	}
@@ -196,7 +197,7 @@ func (q *UnboundedBlockingQueue[T]) PollWithContext(ctx context.Context) adt.Res
 	q.items[q.head] = zeroInner
 	q.head = (q.head + 1) & q.mask
 	q.count--
-	return adt.Success(v)
+	return result.Success(v)
 }
 
 // Size returns the current number of elements in the queue.

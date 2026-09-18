@@ -3,11 +3,12 @@ package reactivex
 import (
 	"context"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	r "github.com/qianwj/typed/adt/result"
 )
 
 // Maybe[T] is a lazy asynchronous computation that produces an optional
-// value or one error. Its terminal result is an adt.Result[adt.Option[T]]:
+// value or one error. Its terminal result is an r.Result[option.Option[T]]:
 //
 //   - Success(Of(value)): a value, delivered to onSuccess.
 //   - Success(Empty[T]()): normal completion without a value, delivered to onComplete.
@@ -53,7 +54,7 @@ import (
 // Concurrent consumers share the same result; callers must synchronize any
 // mutation of data referenced by the result or shared between callbacks.
 type Maybe[T any] struct {
-	state *completion[adt.Option[T]]
+	state *completion[option.Option[T]]
 }
 
 // NewMaybe returns a lazy Maybe whose source produces a Result[Option[T]].
@@ -63,15 +64,15 @@ type Maybe[T any] struct {
 //
 // fn is invoked at most once, on the first Await or Subscribe, and its
 // result is cached for subsequent waits.
-func NewMaybe[T any](fn func() adt.Result[adt.Option[T]]) Maybe[T] {
-	return newMaybe(func(complete func(adt.Result[adt.Option[T]])) {
+func NewMaybe[T any](fn func() r.Result[option.Option[T]]) Maybe[T] {
+	return newMaybe(func(complete func(r.Result[option.Option[T]])) {
 		go func() { complete(fn()) }()
 	})
 }
 
 // newMaybe builds a lazy node whose starter connects continuations or
 // executes a source. It does not add a goroutine to an internal chain.
-func newMaybe[T any](start func(func(adt.Result[adt.Option[T]]))) Maybe[T] {
+func newMaybe[T any](start func(func(r.Result[option.Option[T]]))) Maybe[T] {
 	return Maybe[T]{state: newCompletion(start)}
 }
 
@@ -89,7 +90,7 @@ func (m Maybe[T]) Subscribe(
 	onComplete func(),
 	onError func(error),
 ) Subscription {
-	cb := func(result adt.Result[adt.Option[T]]) {
+	cb := func(result r.Result[option.Option[T]]) {
 		switch {
 		case result.IsFailure():
 			if onError != nil {
@@ -117,7 +118,7 @@ func (m Maybe[T]) Subscribe(
 //
 // Await cannot be cancelled; use [AwaitWithContext] for cancellation
 // or deadlines.
-func (m Maybe[T]) Await() adt.Result[adt.Option[T]] {
+func (m Maybe[T]) Await() r.Result[option.Option[T]] {
 	return m.AwaitWithContext(context.Background())
 }
 
@@ -127,7 +128,7 @@ func (m Maybe[T]) Await() adt.Result[adt.Option[T]] {
 // An already completed Maybe takes precedence over ctx. Otherwise, an already
 // canceled ctx prevents the source from starting. Canceling a wait does not
 // cancel an already running source.
-func (m Maybe[T]) AwaitWithContext(ctx context.Context) adt.Result[adt.Option[T]] {
+func (m Maybe[T]) AwaitWithContext(ctx context.Context) r.Result[option.Option[T]] {
 	return m.state.await(ctx)
 }
 
@@ -142,9 +143,9 @@ func (m Maybe[T]) Done() bool {
 // errors, f is not invoked and that outcome is propagated
 // unchanged.
 func (m Maybe[T]) Map[R any](f func(T) R) Maybe[R] {
-	return newMaybe(func(complete func(adt.Result[adt.Option[R]])) {
-		m.state.onComplete(func(result adt.Result[adt.Option[T]]) {
-			complete(result.Map(func(value adt.Option[T]) adt.Option[R] {
+	return newMaybe(func(complete func(r.Result[option.Option[R]])) {
+		m.state.onComplete(func(result r.Result[option.Option[T]]) {
+			complete(result.Map(func(value option.Option[T]) option.Option[R] {
 				return value.Map(f)
 			}))
 		})
@@ -156,14 +157,14 @@ func (m Maybe[T]) Map[R any](f func(T) R) Maybe[R] {
 // completion-without-value or error, f is not invoked and that
 // outcome is propagated.
 func (m Maybe[T]) FlatMap[R any](f func(T) Maybe[R]) Maybe[R] {
-	return newMaybe(func(complete func(adt.Result[adt.Option[R]])) {
-		m.state.onComplete(func(result adt.Result[adt.Option[T]]) {
+	return newMaybe(func(complete func(r.Result[option.Option[R]])) {
+		m.state.onComplete(func(result r.Result[option.Option[T]]) {
 			if result.IsFailure() {
-				complete(adt.Failure[adt.Option[R]](result.Error()))
+				complete(r.Failure[option.Option[R]](result.Error()))
 				return
 			}
 			if result.Value().IsEmpty() {
-				complete(adt.Success(adt.Empty[R]()))
+				complete(r.Success(option.Empty[R]()))
 				return
 			}
 			f(result.Value().Get()).state.onComplete(complete)

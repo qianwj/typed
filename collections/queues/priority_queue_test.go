@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 )
 
 // --- Empty / peek / pop --------------------------------------------------
@@ -280,7 +280,7 @@ func TestPriorityQueue_PopOnEmptyRepeatedlyReturnsEmpty(t *testing.T) {
 func TestPriorityQueue_EmptyReturnsOptionNotNil(t *testing.T) {
 	t.Parallel()
 	q := NewPriorityQueue(0, cmp.Less[string])
-	var opt adt.Option[string] = q.Pop()
+	var opt option.Option[string] = q.Pop()
 	if opt.IsPresent() {
 		t.Errorf("Pop on empty queue returned present (%v)", opt.Get())
 	}

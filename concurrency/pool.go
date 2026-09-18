@@ -3,6 +3,7 @@ package concurrency
 import (
 	"sync"
 
+	"github.com/qianwj/typed/adt/option"
 	"github.com/qianwj/typed/adt"
 )
 
@@ -45,10 +46,10 @@ func NewPool[T any](creator func() T) *Pool[T] {
 // There is no guarantee that Get returns a previously stored value, even
 // immediately after Put.
 // Get does not reset values; the caller must prepare them for reuse.
-func (p *Pool[T]) Get() adt.Option[T] {
+func (p *Pool[T]) Get() option.Option[T] {
 	value := p.container.Get()
-	return adt.OfNullable(value).
-		FlatMap(func(v any) adt.Option[T] {
+	return option.OfNullable(value).
+		FlatMap(func(v any) option.Option[T] {
 			return adt.Cast[T](v).Option()
 		})
 }

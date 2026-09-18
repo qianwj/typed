@@ -3,7 +3,7 @@ package maps
 import (
 	"errors"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 	"github.com/qianwj/typed/collections/lists"
 	"github.com/qianwj/typed/collections/stream"
 	"github.com/qianwj/typed/utils/json"
@@ -178,55 +178,55 @@ func (m *TreeMap[K, V]) IsEmpty() bool { return m.size == 0 }
 func (m *TreeMap[K, V]) Clear() { m.root, m.size = nil, 0 }
 
 // First returns the least entry under the comparator, or an empty Option.
-func (m *TreeMap[K, V]) First() adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) First() option.Option[Entry[K, V]] {
 	n := m.root
 	if n == nil {
-		return adt.Empty[Entry[K, V]]()
+		return option.Empty[Entry[K, V]]()
 	}
 	for n.left != nil {
 		n = n.left
 	}
-	return adt.Of(n.entry)
+	return option.Of(n.entry)
 }
 
 // Last returns the greatest entry under the comparator, or an empty Option.
-func (m *TreeMap[K, V]) Last() adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) Last() option.Option[Entry[K, V]] {
 	n := m.root
 	if n == nil {
-		return adt.Empty[Entry[K, V]]()
+		return option.Empty[Entry[K, V]]()
 	}
 	for n.right != nil {
 		n = n.right
 	}
-	return adt.Of(n.entry)
+	return option.Of(n.entry)
 }
 
 // Floor returns the greatest entry with key <= key under the comparator.
-func (m *TreeMap[K, V]) Floor(key K) adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) Floor(key K) option.Option[Entry[K, V]] {
 	return m.neighbor(key, true, true)
 }
 
 // Ceiling returns the least entry with key >= key under the comparator.
-func (m *TreeMap[K, V]) Ceiling(key K) adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) Ceiling(key K) option.Option[Entry[K, V]] {
 	return m.neighbor(key, false, true)
 }
 
 // Lower returns the greatest entry strictly before key under the comparator.
-func (m *TreeMap[K, V]) Lower(key K) adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) Lower(key K) option.Option[Entry[K, V]] {
 	return m.neighbor(key, true, false)
 }
 
 // Higher returns the least entry strictly after key under the comparator.
-func (m *TreeMap[K, V]) Higher(key K) adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) Higher(key K) option.Option[Entry[K, V]] {
 	return m.neighbor(key, false, false)
 }
 
-func (m *TreeMap[K, V]) neighbor(key K, before, inclusive bool) adt.Option[Entry[K, V]] {
+func (m *TreeMap[K, V]) neighbor(key K, before, inclusive bool) option.Option[Entry[K, V]] {
 	var candidate *treeNode[K, V]
 	for n := m.root; n != nil; {
 		c := m.compare(n.entry.Key, key)
 		if c == 0 && inclusive {
-			return adt.Of(n.entry)
+			return option.Of(n.entry)
 		}
 		if before {
 			if c < 0 {
@@ -241,9 +241,9 @@ func (m *TreeMap[K, V]) neighbor(key K, before, inclusive bool) adt.Option[Entry
 		}
 	}
 	if candidate == nil {
-		return adt.Empty[Entry[K, V]]()
+		return option.Empty[Entry[K, V]]()
 	}
-	return adt.Of(candidate.entry)
+	return option.Of(candidate.entry)
 }
 
 // ForEach visits entries in comparator order. visit must not mutate the tree.

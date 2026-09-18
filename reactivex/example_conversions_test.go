@@ -5,20 +5,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
+	"github.com/qianwj/typed/adt/result"
 	"github.com/qianwj/typed/reactivex"
 )
 
 func ExampleSingle_ToFlowable() {
-	source := reactivex.NewSingle(func() adt.Result[int] { return adt.Success(42) })
+	source := reactivex.NewSingle(func() result.Result[int] { return result.Success(42) })
 	values, err := source.ToFlowable().ToSlice(context.Background())
 	fmt.Println(values, err)
 	// Output: [42] <nil>
 }
 
 func ExampleMaybe_ToFlowable() {
-	source := reactivex.NewMaybe(func() adt.Result[adt.Option[int]] {
-		return adt.Success(adt.Empty[int]())
+	source := reactivex.NewMaybe(func() result.Result[option.Option[int]] {
+		return result.Success(option.Empty[int]())
 	})
 	values, err := source.ToFlowable().ToSlice(context.Background())
 	fmt.Println(values, err)

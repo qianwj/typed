@@ -3,7 +3,7 @@ package lists
 import (
 	"testing"
 
-	"github.com/qianwj/typed/adt"
+	"github.com/qianwj/typed/adt/option"
 )
 
 func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
@@ -13,8 +13,8 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 	for _, list := range []interface {
 		Add(int)
 		AddFirst(int)
-		RemoveFirst() adt.Option[int]
-		RemoveLast() adt.Option[int]
+		RemoveFirst() option.Option[int]
+		RemoveLast() option.Option[int]
 		Size() int
 		IsEmpty() bool
 		Clear()
@@ -40,7 +40,7 @@ func TestArrayListAndLinkedListCommonOperations(t *testing.T) {
 }
 
 // TestArrayListOptionReturnsOnEmpty exercises the absent-Option
-// branches of every ArrayList method that returns adt.Option[T].
+// branches of every ArrayList method that returns option.Option[T].
 // These are defensive branches: callers should not normally call Get
 // on an empty list, but the contract is "absent Option, not panic",
 // and the branches must be covered.
